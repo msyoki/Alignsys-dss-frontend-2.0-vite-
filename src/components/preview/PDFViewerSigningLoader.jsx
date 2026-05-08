@@ -416,7 +416,7 @@ function PDFViewerSigningLoader(props) {
                                                 startIcon={<FaSignature size={iconSize} />}
                                                 sx={pillBtn}
                                             >
-                                                {hasSignature ? 'Replace' : 'Sign'}
+                                                {hasSignature ? 'Replace Signature' : 'Sign'}
                                             </Button>
                                         </Tooltip>
 
@@ -443,7 +443,7 @@ function PDFViewerSigningLoader(props) {
                                                         startIcon={<FaMapMarkerAlt size={iconSize} />}
                                                         sx={pillBtn}
                                                     >
-                                                        Place {selectedTool} Again
+                                                        Place {isStamp ? 'Stamp' : 'Signature'} Again
                                                     </Button>
                                                 </Tooltip>
                                             )}

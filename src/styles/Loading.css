@@ -1,0 +1,35 @@
+.loading{
+  display: flex; 
+  flex-direction: column;
+  align-items: center; 
+  justify-content: center;
+  /* background-color: white; */
+  height: 5%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+}
+
+.pdf-skeleton {
+  width: 90vw;
+  max-width: 900px;
+  height: 70vh;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 37%, #e0e0e0 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+  margin: 0 auto;
+  margin-top: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+}

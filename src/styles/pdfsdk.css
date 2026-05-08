@@ -1,0 +1,7 @@
+.PSPDFKit-yyu2s7s1tuqk1ww7hvgfnef81, .PSPDFKit-yyu2s7s1tuqk1ww7hvgfnef81:active, .PSPDFKit-yyu2s7s1tuqk1ww7hvgfnef81:focus, .PSPDFKit-yyu2s7s1tuqk1ww7hvgfnef81:hover {
+    background: #4636e3!important;
+    background: var(--PSPDFKit-ToolbarButton-isActive-background)!important;
+    color: #fff!important;
+    color: var(--PSPDFKit-ToolbarButton-isActive-color)!important;
+    display: none;
+}

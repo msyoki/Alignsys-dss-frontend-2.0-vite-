@@ -1,0 +1,15 @@
+/* #uploadSignature,#drawSignature,#save_signature{
+    display:none;
+   
+}
+
+#uploadSignature,#selectSavedSignature,#drawSignature{
+    min-width: 550px;
+}
+@media only screen and (max-width: 600px) {
+    #uploadSignature,#selectSavedSignature,#drawSignature{
+        min-width:inherit;
+    }
+    
+} */
+

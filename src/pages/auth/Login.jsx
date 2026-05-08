@@ -16,8 +16,8 @@ import Authcontext from '../../context/Authcontext.jsx';
 import TermsAndConditionsDialog from '../../components/dialogs/TermsAndConditionsDialog.jsx';
 import TimedAlert from '../../components/TimedAlert.jsx';
 import { Visibility, VisibilityOff, Key, Person } from '@mui/icons-material';
-import logo from '../../images/ZFWHITE.webp';
-import logo2 from '../../images/ZFBLU.webp';
+import logo from '../../images/ZFWHITE.png';
+import logo2 from '../../images/ZFBLU.png';
 
 import '../../styles/App.css';
 import '../../styles/Login.css';
@@ -106,7 +106,7 @@ const Login = () => {
                   </InputAdornment>
                 }
               />
-                     {/* <Input
+              {/* <Input
                 id="email"
                 name="email"
                 type="email"
@@ -208,13 +208,12 @@ const Login = () => {
                   className="mb-3 rounded-pill"
                   disabled={miniLoader}
                   startIcon={miniLoader ? <CircularProgress size={14} color="inherit" /> : null}
-
-                  style={{
+                  sx={{
                     fontSize: '13px',
                     textTransform: 'none',
+                    width: '100%',
                     px: 2,
                     py: 1,
-                    width: '100%',
                     backgroundColor: miniLoader ? '#ccc' : '#2757aa',
                     color: '#fff',
                     '&:hover': {
@@ -222,7 +221,6 @@ const Login = () => {
                     },
                   }}
                 >
-
                   {miniLoader ? 'Logging in ...' : 'LOGIN'}
                 </Button>
 

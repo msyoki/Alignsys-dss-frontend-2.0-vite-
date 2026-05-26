@@ -1,73 +1,82 @@
-import React from "react";
+import React, { memo } from "react";
 import PropTypes from "prop-types";
+
 import Dialog from "@mui/material/Dialog";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Typography from "@mui/material/Typography";
+
 import logo from "../../images/ZFBLU.webp";
 
-// --- Circular Progress with Percentage Label ---
-function CircularProgressWithLabel({ value }) {
-  return (
-    <Box
+// -------------------- Progress With Label --------------------
+const CircularProgressWithLabel = memo(({ value = 0 }) => (
+  <Box
+    sx={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 1,
+    }}
+  >
+    <CircularProgress
+      variant="determinate"
+      value={value}
+      size={58}
+      thickness={4}
+    />
+
+    <Typography
+      variant="body2"
       sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        mt: 1,
+        fontWeight: 600,
+        color: "text.secondary",
+        fontSize: "13px",
       }}
     >
-      <CircularProgress
-        variant="determinate"
-        value={value}
-        size={60}
-        thickness={4}
-        sx={{ color: "primary.main" }}
-      />
-      <Typography
-        variant="body2"
-        sx={{ color: "text.secondary", mt: 1, fontWeight: 500 }}
-      >
-        {`${Math.round(value)}%`}
-      </Typography>
-    </Box>
-  );
-}
+      {`${Math.round(value)}%`}
+    </Typography>
+  </Box>
+));
+
+CircularProgressWithLabel.displayName = "CircularProgressWithLabel";
 
 CircularProgressWithLabel.propTypes = {
   value: PropTypes.number.isRequired,
 };
 
-// --- Loading Dialog Component ---
-const LoadingDialog = ({ opendialogloading = false, msg, percentage }) => {
+// -------------------- Loading Dialog --------------------
+function LoadingDialog({
+  opendialogloading = false,
+  msg = "Processing",
+  percentage,
+}) {
+  const hasPercentage =
+    typeof percentage === "number" && !Number.isNaN(percentage);
+
   return (
     <Dialog
-      keepMounted
       open={opendialogloading}
-      aria-describedby="loading-dialog-description"
+      keepMounted
       fullWidth
       maxWidth="xs"
+      aria-describedby="loading-dialog-description"
       PaperProps={{
+        elevation: 6,
         sx: {
-          m: 2,
-          width: "100%",
-          maxWidth: 400,
           borderRadius: 3,
-          boxShadow: 6,
+          overflow: "hidden",
+          mx: 2,
         },
       }}
     >
       <Box
         sx={{
-          p: 4,
-          textAlign: "center",
-          fontFamily: "Roboto, Arial, sans-serif",
-          color: "#333",
-          width: { xs: "90vw", sm: 400 },
-          maxWidth: "100vw",
+          px: { xs: 3, sm: 4 },
+          py: { xs: 4, sm: 5 },
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          textAlign: "center",
         }}
       >
         {/* Logo */}
@@ -75,47 +84,59 @@ const LoadingDialog = ({ opendialogloading = false, msg, percentage }) => {
           component="img"
           src={logo}
           alt="logo"
+          loading="lazy"
           sx={{
-            width: { xs: 120, sm: 150 }, // smaller on phones, larger on tablets/desktop
-            mb: 2,
+            width: { xs: 110, sm: 140 },
+            height: "auto",
+            mb: 2.5,
+            objectFit: "contain",
           }}
         />
 
-
-        {/* Optional message */}
-        {msg && (
+        {/* Message */}
+        {!!msg && (
           <Typography
-           className="loading-indicator-text"
+            className="loading-indicator-text"
             sx={{
-              fontSize: "15px",
+              fontSize: { xs: "14px", sm: "15px" },
               color: "text.primary",
-              mb: 2,
-              fontWeight: 'normal',
+              fontWeight: 500,
+              mb: 3,
+              lineHeight: 1.5,
             }}
           >
-            
-            {msg}<span>.</span><span>.</span><span>.</span>
-            
+            {msg}
+            <span>.</span>
+            <span>.</span>
+            <span>.</span>
           </Typography>
         )}
 
         {/* Loader */}
-        <Box sx={{ mb: 1 }}>
-          {percentage !== undefined ? (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: 70,
+          }}
+        >
+          {hasPercentage ? (
             <CircularProgressWithLabel value={percentage} />
           ) : (
-            <CircularProgress
-              size={40}
-              thickness={4}
-              sx={{ color: "primary.main" }}
-            />
+            <CircularProgress size={42} thickness={4} />
           )}
         </Box>
 
-        {/* Footer / Processing message */}
+        {/* Footer */}
         <Typography
           variant="body2"
-          sx={{ fontSize: "13px", color: "text.secondary", mt: 2 }}
+          sx={{
+            mt: 3,
+            fontSize: "12px",
+            color: "text.secondary",
+            lineHeight: 1.6,
+          }}
         >
           Please do not reload or close this page.
           <br />
@@ -124,7 +145,7 @@ const LoadingDialog = ({ opendialogloading = false, msg, percentage }) => {
       </Box>
     </Dialog>
   );
-};
+}
 
 LoadingDialog.propTypes = {
   opendialogloading: PropTypes.bool,
@@ -132,4 +153,4 @@ LoadingDialog.propTypes = {
   percentage: PropTypes.number,
 };
 
-export default LoadingDialog;
+export default memo(LoadingDialog);

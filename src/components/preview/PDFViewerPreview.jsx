@@ -284,7 +284,7 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
 
   return (
     <div className='bg-white'>
-      <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} />
+      {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
 
       <div className="controls bg-white shadow-lg text-dark p-2 shadow-sm">
         <div className="d-flex flex-wrap flex-md-nowrap align-items-center justify-content-between w-100 gap-2">

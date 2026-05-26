@@ -229,27 +229,28 @@ function FileUpload(props) {
               <Button
                 variant="contained"
                 startIcon={<FaPlusSquare size={16} />}
-                onClick={onButtonClick}
-                     sx={{
-                      textTransform: 'none',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      borderRadius: '999px',
-                      px: 1.8,
-                      py: 0.8,
-                      minHeight: 34,
-                      boxShadow: 'none',
-                    
-                    }}
+                onClick={(e) => {
+                  e.stopPropagation(); // ← prevent bubbling to the label
+                  onButtonClick();
+                }}
+                sx={{
+                  textTransform: 'none',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  borderRadius: '999px',
+                  px: 1.8,
+                  py: 0.8,
+                  minHeight: 34,
+                  boxShadow: 'none',
+                }}
               >
-               
                 <span>Select files from device</span>
               </Button>
 
               <p style={{ fontSize: "13px", color: "#777", marginTop: "2vh" }}>
                 or drag and drop files here
               </p>
-               <p className="mt-3" style={{ fontSize: 13, color: '#495057' }}>Max File Size Requirement: 20MB</p>
+              <p className="mt-3" style={{ fontSize: 13, color: '#495057' }}>Max File Size Requirement: 20MB</p>
             </div>
           </label>
 
@@ -391,7 +392,7 @@ function FileUpload(props) {
         </div>
       )}
 
-     
+
     </Box>
   );
 }

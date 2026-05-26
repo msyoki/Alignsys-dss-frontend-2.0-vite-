@@ -45,10 +45,7 @@ const pillBtn = {
     gap: '6px',
 };
 
-/* All icons rendered at a consistent size and with no extra margin —
-   the gap on pillBtn handles the spacing uniformly. */
 const iconStyle = { fontSize: '13px', flexShrink: 0 };
-
 
 const signaturePadStyle = {
     border: '1px dashed #00509d',
@@ -72,9 +69,9 @@ const SignaturePad = () => (
 
 const SignatureDialog = (props) => {
 
-    const [addEmail, setAddEmail] = useState(false);
-    const [addDateStamp, setAddDateStamp] = useState(false);
-    const [addTimeStamp, setAddTimeStamp] = useState(false);
+    const [addEmail, setAddEmail] = useState(true);
+    const [addDateStamp, setAddDateStamp] = useState(true);
+    const [addTimeStamp, setAddTimeStamp] = useState(true);
     const [loading, setLoading] = useState(false)
 
     const selectRef = useRef();
@@ -93,6 +90,7 @@ const SignatureDialog = (props) => {
 
     let [badsignature, setBadSignature] = useState(false);
     let [signatureforsaving, setSignatureForSaving] = useState('')
+    const [signatureLoaded, setSignatureLoaded] = useState(false); // ✅ local flag: true once an image is loaded into the pad
     const [signaturetitle, setSignatureTitle] = useState('')
     const [fullWidth, setFullWidth] = React.useState(true);
     const [maxWidth, setMaxWidth] = React.useState('md');
@@ -110,7 +108,10 @@ const SignatureDialog = (props) => {
 
     const handleChange = (event, newValue) => setValue(newValue);
 
-    let changeSavedSwitch = (e) => setChecked(e.target.checked);
+    let changeSavedSwitch = (e) => {
+        setChecked(e.target.checked);
+        if (!e.target.checked) setSignatureTitle('');
+    };
 
     function onSelect(e) {
         if (checked && signaturetitle === '') {
@@ -179,15 +180,25 @@ const SignatureDialog = (props) => {
         setSelectedSignature(e.target.value);
 
         if (selectedValue) {
-            setStamp(true);
             const sigElem = document.getElementById('signature');
             let signature = sigElem ? getComponent(sigElem, 'signature') : null;
             if (!signature) return;
 
+            // ✅ Ensure the value has a proper data URI prefix — saved signatures
+            //    from the server may be raw base64 without it, which breaks
+            //    both img.src decoding and signature.load()
+            const dataUri = selectedValue.startsWith('data:')
+                ? selectedValue
+                : `data:image/png;base64,${selectedValue}`;
+
+            setSignatureForSaving(dataUri);
+            props.setTempSignature(dataUri);
+            // props.setTempUploadedsignature(dataUri);
+            setSignatureLoaded(true);
+
             const resizeImage = (base64String) => {
-                return new Promise((resolve) => {
+                return new Promise((resolve, reject) => {
                     const img = new Image();
-                    img.src = selectedValue;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         let width = 250;
@@ -195,20 +206,26 @@ const SignatureDialog = (props) => {
                         let height = width / aspectRatio;
                         canvas.width = width;
                         canvas.height = height;
-                        props.setUploadedHeight(height / 2)
-                        props.setUploadedWidth(width / 2)
+                        props.setUploadedHeight(height / 2);
+                        props.setUploadedWidth(width / 2);
                         props.setSignatureWidth(width / 2);
                         props.setSignatureHeight(height / 2);
                         canvas.getContext('2d').drawImage(img, 0, 0, width, height);
                         resolve(canvas.toDataURL('image/png'));
                     };
+                    img.onerror = () => reject(new Error('Image failed to load'));
+                    img.src = base64String;
                 });
             };
 
-            const resizedBase64 = await resizeImage(selectedValue);
-            signature.load(resizedBase64);
-            setSignatureForSaving(selectedValue)
-            props.setTempSignature(selectedValue)
+            try {
+                const resizedBase64 = await resizeImage(dataUri);
+                signature.load(resizedBase64);
+            } catch (err) {
+                // Pad preview failed but state is already set — Place button still works
+                console.error('Signature preview resize failed:', err);
+                signature.load(dataUri);
+            }
         }
     }
 
@@ -222,7 +239,9 @@ const SignatureDialog = (props) => {
             let annotate = addTimeStamp || addDateStamp || addEmail;
             props.setHasAnnotations(true)
             let data = JSON.stringify({
-                "signature": `${props.tempUploadedsignature}`,
+                // ✅ use local signatureforsaving — set synchronously in both uploadsignature
+                //    and previewSaved, so it's always the correct value at click time
+                "signature": `${signatureforsaving}`,
                 "email": `${props.signeremail}`,
                 "signerGuid": `${props.signerguid}`,
                 "signerEmail": addEmail,
@@ -240,17 +259,22 @@ const SignatureDialog = (props) => {
                 data: data
             }).then((response) => {
                 setLoading(false)
-                props.setTempSignature(response.data.signature)
-                setStamp(false)
 
-                if (props.tempUploadedsignature) {
+                if (response.data.signature) {
                     props.pdskPlaceSignature(response.data.signature, "upload", annotate)
                     props.setAddSignature(true)
+                    props.setTempSignature(response.data.signature)
+
                     const sigElem = document.getElementById('signature');
                     let signature = sigElem ? getComponent(sigElem, 'signature') : null;
                     if (signature && !signature.disabled && !signature.isReadOnly) signature.clear();
 
+                    // ✅ reset so button hides after placing
+                    setSignatureLoaded(false)
+                    setSignatureForSaving('')
                     setSelectedSignature('');
+                    setStamp(false)
+
                     props.setOpenDialogSignature(false)
                     if (props.clickedSignatureBox && !props.isStamp) props.setOpenDialogSignBoxes(true)
 
@@ -263,6 +287,8 @@ const SignatureDialog = (props) => {
                             data: JSON.stringify({ "email": props.signeremail, "signature": signatureforsaving, "titile": signaturetitle })
                         }).then(() => setChecked(false)).catch(console.log);
                     }
+                } else {
+                    console.log('Failed to place signature, please try again')
                 }
             }).catch(console.log);
         }
@@ -270,6 +296,8 @@ const SignatureDialog = (props) => {
 
     const handleClose = () => {
         setSelectedSignature('');
+        setSignatureLoaded(false);
+        setSignatureForSaving('');
         props.setOpenDialogSignature(false);
     };
 
@@ -318,6 +346,7 @@ const SignatureDialog = (props) => {
         signature.load(resizedBase64);
         setSignatureForSaving(base64)
         props.setTempSignature(base64)
+        setSignatureLoaded(true) // ✅ local flag — triggers button visibility immediately
     };
 
     function clrBtnClick() {
@@ -326,6 +355,7 @@ const SignatureDialog = (props) => {
         let signature = sigElem ? getComponent(sigElem, 'signature') : null;
         if (signature && !signature.disabled && !signature.isReadOnly) signature.clear();
         props.setTempSignature("");
+        setSignatureLoaded(false) // ✅ reset local flag
     }
 
     const handleUploadChange = (e) => {
@@ -352,6 +382,8 @@ const SignatureDialog = (props) => {
     let showUploadForm = () => {
         props.setSigningPadDisabled(false)
         setSelectedSignature('');
+        setChecked(false);
+        setSignatureTitle('');
         clrBtnClick()
         props.setSigningPadDisabled(true)
     }
@@ -359,12 +391,16 @@ const SignatureDialog = (props) => {
     let showDrawForm = () => {
         props.setSigningPadDisabled(false)
         setSelectedSignature('');
+        setChecked(false);
+        setSignatureTitle('');
         clrBtnClick()
     }
 
     let showSelectForm = () => {
         clrBtnClick()
         setSelectedSignature('');
+        setChecked(false);
+        setSignatureTitle('');
         props.setSigningPadDisabled(true)
     }
 
@@ -413,76 +449,30 @@ const SignatureDialog = (props) => {
         setSignatureToDelete(null);
     };
 
-    /* ─── Reusable button groups ─────────────────────────────────────── */
-
-    const BtnCancel = () => (
-        <Button variant="outlined" sx={pillBtn} onClick={handleClose}>
-            <FaTimes style={iconStyle} />
-            Cancel
-        </Button>
-    );
-
-    const BtnClearPad = () => (
-        <Button variant="outlined" color="warning" sx={pillBtn} onClick={clrBtnClick}>
-            <FaEraser style={iconStyle} />
-            Clear Pad
-        </Button>
-    );
-
-    const BtnPlaceDrawn = () => (
-        <Button variant="contained" color="primary" id="placeDrawn" sx={pillBtn} onClick={onSelect}>
-            {loading ? <CircularProgress size={13} sx={{ color: '#fff', flexShrink: 0 }} /> : <FaMapMarkerAlt style={iconStyle} />}
-            Place Drawn Signature
-        </Button>
-    );
-
-    const BtnPlaceUploaded = ({ label = 'Place Uploaded Signature' }) => (
-        <Button variant="contained" color="primary" sx={pillBtn} onClick={onSelect1}>
-            {loading ? <CircularProgress size={13} sx={{ color: '#fff', flexShrink: 0 }} /> : <FaMapMarkerAlt style={iconStyle} />}
-            {label}
-        </Button>
-    );
-
-    const BtnDeleteSignature = () => selectedsignature ? (
-        <Button
-            variant="contained"
-            sx={{
-                ...pillBtn,
-                backgroundColor: '#ff6b6b',
-                color: '#fff',
-                '&:hover': { backgroundColor: '#ff5a5a' },
-            }}
-            onClick={() => handleDeleteClick(selectedsignature)}
-        >
-            <FaTrashAlt style={iconStyle} />
-            Delete Signature
-        </Button>
-    ) : null;
-
-    const BtnBrowse = () => (
-        <Button variant="contained" color="primary" sx={pillBtn} onClick={browseFromComputer}>
-            Browse from Device
-        </Button>
-    );
-
-
-
-    /* ─── Shared save-switch ─────────────────────────────────────────── */
-    const SaveSwitch = ({ placeholder }) => (
+    /* ─── Inline Save Switch JSX (NOT a sub-component — avoids remount bug) ─── */
+    const renderSaveSwitch = (placeholder) => (
         <FormControl component="fieldset" variant="standard" style={{ width: '100%' }}>
             {checked && (
                 <input
                     type="text"
+                    value={signaturetitle}
                     onChange={(e) => setSignatureTitle(e.target.value)}
                     className="form-control form-control-sm"
                     placeholder={placeholder}
                     required
+                    autoFocus
                 />
             )}
             <FormGroup style={{ fontSize: '12px' }}>
                 <FormControlLabel
                     label={<span style={{ fontSize: '12px' }}>Save {props.isStamp ? 'Stamp' : 'Signature'}?</span>}
-                    control={<Switch checked={checked} onChange={changeSavedSwitch} inputProps={{ 'aria-label': 'controlled' }} />}
+                    control={
+                        <Switch
+                            checked={checked}
+                            onChange={changeSavedSwitch}
+                            inputProps={{ 'aria-label': 'controlled' }}
+                        />
+                    }
                 />
             </FormGroup>
         </FormControl>
@@ -538,6 +528,56 @@ const SignatureDialog = (props) => {
         </div>
     );
 
+    const BtnCancel = () => (
+        <Button variant="outlined" sx={pillBtn} onClick={handleClose}>
+            <FaTimes style={iconStyle} />
+            Cancel
+        </Button>
+    );
+
+    const BtnClearPad = () => (
+        <Button variant="outlined" color="warning" sx={pillBtn} onClick={clrBtnClick}>
+            <FaEraser style={iconStyle} />
+            Clear Pad
+        </Button>
+    );
+
+    const BtnPlaceDrawn = () => (
+        <Button variant="contained" color="primary" id="placeDrawn" sx={pillBtn} onClick={onSelect}>
+            {loading ? <CircularProgress size={13} sx={{ color: '#fff', flexShrink: 0 }} /> : <FaMapMarkerAlt style={iconStyle} />}
+            Place Drawn Signature
+        </Button>
+    );
+
+    const BtnPlaceUploaded = ({ label = 'Place Uploaded Signature' }) => (
+        <Button variant="contained" color="primary" sx={pillBtn} onClick={onSelect1}>
+            {loading ? <CircularProgress size={13} sx={{ color: '#fff', flexShrink: 0 }} /> : <FaMapMarkerAlt style={iconStyle} />}
+            {label}
+        </Button>
+    );
+
+    const BtnDeleteSignature = () => selectedsignature ? (
+        <Button
+            variant="contained"
+            sx={{
+                ...pillBtn,
+                backgroundColor: '#ff6b6b',
+                color: '#fff',
+                '&:hover': { backgroundColor: '#ff5a5a' },
+            }}
+            onClick={() => handleDeleteClick(selectedsignature)}
+        >
+            <FaTrashAlt style={iconStyle} />
+            Delete Signature
+        </Button>
+    ) : null;
+
+    const BtnBrowse = () => (
+        <Button variant="contained" color="primary" sx={pillBtn} onClick={browseFromComputer}>
+            Browse from Device
+        </Button>
+    );
+
     return (
         <>
             <Dialog
@@ -574,11 +614,12 @@ const SignatureDialog = (props) => {
                                     <SignaturePad />
 
                                     <TabPanel value="1">
-                                        <SaveSwitch placeholder="Enter stamp title here" />
+                                        {/* ✅ Inlined — no remount on keystroke */}
+                                        {renderSaveSwitch("Enter stamp title here")}
                                         <BtnRow>
-                                            {props.tempUploadedsignature !== '' && !stamp ? (
+                                            {signatureLoaded ? (
                                                 <>
-                                                    <BtnPlaceDrawn />
+                                                    <BtnPlaceUploaded label="Place Uploaded Stamp" />
                                                     <BtnClearPad />
                                                     <BtnCancel />
                                                 </>
@@ -590,7 +631,7 @@ const SignatureDialog = (props) => {
 
                                     <TabPanel value="2">
                                         <BtnRow>
-                                            {props.tempUploadedsignature !== '' && stamp ? (
+                                            {signatureLoaded && selectedsignature ? (
                                                 <>
                                                     <BtnPlaceUploaded label="Place Selected Stamp" />
                                                     <BtnCancel />
@@ -655,7 +696,8 @@ const SignatureDialog = (props) => {
 
                                         {/* ── Draw tab ── */}
                                         <TabPanel value="1">
-                                            <SaveSwitch placeholder="Enter signature title here" />
+                                            {/* ✅ Inlined — no remount on keystroke */}
+                                            {renderSaveSwitch("Enter signature title here")}
                                             <BtnRow>
                                                 <BtnPlaceDrawn />
                                                 <BtnClearPad />
@@ -665,12 +707,15 @@ const SignatureDialog = (props) => {
 
                                         {/* ── Upload tab ── */}
                                         <TabPanel value="2">
-                                            <SaveSwitch placeholder="Enter signature title here" />
+                                            {/* ✅ Inlined — no remount on keystroke */}
+                                            {renderSaveSwitch("Enter signature title here")}
                                             <BtnRow>
-                                                {props.tempUploadedsignature !== '' && stamp ? (
+                                                {/* ✅ Fix: use local signatureLoaded flag — props.tempSignature update depends on parent re-render */}
+                                                {signatureLoaded ? (
                                                     <>
-                                                        <BtnCancel />
                                                         <BtnPlaceUploaded />
+                                                        <BtnClearPad />
+                                                        <BtnCancel />
                                                     </>
                                                 ) : (
                                                     <BtnCancel />
@@ -681,7 +726,8 @@ const SignatureDialog = (props) => {
                                         {/* ── Select tab ── */}
                                         <TabPanel value="3">
                                             <BtnRow>
-                                                {props.tempUploadedsignature !== '' && selectedsignature ? (
+                                                {/* ✅ Fix: use local signatureLoaded flag + selectedsignature */}
+                                                {signatureLoaded && selectedsignature ? (
                                                     <>
                                                         <BtnPlaceUploaded label="Place Selected Signature" />
                                                         <BtnCancel />

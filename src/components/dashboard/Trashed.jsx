@@ -165,7 +165,7 @@ function Trashed(props) {
         document={document}
         documentsigners={documentsigners}
         refreshdata={props.refreshdata}
-        type={'upload'}
+        type={'trashed'}
       />
 
 

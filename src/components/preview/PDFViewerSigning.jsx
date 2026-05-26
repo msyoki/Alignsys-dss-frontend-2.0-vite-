@@ -999,7 +999,7 @@ const PDFViewerSigning = (props) => {
   return (
     <>
       <SignSignatureBoxesDialog handleAnnotation={addPredefinedAnnotationsWithPageDims} open={props.openDialogSignBoxes} setOpen={props.setOpenDialogSignBoxes} />
-      <MultipageInfoDialog open={openMultipageInfoDialog} setOpen={setOpenMultipageInfoDialog} stamp={props.isStamp} />
+      <MultipageInfoDialog open={openMultipageInfoDialog} setOpen={setOpenMultipageInfoDialog} stamp={props.isStamp} addMultipageAnnotation={addMultipageAnnotation} />
       <DeleteAnnotationDialog findAnnotationById={id => props.annotations.find(a => a.id === id)} deleteAnnotation={deleteAnnotation} selectedAnnotationId={selectedAnnotationId} setDeleteAnnotationDialog={setDeleteAnnotationDialog} deleteAnnotationDialog={deleteAnnotationDialog} />
 
       {/* Controls Section */}

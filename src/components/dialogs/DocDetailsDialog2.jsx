@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
   Button,
   Dialog,
@@ -8,7 +8,9 @@ import {
   Tooltip,
 } from '@mui/material';
 
-import { FaRegWindowClose } from "react-icons/fa";
+import { FaRegWindowClose, FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaPaperPlane, FaBan, FaCircle, FaSpinner } from "react-icons/fa";
+import { FaDownload } from "react-icons/fa6";
+import { RiMailSendLine } from "react-icons/ri";
 import axios from 'axios';
 import AuthContext from '../../context/Authcontext.jsx';
 import DocExpiryDate from '../GetExpiryDate.jsx';
@@ -33,6 +35,9 @@ const DocDetailsDialog2 = ({
   const [alertMsg, setAlertMsg] = useState('');
   const [editingSigner, setEditingSigner] = useState(null);
   const [newEmail, setNewEmail] = useState('');
+  const [isLoadingSubstitute, setIsLoadingSubstitute] = useState(false);
+  const [isLoadingResend, setIsLoadingResend] = useState(false);
+  const [isLoadingVoid, setIsLoadingVoid] = useState(false);
   const isSubstitutionAllowed =
     document.signedcomplete !== 'True' && document.declined !== 'True';
 
@@ -45,7 +50,19 @@ const DocDetailsDialog2 = ({
     setOpenAlert(true);
   };
 
+  // Auto-hide alert after 5 seconds
+  useEffect(() => {
+    if (openAlert) {
+      const timer = setTimeout(() => {
+        setOpenAlert(false);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [openAlert]);
+
   const handleVoiding = async () => {
+    setIsLoadingVoid(true);
     try {
       await axios.post(`${constants.devApi2BaseUrl}/api/SendSigning/OwnerDecline`, {
         fileGuid: document.guid,
@@ -59,22 +76,27 @@ const DocDetailsDialog2 = ({
     } catch (error) {
       showAlert('Failed to void document.', 'error');
       console.error('Error:', error);
+    } finally {
+      setIsLoadingVoid(false);
     }
   };
 
   const resendSigner = async () => {
+    setIsLoadingResend(true);
     try {
       await axios.post(`${constants.devApi2BaseUrl}/api/signers/Resend`, {
         fileGuid: document.guid,
       });
-      handleClose();
       showAlert('Signer request resent successfully.', 'success');
       setTimeout(() => {
+        refreshdata();
         handleClose();
       }, 2000);
     } catch (error) {
       showAlert('Failed to resend signer request.', 'error');
       console.error('Error resending signer request:', error);
+    } finally {
+      setIsLoadingResend(false);
     }
   };
 
@@ -95,6 +117,7 @@ const DocDetailsDialog2 = ({
   };
 
   const handleSwapSigner = async (oldEmail, newEmail) => {
+    setIsLoadingSubstitute(true);
     try {
       const payload = {
         email: newEmail,
@@ -123,6 +146,8 @@ const DocDetailsDialog2 = ({
     } catch (err) {
       console.error('Error swapping signer:', err);
       showAlert('Failed to update signer', 'error');
+    } finally {
+      setIsLoadingSubstitute(false);
     }
   };
 
@@ -168,7 +193,9 @@ const DocDetailsDialog2 = ({
               </p>
             )}
             {openAlert && alertMsg && (
-              <SimpleAlert openAlert={openAlert} alertMsg={alertMsg} alertSeverity={alertSeverity} />
+              <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+                <SimpleAlert openAlert={openAlert} alertMsg={alertMsg} alertSeverity={alertSeverity} />
+              </div>
             )}
 
             {/* Signers List */}
@@ -178,7 +205,15 @@ const DocDetailsDialog2 = ({
                 style={{ maxHeight: '20vh', overflowY: 'auto', backgroundColor: '#ecf4fc' }}
               >
 
-                {documentsigners.map((s, index) => (
+                {[...documentsigners].sort((a, b) => {
+                  // Priority: 1. Signed, 2. Current Signer, 3. Queued
+                  const getPriority = (signer) => {
+                    if (signer.signed === 'True') return 1;
+                    if (signer.current_signer === 'True') return 2;
+                    return 3;
+                  };
+                  return getPriority(a) - getPriority(b);
+                }).map((s, index) => (
                   <div
                     key={index}
                     className={`d-flex justify-content-between align-items-center p-1 ${documentsigners.length > 1 && index !== documentsigners.length - 1
@@ -206,41 +241,57 @@ const DocDetailsDialog2 = ({
                           style={{ fontSize: '13px' }}
                         />
                         <div className="d-flex">
-                          <Button
-                            type="submit"
-                            variant="contained"
-                            size="small"
-                            sx={{
-                              borderRadius: 5,
-                              mr: 1,
-                              textTransform: 'none',
-                              fontSize: '13px',
-                              backgroundColor: '#2757aa',
-                              '&:hover': {
-                                backgroundColor: '#1e4a93',
-                              },
-                            }}
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={cancelEdit}
-                            sx={{
-                              borderRadius: 5,
-                              textTransform: 'none',
-                              fontSize: '13px',
-                              color: '#2757aa',
-                              borderColor: '#2757aa',
-                              '&:hover': {
-                                backgroundColor: '#e6eefc',
-                                borderColor: '#1e4a93',
-                              },
-                            }}
-                          >
-                            Cancel
-                          </Button>
+                          <Tooltip title="Save changes">
+                            <span>
+                              <Button
+                                type="submit"
+                                variant="contained"
+                                size="small"
+                                disabled={isLoadingSubstitute}
+                                sx={{
+                                  borderRadius: 5,
+                                  mr: 1,
+                                  textTransform: 'none',
+                                  fontSize: '13px',
+                                  backgroundColor: '#2757aa',
+                                  '&:hover': {
+                                    backgroundColor: '#1e4a93',
+                                  },
+                                }}
+                              >
+                                {isLoadingSubstitute ? (
+                                  <>
+                                    <FaSpinner className="fa-spin me-1" /> Saving...
+                                  </>
+                                ) : (
+                                  'Save'
+                                )}
+                              </Button>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Cancel editing">
+                            <span>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={cancelEdit}
+                                disabled={isLoadingSubstitute}
+                                sx={{
+                                  borderRadius: 5,
+                                  textTransform: 'none',
+                                  fontSize: '13px',
+                                  color: '#2757aa',
+                                  borderColor: '#2757aa',
+                                  '&:hover': {
+                                    backgroundColor: '#e6eefc',
+                                    borderColor: '#1e4a93',
+                                  },
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </span>
+                          </Tooltip>
                         </div>
                       </form>
                     ) : (
@@ -250,39 +301,39 @@ const DocDetailsDialog2 = ({
                         <span className="text-muted d-flex align-items-center">
                           {s.signed === 'True' ? (
                             <>
-                              signed <i className="fas fa-check-circle text-success mx-1"></i>:
+                              signed <FaCheckCircle className="text-success mx-1" />:
                               {s.signed_time_stamp}
                             </>
                           ) : (
                             <>
                               {s.current_signer === 'True' ? 'Current Signer' : 'Queued'}
-                              <i
-                                className={
-                                  s.current_signer === 'True'
-                                    ? 'fas fa-envelope-open-text text-danger mx-1'
-                                    : 'fas fa-envelope text-warning mx-1'
-                                }
-                              ></i>
+                              {s.current_signer === 'True' ? (
+                                <FaEnvelopeOpenText className="text-danger mx-1" />
+                              ) : (
+                                <FaEnvelope className="text-warning mx-1" />
+                              )}
                               {document.owner === user.email && isSubstitutionAllowed && (
-                                <Button
-                                  variant="outlined"
-                                  size="small"
-                                  onClick={() => startEdit(s.email)}
-                                  sx={{
-                                    borderRadius: 5,
-                                    ml: 1,
-                                    textTransform: 'none',
-                                    fontSize: '12px',
-                                    color: '#2757aa',
-                                    borderColor: '#2757aa',
-                                    '&:hover': {
-                                      backgroundColor: '#e6eefc',
-                                      borderColor: '#1e4a93',
-                                    },
-                                  }}
-                                >
-                                  Substitute
-                                </Button>
+                                <Tooltip title="Replace this signer with another email">
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => startEdit(s.email)}
+                                    sx={{
+                                      borderRadius: 5,
+                                      ml: 1,
+                                      textTransform: 'none',
+                                      fontSize: '12px',
+                                      color: '#2757aa',
+                                      borderColor: '#2757aa',
+                                      '&:hover': {
+                                        backgroundColor: '#e6eefc',
+                                        borderColor: '#1e4a93',
+                                      },
+                                    }}
+                                  >
+                                    Substitute
+                                  </Button>
+                                </Tooltip>
                               )}
 
                             </>
@@ -301,31 +352,43 @@ const DocDetailsDialog2 = ({
 
         {/* Action Icons */}
         <div className="d-flex justify-content-center my-3 gap-3">
-          {document.owner === user.email && (
+          {document.owner === user.email && document.signedcomplete !== 'True' && document.declined !== 'True' && documentsigners.length > 0 && type !== 'trashed' && (
             <Tooltip title="Resend Mail">
-              <i
-                onClick={resendSigner}
-                className="fa-solid fa-paper-plane mx-2"
-                style={{ fontSize: '30px', color: '#2757aa', cursor: 'pointer' }}
-              ></i>
+              <span style={{ position: 'relative', display: 'inline-block' }}>
+                {isLoadingResend ? (
+                  <FaSpinner className="fa-spin mx-2" style={{ fontSize: '30px', color: '#2757aa' }} />
+                ) : (
+                  <RiMailSendLine
+                    onClick={resendSigner}
+                    className="mx-2"
+                    style={{ fontSize: '30px', color: '#2757aa', cursor: 'pointer' }}
+                  />
+                )}
+              </span>
             </Tooltip>
           )}
           <Tooltip title="Download">
-            <i
-              className="fas fa-download mx-2"
+            <FaDownload
+              className="mx-2"
               style={{ fontSize: '30px', color: '#2757aa', cursor: 'pointer' }}
               onClick={() =>
                 window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${document.guid}`)
               }
-            ></i>
+            />
           </Tooltip>
-          {document.owner === user.email && (type === 'inbox' || type === 'outbox') && (
+          {document.owner === user.email && (type === 'inbox' || type === 'outbox' ) && (
             <Tooltip title={type === 'outbox' ? 'Recall Document' : 'Void Document'}>
-              <i
-                onClick={handleVoiding}
-                className="fas fa-ban mx-2"
-                style={{ fontSize: '30px', color: '#ff4f4f', cursor: 'pointer' }}
-              ></i>
+              <span style={{ position: 'relative', display: 'inline-block' }}>
+                {isLoadingVoid ? (
+                  <FaSpinner className="fa-spin mx-2" style={{ fontSize: '30px', color: '#ff4f4f' }} />
+                ) : (
+                  <FaBan
+                    onClick={handleVoiding}
+                    className="mx-2"
+                    style={{ fontSize: '30px', color: '#ff4f4f', cursor: 'pointer' }}
+                  />
+                )}
+              </span>
             </Tooltip>
           )}
         </div>
@@ -343,16 +406,20 @@ const DocDetailsDialog2 = ({
               <span>Status:</span>
               {document.signedcomplete === 'True' ? (
                 <span>
-                  <i className="fas fa-circle mx-1 text-success"></i> Signing Completed
+                  <FaCircle className="mx-1 text-success" /> Signing Completed
                 </span>
               ) : document.declined === 'True' ? (
                 <span>
-                  <i className="fas fa-circle mx-1 text-danger"></i> Voided
+                  <FaCircle className="mx-1 text-danger" /> Voided
+                </span>
+              ) :  document.trashed === 'True' ? (
+                <span>
+                  <FaCircle className="mx-1 text-warning" /> Trashed
                 </span>
               ) : (
-                <span>
-                  <i className="fas fa-circle mx-1 text-warning"></i> Pending Signing
-                </span>
+              <span>
+                <FaCircle className="mx-1 text-warning" /> Pending Signing
+              </span>
               )}
             </p>
             <p className="mt-1" style={{ fontSize: '11px' }}>

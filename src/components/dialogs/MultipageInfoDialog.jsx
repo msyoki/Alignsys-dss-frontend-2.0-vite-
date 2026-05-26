@@ -3,18 +3,18 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
-
 import Slide from '@mui/material/Slide';
-import { ButtonComponent } from '@syncfusion/ej2-react-buttons';
 
+import { FaInfoCircle, FaCheck } from 'react-icons/fa';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
-    return <Slide direction="up" ref={ref} {...props} />
-})
+    return <Slide direction="up" ref={ref} {...props} />;
+});
 
 function MultipageInfoDialog(props) {
 
     const handleClose = () => {
+        props.addMultipageAnnotation()
         props.setOpen(false);
     };
 
@@ -28,25 +28,53 @@ function MultipageInfoDialog(props) {
                 aria-describedby="alert-dialog-slide-description"
             >
                 <DialogContent>
-   
+                    <DialogContentText
+                        id="alert-dialog-slide-description"
+                        className='text-center'
+                    >
+                        <FaInfoCircle
+                            style={{
+                                fontSize: "40px",
+                                color: '#1C4690'
+                            }}
+                        />
 
-                    <DialogContentText id="alert-dialog-slide-description" className='text-center'>
-                    <i class="fas fa-info-circle " style={{ fontSize: "50px" ,color:'#1C4690'}}></i>
-                        <p className='m-4 text-dark' style={{ fontSize: "12px" }}>
-                         You have selected multipage {props.isStamp?'stamping':'signing'}. Once you're satisfied with the placement of the {props.stamp ? "stamp" : "signature"}, click the '{props.stamp ? "Stamping" : "Sign"} All Pages' button to apply it to all pages, or use the 'Abort Mutipage {props.isStamp?'Stamp':'Signing'}' button to discard option.
+                        <p
+                            className='m-4 text-dark'
+                            style={{ fontSize: "12px" }}
+                        >
+                            You have selected multipage {props.isStamp ? 'stamping' : 'signing'}.
+                            Once you're satisfied with the placement of the {props.stamp ? "stamp" : "signature"},
+                            click the '{props.stamp ? "Stamping" : "Sign"} All Pages' button to apply it to all pages,
+                            or use the 'Abort Multipage {props.isStamp ? 'Stamp' : 'Signing'}'
+                            button to discard option.
                         </p>
                     </DialogContentText>
+
                     <div className='d-flex justify-content-center'>
-                        <ButtonComponent
-                            cssClass="e-custom-light"
-                            className='m-2 p-2'
-                            style={{ textTransform: 'none', fontWeight: 'lighter', fontSize: '15px' }}
+                        <Button
+                            variant="contained"
+                            color='inherit'
+                            className='m-2'
                             onClick={handleClose}
+                            sx={{
+                                textTransform: 'none',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                borderRadius: '999px',
+                                px: 1.8,
+                                py: 0.8,
+                                minHeight: 34,
+                                boxShadow: 'none',
+                                
+
+                            }}
                         >
-                            <span className='mx-2'>
-                                <i className="fas fa-check mx-1"></i> i understand, proceed !
+                            <span className='mx-2 d-flex align-items-center' style={{ color: '#1C4690' }}>
+                                <FaCheck style={{ marginRight: '6px' }} />
+                                I understand, proceed!
                             </span>
-                        </ButtonComponent>
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

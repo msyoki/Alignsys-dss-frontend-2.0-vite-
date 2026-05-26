@@ -318,7 +318,7 @@ const PDFViewerPreview2 = ({
 
     return (
         <>
-            <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} />
+            {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
 
             {/* ── Toolbar ── */}
             <div className="controls bg-white shadow-lg text-dark p-1 d-flex align-items-center justify-content-between">

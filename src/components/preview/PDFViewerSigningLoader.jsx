@@ -278,8 +278,8 @@ function PDFViewerSigningLoader(props) {
 
     return (
         <>
-            <LoadingDialog opendialogloading={annotatingDocument} msg={`Updating Document`} />
-            <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} />
+            <LoadingDialog opendialogloading={annotatingDocument} msg={`Signing Document...`} />
+            {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
             <OtpDialog
                 time={props.time}
                 setTime={props.setTime}
@@ -440,10 +440,11 @@ function PDFViewerSigningLoader(props) {
                                                         variant="outlined"
                                                         color="inherit"
                                                         onClick={placeSignatureAgain}
-                                                        startIcon={<FaMapMarkerAlt size={iconSize} />}
-                                                        sx={pillBtn}
+                                                        startIcon={<FaMapMarkerAlt style={{ color: '#1C4690' }} size={iconSize} />}
+                                                        sx={{ ...pillBtn }}
                                                     >
-                                                        Place {isStamp ? 'Stamp' : 'Signature'} Again
+                                                        <span style={{ color: '#1C4690' }}> Place {isStamp ? 'Stamp' : 'Signature'} Again</span>
+                                                       
                                                     </Button>
                                                 </Tooltip>
                                             )}

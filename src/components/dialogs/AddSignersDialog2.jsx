@@ -1,5 +1,5 @@
 import React, { useRef, useContext, useState } from 'react';
-import { FaUserCircle, FaMobile, FaTrashAlt, FaArrowRight, FaUserPlus, FaPlusCircle, FaEnvelopeOpenText, FaUsers, FaNetworkWired, FaMailBulk } from 'react-icons/fa';
+import { FaUserCircle, FaMobileAlt, FaTimes, FaTrashAlt, FaArrowRight, FaUserPlus, FaPlusCircle, FaEnvelopeOpenText, FaUsers, FaNetworkWired, FaMailBulk } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
 import FormControl from '@mui/material/FormControl';
@@ -20,6 +20,129 @@ import Box from '@mui/material/Box';
 import ListSubheader from '@mui/material/ListSubheader';
 import TimedAlert from '../TimedAlert.jsx';
 
+
+
+const AddSignerForm = React.memo(({
+  onSubmit,
+  checked,
+  setChecked,
+  loadingAddSigner,
+  emailInputRef,
+  phoneNumberRef,
+  phoneCodeRef,
+}) => {
+  return (
+    <form onSubmit={onSubmit}>
+      <div className="rounded mb-2 mt-2">
+        {/* <h5 className="mb-2" style={{ fontSize: 13, color: '#2757aa' }}>
+          <FaUserPlus className="me-2" />Add new signer
+        </h5> */}
+
+
+
+        <div className="d-flex align-items-center gap-2 mb-2 flex-wrap" style={{ fontSize: 13 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+              alignItems: 'center',
+              gap: '8px',
+              width: '100%',
+            }}
+          >
+            <input
+              ref={emailInputRef}
+              className="form-control form-control-sm"
+              type="email"
+              name="to"
+              placeholder="Email e.g. jdoe@mail.com"
+              required
+              aria-label="Signer email"
+              style={{
+                flex: 1,
+                maxWidth: '280px',
+                minWidth: '220px',
+                height: '36px',
+                fontSize: '13px',
+              }}
+            />
+
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              size="small"
+              disabled={loadingAddSigner}
+              startIcon={<FaPlusCircle size={13} />}
+              style={{
+                backgroundColor: '#2757aa',
+                textTransform: 'none',
+                fontSize: '12px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+                fontWeight: 300,
+              }}
+            >
+              Add Signer
+            </Button>
+          </div>
+        </div>
+        <label
+          htmlFor="otpSwitch"
+          className="text-dark mb-0"
+          style={{ userSelect: 'none', whiteSpace: 'nowrap', fontSize: 13 }}
+        >
+          Enable SMS OTP verification
+        </label>
+
+        <Switch
+          id="otpSwitch"
+          checked={checked}
+          onChange={e => setChecked(e.target.checked)}
+          inputProps={{ 'aria-label': 'Enable SMS OTP verification' }}
+          className="ms-1"
+          size="small"
+        />
+
+        {checked && (
+          <div className="d-flex gap-1 mb-2" style={{ maxWidth: 300 }}>
+            <select
+              ref={phoneCodeRef}
+              className="form-control form-control-sm"
+              name="phoneCode"
+              style={{ maxWidth: 100, padding: '0.25rem 0.5rem' }}
+              aria-label="Select country code"
+            >
+              <option value="+254">Kenya (+254)</option>
+              {jsonPhoneCodesData.map((item, index) => (
+                <option key={index} value={item.dial_code}>
+                  {item.name} ({item.dial_code})
+                </option>
+              ))}
+            </select>
+
+            <input
+              ref={phoneNumberRef}
+              type="tel"
+              className="form-control form-control-sm"
+              maxLength={15}
+              name="phoneNumber"
+              placeholder="e.g. 722XXXXXX"
+              pattern="[1-9][0-9]{6,14}"
+              title="Enter a valid phone number without the country code"
+              aria-label="Phone number"
+              style={{ minWidth: 160, padding: '0.25rem 0.5rem' }}
+            />
+          </div>
+        )}
+      </div>
+    </form>
+  );
+});
 
 const AddSignersDialog2 = (props) => {
 
@@ -314,10 +437,10 @@ const AddSignersDialog2 = (props) => {
             <span className="me-2 text-dark">{item.email}</span>
             {item.phone && (
               <Tooltip title="OTP authentication enabled" placement="top">
-                <FaMobile className="text-primary me-2" />
+                <FaMobileAlt className="text-primary me-2" />
               </Tooltip>
             )}
-            <FaTrashAlt
+            <FaTimes
               className="text-danger"
               style={{ cursor: 'pointer' }}
               onClick={e => removeSigner(e, item.email)}
@@ -334,151 +457,10 @@ const AddSignersDialog2 = (props) => {
     </div>
   );
 
-  const AddSignerForm = ({
-    onSubmit, checked, setChecked, emailInputRef, phoneNumberRef, phoneCodeRef
-  }) => (
-    <form onSubmit={onSubmit}>
-      <div className="rounded mb-2">
-        <h5 className="mb-2" style={{ fontSize: 13, color: '#2757aa' }}>
-          <FaUserPlus className="me-2" />Add new signer
-        </h5>
-            <label htmlFor="otpSwitch" className="text-dark mb-0" style={{ userSelect: 'none', whiteSpace: 'nowrap', fontSize: 13 }}>
-            Enable SMS OTP verification
-          </label>
-          <Switch
-            id="otpSwitch"
-            checked={checked}
-            onChange={e => setChecked(e.target.checked)}
-            inputProps={{ 'aria-label': 'Enable SMS OTP verification' }}
-            className="ms-1"
-            size="small"
-          />
-    
-        {checked && (
-          <div className="d-flex gap-1 mb-2" style={{ maxWidth: 300 }}>
-            <select
-              ref={phoneCodeRef}
-              className="form-control form-control-sm"
-              name="phoneCode"
-              style={{ maxWidth: 100, padding: '0.25rem 0.5rem' }}
-              aria-label="Select country code"
-            >
-              <option value="+254">Kenya (+254)</option>
-              {jsonPhoneCodesData.map((item, index) => (
-                <option key={index} value={item.dial_code}>
-                  {item.name} ({item.dial_code})
-                </option>
-              ))}
-            </select>
-            <input
-              ref={phoneNumberRef}
-              type="tel"
-              className="form-control form-control-sm"
-              maxLength={15}
-              name="phoneNumber"
-              placeholder="e.g. 722XXXXXX"
-              pattern="[1-9][0-9]{6,14}"
-              title="Enter a valid phone number without the country code"
-              aria-label="Phone number"
-              style={{ minWidth: 160, padding: '0.25rem 0.5rem' }}
-            />
 
-          </div>
-        )}
-        {/* <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-               style={{
-              backgroundColor: '#2757aa',
-              textTransform: 'none',
-              fontSize: '12px',
-              height: '36px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '0 12px',
-              whiteSpace: 'nowrap',
-              fontWeight: 300,
-            }}
-            startIcon={<FaPlusCircle />}
-          >
-            Add Signer
-          </Button>
-        </div> */}
-            <div className="d-flex align-items-center gap-2 mb-2 flex-wrap" style={{ fontSize: 13 }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-start',
-              alignItems: 'center',
-              gap: '8px',
-              width: '100%',
-            }}
-          >
-            <input
-              ref={emailInputRef}
-              className="form-control form-control-sm"
-              type="email"
-              name="to"
-              placeholder="Email e.g. jdoe@mail.com"
-              required
-              aria-label="Signer email"
-              style={{
-                flex: 1,
-                maxWidth: '280px',
-                minWidth: '220px',
-                height: '36px',
-                fontSize: '13px',
-              }}
-            />
-
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              size="small"
-              disabled={loadingAddSigner}
-              startIcon={<FaPlusCircle size={13} />}
-              style={{
-                backgroundColor: '#2757aa',
-                textTransform: 'none',
-                fontSize: '12px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0 12px',
-                whiteSpace: 'nowrap',
-                fontWeight: 300,
-              }}
-            >
-              Add Signer
-            </Button>
-          </div>
-      
-        </div>
-
-
-
-      </div>
-    </form>
-  );
 
   return (
     <>
-
-
-      <TimedAlert
-        open={openalert}
-        onClose={() => setOpenAlert(false)}
-        severity={alertseverity}
-        message={alertmsg}
-        setSeverity={setAlertSeverity}
-        setMessage={setAlertMsg}
-      />
-
       <SignersBoxDialog
         selectedAnnotationId={selectedAnnotationId}
         setSelectedAnnotationId={setSelectedAnnotationId}
@@ -491,7 +473,14 @@ const AddSignersDialog2 = (props) => {
         signatureBoxes={signatureBoxes}
         setSignatureBoxes={setSignatureBoxes}
       />
-
+      <TimedAlert
+        open={openalert}
+        onClose={() => setOpenAlert(false)}
+        severity={alertseverity}
+        message={alertmsg}
+        setSeverity={setAlertSeverity}
+        setMessage={setAlertMsg}
+      />
       <Dialog
         open={props.opendialogaddsigners}
 
@@ -500,15 +489,73 @@ const AddSignersDialog2 = (props) => {
         maxWidth="md"
       >
         <div className='row m-0' style={{ width: '100%' }}>
-          <div className='col-md-12 col-lg-5' style={{ backgroundColor: '#fff', color: 'white' }}>
-            <label className='my-3 text-dark input-group' style={{ fontSize: '14px' }}>
-              <div className='p-3'>
-                <span style={{ color: '#2757aa' }}>Instructions</span>: Choose a workflow to use as is or add more signers. You can also create a new workflow or add signers without selecting one.
+          <div
+            className="col-md-12 col-lg-5"
+            style={{
+              backgroundColor: "#fff",
+              color: "#000",
+              padding: "12px 14px",
+            }}
+          >
+            {/* Step 1 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div
+                style={{
+                  fontSize: "14px",
+                  color: "#2757aa",
+                  fontWeight: 500,
+                  marginBottom: "2px",
+                  marginTop: "5px"
+                }}
+              >
+                1. Add signer(s)' emails below in the order you would like them to sign
               </div>
+
+              <AddSignerForm
+                onSubmit={addMailList}
+                checked={checked}
+                setChecked={setChecked}
+                emailInputRef={emailInputRef}
+                phoneNumberRef={phoneNumberRef}
+                phoneCodeRef={phoneCodeRef}
+                loadingAddSigner={loadingAddSigner}
+              />
+            </div>
+
+            {/* OR divider */}
+            <div
+              style={{
+                textAlign: "center",
+                margin: "6px 0",
+                fontSize: "13.5px",
+                color: "#2757aa",
+                fontWeight: 500,
+              }}
+            >
+              OR
+            </div>
+
+            {/* Step 2 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div
+                style={{
+                  fontSize: "14px",
+                  color: "#2757aa",
+                  fontWeight: 500,
+                  marginBottom: "2px",
+                }}
+              >
+                2. Select an existing workflow below
+              </div>
+
               <FormControl
                 variant="filled"
-                style={{ width: "100%", marginBottom: '10px', marginTop: '10px' }}
                 size="small"
+                style={{
+                  width: "100%",
+                  marginTop: "4px",
+                  marginBottom: "4px",
+                }}
               >
                 <InputLabel
                   id="merged-select-label"
@@ -516,6 +563,7 @@ const AddSignersDialog2 = (props) => {
                 >
                   Select Workflow
                 </InputLabel>
+
                 <Select
                   ref={selectRef}
                   labelId="merged-select-label"
@@ -524,77 +572,114 @@ const AddSignersDialog2 = (props) => {
                   onChange={AddWorkflow}
                   name="wf"
                   size="small"
-                  style={{ backgroundColor: 'white' }}
-                  inputProps={{ style: { backgroundColor: 'white' } }}
+                  style={{ backgroundColor: "white" }}
+                  inputProps={{ style: { backgroundColor: "white" } }}
                 >
-                  <ListSubheader disabled style={{ fontSize: '13px', backgroundColor: '#f0f0f0', color: '#2757aa' }}>
+                  <ListSubheader
+                    disabled
+                    style={{
+                      fontSize: "13px",
+                      backgroundColor: "#f0f0f0",
+                      color: "#2757aa",
+                    }}
+                  >
                     Personal Workflows ({props.workflows.length})
                   </ListSubheader>
+
                   {props.workflows.map((wf) => (
-                    <MenuItem key={`personal-${wf.id}`} value={`personal-${wf.id}`} style={{ fontSize: "12.5px" }}>
-                      <Box display="flex" justifyContent="space-between" alignItems="center" width="100%">
+                    <MenuItem
+                      key={`personal-${wf.id}`}
+                      value={`personal-${wf.id}`}
+                      style={{ fontSize: "12.5px" }}
+                    >
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        width="100%"
+                      >
                         <span>{wf.title}</span>
+
                         <Tooltip title="Delete workflow">
                           <span>
                             <FaTrashAlt
                               className="text-danger"
-                              style={{ cursor: loadingDeleteWorkflow ? 'not-allowed' : 'pointer', marginLeft: '8px' }}
-                              onClick={loadingDeleteWorkflow ? undefined : (e) => {
-                                e.stopPropagation();
-                                deleteWorkflow(wf.id);
+                              style={{
+                                cursor: loadingDeleteWorkflow
+                                  ? "not-allowed"
+                                  : "pointer",
+                                marginLeft: "8px",
                               }}
+                              onClick={
+                                loadingDeleteWorkflow
+                                  ? undefined
+                                  : (e) => {
+                                    e.stopPropagation();
+                                    deleteWorkflow(wf.id);
+                                  }
+                              }
                             />
+
                             {loadingDeleteWorkflow && (
-                              <CircularProgress size={14} color="inherit" style={{ marginLeft: 4, verticalAlign: 'middle' }} />
+                              <CircularProgress
+                                size={14}
+                                style={{ marginLeft: 4, verticalAlign: "middle" }}
+                              />
                             )}
                           </span>
                         </Tooltip>
                       </Box>
                     </MenuItem>
                   ))}
-                  <ListSubheader disabled style={{ fontSize: '13px', backgroundColor: '#f0f0f0', color: '#2757aa' }}>
+
+                  <ListSubheader
+                    disabled
+                    style={{
+                      fontSize: "13px",
+                      backgroundColor: "#f0f0f0",
+                      color: "#2757aa",
+                    }}
+                  >
                     Organization Workflows ({props.organizationWorkflows.length})
                   </ListSubheader>
+
                   {props.organizationWorkflows.map((wf) => (
-                    <MenuItem key={`org-${wf.id}`} value={`org-${wf.id}`} style={{ fontSize: "12.5px" }}>
+                    <MenuItem
+                      key={`org-${wf.id}`}
+                      value={`org-${wf.id}`}
+                      style={{ fontSize: "12.5px" }}
+                    >
                       {wf.title}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
-            </label>
+            </div>
 
-            <AddSignerForm
-              onSubmit={addMailList}
-              checked={checked}
-              setChecked={setChecked}
-              emailInputRef={emailInputRef}
-              phoneNumberRef={phoneNumberRef}
-              phoneCodeRef={phoneCodeRef}
-              loadingAddSigner={loadingAddSigner}
-            />
-
-            <div className='row d-flex justify-content-center my-2'>
+            {/* Button */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginTop: "10px",
+              }}
+            >
               <Button
                 variant="contained"
-                color="warning"
                 onClick={handleClose2}
-                style={{
-                  textTransform: 'none',
-                  fontSize: '14px',
-                  width: "50%",
-                  background: '#ffda75',
-                  color: '#30343f',
-                  borderRadius: 30,
-                  boxShadow: 'none',
-                  outline: 'none',
-                  margin: '8px 0',
-                  padding: '8px 16px'
-                }}
-                className='m-2 p-2'
                 disabled={false}
+                style={{
+                  textTransform: "none",
+                  fontSize: "14px",
+                  width: "50%",
+                  background: "#ffda75",
+                  color: "#30343f",
+                  borderRadius: "30px",
+                  boxShadow: "none",
+                  padding: "8px 16px",
+                }}
               >
-                Cancel/ Back home
+                Cancel / Back home
               </Button>
             </div>
           </div>

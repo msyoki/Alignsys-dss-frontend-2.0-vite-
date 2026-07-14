@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { FaEye, FaEnvelopeOpen, FaDownload, FaHome } from 'react-icons/fa';
-import Button from '@mui/material/Button';
+import { Button, Typography } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import AuthContext from '../context/Authcontext';
 
-import AddSignersDialog2 from '../components/dialogs/AddSignersDialog2';
+import AddSignersDialogMerged from '../components/dialogs/AddSignersDialogMerged';
 import PreviewerDialog2 from '../components/dialogs/PreviewerDialog2';
 import Loading from '../components/loaders/Loading';
 import PDFViewerPreviewLoader from '../components/preview/PDFViewerPreviewLoader';
@@ -129,14 +129,7 @@ function SelfSignOtherAction() {
         <Loading />
       ) : (
         <>
-          {/* dialogs */}
-          <PreviewerDialog2
-            openpreviewerdialog={openpreviewerdialog}
-            setOpenPreviewerDialog={setOpenPreviewerDialog}
-            filepreviewurl={`${location.state.docguid}.pdf`}
-          />
-
-          <AddSignersDialog2
+          <AddSignersDialogMerged
             getWorkflows={getWorkflows}
             workflows={workflows}
             setOrganizationWorkflows={setOrganizationWorkflows}
@@ -149,149 +142,137 @@ function SelfSignOtherAction() {
             docTitle={location.state.doctitle}
           />
 
+          {/* dialogs */}
+          <PreviewerDialog2
+            openpreviewerdialog={openpreviewerdialog}
+            setOpenPreviewerDialog={setOpenPreviewerDialog}
+            filepreviewurl={`${location.state.docguid}.pdf`}
+          />
+
           {/* ---------------- MAIN UI ---------------- */}
+          {opendialogaddsigners?<></>:
           <Box
             sx={{
-              minHeight: '100vh',
-              backgroundColor: '#1C4690',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              p: 2,
+              minHeight: "100vh",
+              bgcolor: "#1C4690",
+              py: { xs: 2, md: 3 },
+              px: { xs: 1.5, md: 3 },
             }}
           >
-            <Grid
-              container
-              spacing={2}
+            <Box
               sx={{
-                maxWidth: 1200,
-                width: '100%',
+                display: "flex",
+                flexDirection: { xs: "column", md: "row" },
+                gap: 2,
+                maxWidth: 1600,
+                mx: "auto",
               }}
             >
               {/* LEFT PANEL */}
-              <Grid item xs={12} md={3}>
-                <div
-                  style={{
-                    background: '#fff',
-                    textAlign: 'center',
-                    padding: '20px',
-                    borderRadius: 10,
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-                    height: '100%',
-                  }}
-                >
-                  {/* Logo */}
-                  <div style={{ marginBottom: 15 }}>
-                    <a
-                      href="https://alignsys.tech"
-                      target="_blank"
-                      rel="noopener noreferrer"
+              <Paper
+                elevation={3}
+                sx={{
+                  width: { xs: "100%", md: "25%" },
+                  height: { xs: "auto", md: "90vh" },
+                  display: "flex",
+                  flexDirection: "column",
+                  p: 3,
+                  borderRadius: 2,
+                  textAlign: "center",
+                }}
+              >
+                {/* Logo */}
+                <Box sx={{ mb: 2 }}>
+                  <a href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
+                    <Box
+                      component="img"
+                      src={logo}
+                      alt="Logo"
+                      sx={{ width: 180, maxWidth: "100%", height: "auto" }}
+                    />
+                  </a>
+                </Box>
+
+                <Typography variant="subtitle1" fontWeight={600} color="primary">
+                  Document Title
+                </Typography>
+
+                <Typography variant="body2" sx={{ mt: 1, wordBreak: "break-word" }}>
+                  {location.state.doctitle}
+                </Typography>
+
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Document {voided ? "voided" : "signed"} successfully.
+                </Typography>
+
+                <Box sx={{ mt: 3, display: "flex", flexDirection: "column", gap: 1.25 }}>
+                  {voided ? (
+                    <ActionButton
+                      variant="contained"
+                      color="primary"
+                      onClick={() =>
+                        window.open(
+                          `${constants.devApi2BaseUrl}/api/Doc/FileDownload/${location.state.docguid}`
+                        )
+                      }
+                      startIcon={<FaEnvelopeOpen style={iconStyle} />}
                     >
-                      <img src={logo} width="180px" alt="Logo" />
-                    </a>
-                  </div>
-
-                  {/* Title */}
-                  <div style={{ color: '#2757aa', fontWeight: 600 }}>
-                    Document Title
-                  </div>
-
-                  <p style={{ marginTop: 5 }}>{location.state.doctitle}</p>
-
-                  <p style={{ fontSize: 13, color: '#666' }}>
-                    Document {voided ? 'voided' : 'signed'} successfully.
-                  </p>
-
-                  {/* Preview */}
-                  {/* <ActionButton
-                    fullWidth
-                    variant="contained"
-                    color="inherit"
-                    onClick={preview}
-                    startIcon={<FaEye style={iconStyle} />}
-                    sx={{ mt: 2 }}
-                  >
-                    Preview Document
-                  </ActionButton> */}
-
-                  {/* Actions */}
-                  <div
-                    style={{
-                      marginTop: 20,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 10,
-                    }}
-                  >
-                    {voided ? (
+                      Download Voided Document
+                    </ActionButton>
+                  ) : (
+                    <>
                       <ActionButton
                         variant="contained"
                         color="primary"
+                        onClick={sendforSigning}
+                        startIcon={<FaEnvelopeOpen style={iconStyle} />}
+                      >
+                        Send to Others to Sign
+                      </ActionButton>
+
+                      <ActionButton
+                        variant="contained"
+                        color="success"
                         onClick={() =>
                           window.open(
                             `${constants.devApi2BaseUrl}/api/Doc/FileDownload/${location.state.docguid}`
                           )
                         }
-                        startIcon={<FaEnvelopeOpen style={iconStyle} />}
+                        startIcon={<FaDownload style={iconStyle} />}
                       >
-                        Download Voided Document
+                        Download Signed Document
                       </ActionButton>
-                    ) : (
-                      <>
-                        <ActionButton
-                          variant="contained"
-                          color="primary"
-                          onClick={sendforSigning}
-                          startIcon={<FaEnvelopeOpen style={iconStyle} />}
-                        >
-                          Send to Others to Sign
-                        </ActionButton>
+                    </>
+                  )}
 
-                        <ActionButton
-                          variant="contained"
-                          color="success"
-                          onClick={() =>
-                            window.open(
-                              `${constants.devApi2BaseUrl}/api/Doc/FileDownload/${location.state.docguid}`
-                            )
-                          }
-                          startIcon={<FaDownload style={iconStyle} />}
-                        >
-                          Download Signed Document
-                        </ActionButton>
-                      </>
-                    )}
+                  <ActionButton
+                    variant="outlined"
+                    color="warning"
+                    onClick={home}
+                    startIcon={<FaHome style={iconStyle} />}
+                  >
+                    Go Back Home
+                  </ActionButton>
+                </Box>
 
-                    <ActionButton
-                      variant="outlined"
-                      color="warning"
-                      onClick={home}
-                      startIcon={<FaHome style={iconStyle} />}
-                    >
-                      Go Back Home
-                    </ActionButton>
-                  </div>
-                </div>
-              </Grid>
+                <Box sx={{ flexGrow: 1 }} />
+              </Paper>
 
-              {/* RIGHT PANEL - VIEWER */}
-              <Grid item xs={12} md={9}>
-                <Paper
-                  elevation={6}
-                  sx={{
-                    height: '90vh',
-                    // borderRadius: 3,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <PDFViewerPreviewLoader
-                    height="100%"
-                    document={`${location.state.docguid}.pdf`}
-                  />
-                </Paper>
-              </Grid>
-            </Grid>
+              {/* RIGHT PANEL */}
+              <Paper
+                elevation={3}
+                sx={{
+                  width: { xs: "100%", md: "75%" },
+                  height: { xs: "75vh", md: "90vh" },
+                  borderRadius: 2,
+                  overflow: "hidden",
+                }}
+              >
+                <PDFViewerPreviewLoader height="100%" document={`${location.state.docguid}.pdf`} />
+              </Paper>
+            </Box>
           </Box>
+          }
         </>
       )}
     </>

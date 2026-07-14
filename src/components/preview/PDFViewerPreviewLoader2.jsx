@@ -4,7 +4,7 @@ import * as constants from '../constants/constants'
 import axios from 'axios'
 import LoadingMini from "../loaders/LoadingMini2";
 import CustomViewer from "./PDFViewerPreview";
-import PDFViewerPreview2 from "./PDFViewerPreview2";
+import PDFViewerSetSIgningAreas from "./PDFViewerSetSIgningAreas";
 
 
 function PDFViewerPreviewLoader2(props) {
@@ -58,7 +58,7 @@ function displayPercentageWaitingTime(percentage) {
       {document?
       
       // <div ref={containerRef} style={{ width: "100%", height: `${props.height}` }} />
-      <PDFViewerPreview2  title={props.title}  complete={props.complete} uploadeddocument={document}  height={props.height} signer={props.signer} signatureBoxes={props.signatureBoxes} setSignatureBoxes={props.setSignatureBoxes} selectedAnnotationId={props.selectedAnnotationId} setSelectedAnnotationId={props.setSelectedAnnotationId}    addSignatureBox={props.addSignatureBox} 
+      <PDFViewerSetSIgningAreas  title={props.title}  complete={props.complete} uploadeddocument={document}  height={props.height} signer={props.signer} signatureBoxes={props.signatureBoxes} setSignatureBoxes={props.setSignatureBoxes} selectedAnnotationId={props.selectedAnnotationId} setSelectedAnnotationId={props.setSelectedAnnotationId}    addSignatureBox={props.addSignatureBox} 
       setAddSignatureBox={props.setAddSignatureBox}  handleSelectUser={props.handleSelectUser}
       signers={props.signers}/>
       :

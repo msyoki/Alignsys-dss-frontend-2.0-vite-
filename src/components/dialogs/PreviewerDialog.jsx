@@ -122,6 +122,8 @@ function PreviewerDialog(props) {
       });
   }
 
+  
+
   useEffect(() => {
     setSidebarOpen(!isMobile);
   }, [isMobile]);
@@ -143,8 +145,8 @@ function PreviewerDialog(props) {
               sx={{ m: 0, p: 0 }}
             >
               <div
-                className="container-fluid p-0 m-0"
-                style={{ maxHeight: '100vh', overflowY: 'auto' }} // enable full scroll
+                className="container-fluid p-0 m-0 "
+                style={{ maxHeight: '100%', overflowY: 'hidden' }} // enable full scroll
               >
                 <div className="row g-0">
                   {/* Main Content */}
@@ -164,6 +166,7 @@ function PreviewerDialog(props) {
                           variant={isMobile ? "fullWidth" : "standard"}
                           TabIndicatorProps={{ sx: { height: 2 } }}
                           sx={{ minHeight: '40px' }}
+                         
                         >
                           <Tab label="Signed Document" {...a11yProps(0)} sx={{ minHeight: '40px', py: 0.5, px: 1, textTransform: 'none' }} />
                           <Tab label="Summary Report" {...a11yProps(1)} sx={{ minHeight: '40px', py: 0.5, px: 1, textTransform: 'none' }} />
@@ -202,11 +205,12 @@ function PreviewerDialog(props) {
 
                   {/* Sidebar */}
                   <div
-                    className={`col-md-3 col-12 px-3 text-center shadow-lg order-lg-2 order-sm-2`}
+                    className={`col-md-3 col-12 px-3 text-center order-lg-2 order-sm-2 shadow-lg`}
                     style={{
                       order: isMobile ? 1 : 2,
                       backgroundColor: '#fff',
                       paddingTop: '1rem',
+                      height:'auto'
                     }}
                   >
                     {/* Sidebar Header */}
@@ -216,6 +220,7 @@ function PreviewerDialog(props) {
                         fontSize: isMobile ? '10px' : '12px',
                         backgroundColor: '#2757aa',
                         width: '100%',
+                        overflow:'hidden'
                       }}
                     >
                       Document Preview
@@ -283,28 +288,20 @@ function PreviewerDialog(props) {
 
                     {/* Action Buttons */}
                     <div className="my-3 d-flex flex-column">
-                      <div className="mb-2">
+                      <div className="mb-4 mt-4 ">
                         <Button
                           variant="contained"
-                          className='rounded-pil'
+                            color='primary'
+                          className='rounded-pill'
 
 
                           startIcon={<FaComments />}
                           onClick={handleComments}
                           sx={{
-                            backgroundColor: '#2757aa',
-                            fontWeight: 'normal',
-                            color: '#fff',
-                            borderColor: '#2757aa',
-                            fontFamily: 'inherit',
-                            textAlign: 'center',
+                           
                             fontSize: '12px',
                             borderRadius: '30px', // rounded corners
-                            padding: '8px 16px', // adjust padding for size
-                            '&:hover': {
-                              backgroundColor: '#1f488a', // optional hover color
-                              borderColor: '#1f488a',
-                            },
+                           
                             textTransform: 'none',
                           }}
 
@@ -314,21 +311,19 @@ function PreviewerDialog(props) {
                       </div>
                       <div>
                         <Button
-                          variant="outlined"
+                          variant="contained"
                           color='warning'
-                          className='mx-3 mt-4'
+                          className='mx-3 mt-3 rounded-pill'
 
                           startIcon={<FaTimes className="mx-1" />}
                           onClick={handleClose}
                                   sx={{
                       textTransform: 'none',
                       fontSize: '12px',
-                      fontWeight: 500,
-                      borderRadius: '999px',
+               
                       px: 1.8,
                       py: 0.8,
-                      minHeight: 34,
-                      boxShadow: 'none',
+           
                     
                     }}
                         >

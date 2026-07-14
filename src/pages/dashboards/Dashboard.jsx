@@ -20,7 +20,7 @@ import LicenseStatus from '../../components/dialogs/LicenseStatusDialog.jsx';
 import TimedAlert from '../../components/TimedAlert.jsx';
 import UserAvatarMenu from '../../components/UserAvatr.jsx';
 import defaultAvatar from '../../images/default_avatar.png';
-import AddSignersDialog from '../../components/dialogs/AddSignersDialog.jsx';
+import AddSignersDialogMerged from '../../components/dialogs/AddSignersDialogMerged';
 import CommentsDialog from '../../components/dialogs/CommentsDialog.jsx';
 import PreviewerDialog from '../../components/dialogs/PreviewerDialog.jsx';
 import FileUpload from '../../components/FileUpload.jsx';
@@ -677,7 +677,23 @@ function Dashboard() {
                         setMessage={setAlertMsg}
                     />
                     <LicenseStatus logoutUser={logoutUser} open={openlicensedialog} setOpen={setOpenLicenseDialog} />
-                    <AddSignersDialog setAlertSeverity={setAlertSeverity} setAlertMsg={setAlertMsg} setOpenAlert={setOpenAlert} loading={loading} setLoading={setLoading} getWorkflows={getWorkflows} workflows={workflows} organizationWorkflows={organizationWorkflows} opendialogaddsigners={opendialogaddsigners} setOpenDialogAddSigners={setOpenDialogAddSigners} fileurl={uploadedfileurl} refreshdata={refreshdata} setActiveForm={setActiveForm} />
+
+                    <AddSignersDialogMerged
+                        setAlertSeverity={setAlertSeverity}
+                        setAlertMsg={setAlertMsg}
+                        setOpenAlert={setOpenAlert}
+                        loading={loading}
+                        setLoading={setLoading}
+                        getWorkflows={getWorkflows}
+                        workflows={workflows}
+                        organizationWorkflows={organizationWorkflows}
+                        opendialogaddsigners={opendialogaddsigners}
+                        setOpenDialogAddSigners={setOpenDialogAddSigners}
+                        fileurl={uploadedfileurl}
+                        refreshdata={refreshdata}
+                        setActiveForm={setActiveForm}
+                    />
+
                     <CommentsDialog opendialogcomments={opendialogcomments} setOpenDialogComments={setOpenDialogComments} comments={comments} ccdocguid={ccdocguid} ccdoctitle={ccdoctitle} />
                     <PreviewerDialog
                         signers={signers}
@@ -1001,11 +1017,18 @@ function Dashboard() {
                         </nav>
                         <main className={`content ${sidebarOpen ? 'shifted' : 'full-width'}`}>
                             <Tooltip title={sidebarOpen ? 'Minimize sidebar' : 'Expand sidebar'}>
-                                <div className={`bump-toggle ${sidebarOpen ? 'attached' : 'moved'}`} onClick={toggleSidebar}>
+                                <div
+                                    className={`bump-toggle ${sidebarOpen ? 'attached' : 'moved'}`}
+                                    onClick={toggleSidebar}
+                                >
                                     {sidebarOpen ? (
-                                        <FaCaretLeft style={{ fontSize: '16px' }} className="mx-2" />
+                                        <FaCaretLeft
+                                            style={{ fontSize: '30px', color: '#fff', margin: '0 4px' }}
+                                        />
                                     ) : (
-                                        <FaCaretRight style={{ fontSize: '16px' }} className="mx-2" />
+                                        <FaCaretRight
+                                            style={{ fontSize: '30px', color: '#fff', margin: '0 4px' }}
+                                        />
                                     )}
                                 </div>
                             </Tooltip>

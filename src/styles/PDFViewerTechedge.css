@@ -1,10 +1,11 @@
 .pdf-viewer-container {
   display: flex;
   flex-direction: row;
-  height: 80vh;
+  height: 85vh;
   width: 100%;
-  overflow: hidden;
-  background-color: #666666;
+  overflow: auto;
+  background-color: #bfc0be;
+  /* margin-top: 0px; */
 }
 
 .tall {
@@ -14,8 +15,8 @@
 /* Sidebar / Thumbnail Panel */
 .pdf-thumbnail-panel {
   position: relative;
-  height: 100%;
-  width: 210px;
+  height: 85vh;
+  width: 20%;
   background-color: #666666;
   color: black;
   z-index: 1000;
@@ -24,7 +25,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px;
+
   box-sizing: border-box;
 }
 
@@ -78,38 +79,31 @@
 /* Main PDF Viewer */
 .pdf-main-viewer {
   position: relative;
-  overflow-y: auto;
-  height: 100%;
+  overflow: auto;
   flex: 1;
-  background-color: #bfc0be;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0;
+  padding: 24px 0;
+  gap: 24px;           /* guaranteed gap, independent of page scale */
   box-sizing: border-box;
 }
 
 /* Main viewer responsive padding for mobile */
-@media (max-width: 768px) {
+/* @media (max-width: 768px) {
   .pdf-main-viewer {
     padding: 5px;
   }
-}
+} */
 
-.pdf-page-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 900px;
-  padding-top: 5px;
-  background: white;
-}
+
 
 .pdf-page-divider {
-  width: 100%;
-  max-width: 900px;
-  height: 32px;
+  width: inherit;
+  max-width: auto;
+  height: 15px;
   margin: 0 auto 0 auto;
-  border-bottom: 2px dashed #bfc0be;
+  /* border-bottom: 2px dashed #bfc0be; */
   background: transparent;
   box-sizing: border-box;
   pointer-events: none;

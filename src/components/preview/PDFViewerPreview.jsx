@@ -3,12 +3,14 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Draggable from 'react-draggable';
 import '../../styles/PDFViewerTechedge.css'
-import { Slider, Tooltip } from '@mui/material';
+import { Slider, Tooltip,Typography,Box } from '@mui/material';
 import LoadingDialog from '../loaders/LoadingDialog';
 import Button from '@mui/material/Button';
 import { FaDownload, FaBars, FaTimes } from 'react-icons/fa';
 import { FaBarsStaggered, FaMagnifyingGlassMinus, FaMagnifyingGlassPlus, FaRotateRight } from 'react-icons/fa6';
 import { FaThList } from "react-icons/fa";
+import { TfiLayoutSidebarLeft } from "react-icons/tfi";
+import { TfiLayoutSidebarNone } from "react-icons/tfi";
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
@@ -29,8 +31,8 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   // Add zoom controls
-  const zoomIn = () => setZoom(prev => Math.min(prev + 0.1, 2));
-  const zoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.5));
+  const zoomIn = () => setZoom(prev => Math.min(prev + 0.01, 2));
+  const zoomOut = () => setZoom(prev => Math.max(prev - 0.01, 0.25));
   const resetZoom = () => setZoom(1);
 
   // Handle pinch zoom
@@ -203,6 +205,12 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
 
   };
 
+  const getPageSize = (pageNumber) => {
+    const pageDim = pageDimensions.find(d => d.pageNumber === pageNumber);
+    return { width: pageDim?.width ?? 0, height: pageDim?.height ?? 0 };
+  };
+
+
 
   const handleDownload = () => {
     if (typeof window !== 'undefined') {
@@ -278,12 +286,12 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
     // Cleanup
     return () => window.removeEventListener('resize', checkScreenSizeAndSetZoom);
   }, []);
-      const iconSz = isMobile ? 14 : 18;
-    const labelSz = isMobile ? '10px' : '12px';
+  const iconSz = isMobile ? 14 : 18;
+  const labelSz = isMobile ? '10px' : '12px';
 
 
   return (
-    <div className='bg-white'>
+    <>
       {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
 
       <div className="controls bg-white shadow-lg text-dark p-2 shadow-sm">
@@ -291,21 +299,53 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
           {/* Toggle Button */}
           <div className="d-flex align-items-center" style={{ minWidth: '150px' }}>
             <span onClick={toggleAside} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <Tooltip title={isAsideOpen ? 'Close thumbnail view' : 'Open thumbnail view'}>
-                <span
-                  onClick={toggleAside}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                >
-                  {isAsideOpen
-                    ? <FaThList style={{ fontSize: iconSz, color: '#1C4690' }} />
-                    : <FaBars style={{ fontSize: iconSz, color: '#1C4690' }} />
-                  }
-                  <span className="text-muted" style={{ fontSize: labelSz }}>
-                    {isAsideOpen ? 'Close' : 'Open'} Snapshot View
-                  </span>
-                </span>
-              </Tooltip>
-      
+           <Tooltip title={isAsideOpen ? "Hide page navigation" : "Show page navigation"}>
+            <Box
+              onClick={toggleAside}
+              className='shadow-lg'
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                px: 1,
+                height: 32,
+                borderRadius: 1.5,
+                cursor: "pointer",
+                userSelect: "none",
+                bgcolor: isAsideOpen ? "#EEF4FF" : "transparent",
+                color: isAsideOpen ? "#1C4690" : "text.secondary",
+                transition: "all .2s ease",
+
+                "&:hover": {
+                  bgcolor: "#F5F8FD",
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  transition: "transform .2s ease",
+                  // transform: isAsideOpen ? "rotate(0deg)" : "rotate(180deg)",
+                }}
+              >
+               
+                {isAsideOpen?   <TfiLayoutSidebarLeft size={15} />: <TfiLayoutSidebarNone  size={15} />}
+              </Box>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  flexGrow: 1,
+                }}
+              >
+                {isAsideOpen ? "Close" : "Open"} Pages Navigation
+              </Typography>
+
+
+            </Box>
+          </Tooltip>
+
             </span>
           </div>
 
@@ -334,7 +374,7 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
               value={zoom * 100} // controlled by zoom state (e.g., 1 = 100%)
               onChange={(_, newValue) => setZoom(newValue / 100)} // convert back to scale
               min={25}
-              max={151}
+              max={200}
               aria-label="Zoom"
               sx={{ width: 120 }}
             />
@@ -400,7 +440,7 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
       </div>
 
 
-      <div className={`pdf-viewer-container ${!complete ? 'tall' : ''}`} >
+      <div className={`pdf-viewer-container `} >
 
         {/* Sidebar Thumbnails */}
         {isAsideOpen && (
@@ -431,40 +471,68 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
         )}
 
         {/* Main PDF Viewer */}
-        <main className="pdf-main-viewer scrollbar-custom" ref={mainContainerRef}>
+        <main className="pdf-main-viewer scrollbar-custom" ref={mainContainerRef}
+          style={{
+            height: "80vh"
+          }}
+        >
 
           <Document
-            className="pdf-container"
+
+
             file={document}
             onLoadSuccess={onDocumentLoadSuccess}
             loading={<div>Loading PDF...</div>}
             error={<div>Error loading PDF!</div>}
           >
-            {[...Array(numPages).keys()].map((pageIndex) => (
-              <div
-                key={`page_${pageIndex + 1}`}
-                id={`page_${pageIndex + 1}`}
-                className="pdf-page-wrapper"
 
-              >
-                <Page
-                  pageNumber={pageIndex + 1}
 
-                  scale={getScaleForPage(pageIndex + 1) * zoom}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  className="page-container shadow-sm"
-                  onLoadSuccess={onPageLoadSuccess}
-                />
+            {[...Array(numPages).keys()].map((pageIndex) => {
+              const { width, height } = getPageSize(pageIndex + 1);
+              const pageScale = getScaleForPage(pageIndex + 1) * zoom;
+              const scaledWidth = width * pageScale;
+              const scaledHeight = height * pageScale;
+              return (
+                <React.Fragment key={`pagefrag_${pageIndex + 1}`}>
+                  <div
+                    key={`page_${pageIndex + 1}`}
+                    id={`page_${pageIndex + 1}`}
 
-              </div>
-            ))}
+                    style={{
+                      position: 'relative',
+                      margin: '24px auto 24px',
+                      display: 'flex',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Page
+                      pageNumber={pageIndex + 1}
+                      scale={pageScale}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      className="page-container "
+                      onLoadSuccess={onPageLoadSuccess}
+                    />
+                    {/* Annotation Layer */}
+
+                  </div>
+
+                  {/* Divider between pages, not after last page */}
+                  {pageIndex < numPages - 1 && (
+                    <div
+                      className="pdf-page-divider"
+
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
 
 
           </Document>
         </main>
       </div>
-    </div>
+    </>
   );
 };
 

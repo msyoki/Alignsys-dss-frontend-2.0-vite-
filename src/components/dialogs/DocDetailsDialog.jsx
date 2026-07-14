@@ -7,6 +7,7 @@ import logo from '../../images/ZFWHITE.webp';
 import axios from 'axios';
 import SimpleAlert from '../SimpleAlert.jsx';
 import { FaDownload } from "react-icons/fa6";
+import HumanizedDate from '../HumanizeDate.jsx';
 const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, document = {} }) => {
   const handleClose = () => setOpenDialogDocDetails(false);
   const [editingSigner, setEditingSigner] = useState(null);
@@ -156,7 +157,7 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
                   <span className="text-muted ms-2">
                     {s.signed === 'True' ? (
                       <>
-                        signed <FaCheckCircle className="text-success mx-1" />: {s.signed_time_stamp}
+                        signed  <FaCheckCircle className="text-success mx-1" />: <HumanizedDate dateStr={s.signed_time_stamp} />
                       </>
                     ) : (
                       <>

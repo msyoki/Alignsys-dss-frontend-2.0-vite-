@@ -8,8 +8,8 @@ import * as constants from './constants/constants';
 
 // Lazy load heavy dependencies
 const ReactMarkdown = lazy(() => import('react-markdown'));
-const SyntaxHighlighter = lazy(() => import('react-syntax-highlighter').then(module => ({ 
-    default: module.Prism 
+const SyntaxHighlighter = lazy(() => import('react-syntax-highlighter').then(module => ({
+    default: module.Prism
 })));
 const vscDarkPlus = lazy(() => import('react-syntax-highlighter/dist/esm/styles/prism').then(module => ({
     default: module.vscDarkPlus
@@ -248,13 +248,13 @@ const Chatbot = memo((props) => {
         }
     }, [handleChatSubmit]);
 
-    const renderedMessages = useMemo(() => 
+    const renderedMessages = useMemo(() =>
         messages.map((message, index) => (
             <Message key={`${message.timestamp.getTime()}-${index}`} message={message} />
         )), [messages]
     );
 
-    const isSubmitDisabled = useMemo(() => 
+    const isSubmitDisabled = useMemo(() =>
         loading || !inputValue.trim(), [loading, inputValue]
     );
 
@@ -276,11 +276,28 @@ const Chatbot = memo((props) => {
                             borderRadius: '50%',
                             width: '50px',
                             height: '50px',
-                            '&:hover': { backgroundColor: '#1C4690' }
+
+                            animation: 'pulse 2s infinite',
+
+                            '@keyframes pulse': {
+                                '0%': {
+                                    boxShadow: '0 0 0 0 rgba(39, 87, 170, 0.45)',
+                                },
+                                '70%': {
+                                    boxShadow: '0 0 0 12px rgba(39, 87, 170, 0)',
+                                },
+                                '100%': {
+                                    boxShadow: '0 0 0 0 rgba(39, 87, 170, 0)',
+                                },
+                            },
+
+                            '&:hover': {
+                                backgroundColor: '#1C4690',
+                            },
                         }}
                         onClick={handleOpen}
                     >
-                        <FaAndroid style={{ fontSize: '20px', color: '#fff' }} />
+                        <FaAndroid style={{ fontSize: 20, color: '#fff' }} />
                     </IconButton>
                 </Tooltip>
             ) : null}
@@ -302,7 +319,7 @@ const Chatbot = memo((props) => {
                     {/* Header */}
                     <div className="chatbot-header" style={{
                         width: '100%',
-                 
+
                         backgroundColor: '#2757aa',
                         color: 'white',
                         textAlign: 'center',
@@ -330,12 +347,12 @@ const Chatbot = memo((props) => {
                     {props.filename && (
                         <>
                             <div style={{
-                    
+
                                 backgroundColor: '#ecf4fc',
                                 display: 'flex',
                                 alignItems: 'center',
                             }}
-                            className='p-2'
+                                className='p-2'
                             >
                                 <span className='mx-2' style={{ fontSize: '13px', color: 'black' }}>
                                     Hello, how can I help with this document?
@@ -349,13 +366,13 @@ const Chatbot = memo((props) => {
                                 )}
                             </div>
                             <div style={{
-                               
+
                                 borderBottom: '1px solid #ecf4fc',
                                 backgroundColor: '#ecf4fc',
                                 display: 'flex',
                                 alignItems: 'center',
                             }}
-                            className='p-2'
+                                className='p-2'
                             >
                                 <FaFilePdf className="text-danger mx-2" style={{ fontSize: '20px', marginRight: '8px' }} />
                                 <span style={{ fontSize: '13px', color: 'black' }}>{props.filename}.pdf</span>

@@ -377,26 +377,33 @@ function PDFViewerSigningLoader(props) {
 
             <div className="row bg-white shadow-lg p-2 align-items-center">
                 {(() => {
-                    const pillBtn = {
-                        textTransform: 'none',
-                        borderRadius: '999px',
-                        px: { xs: 1.5, sm: 1.8 },
-                        py: { xs: 0.6, sm: 0.8 },
-                        fontSize: { xs: '11px', sm: '12px' },
-                        fontWeight: 500,
-                        minHeight: 36,
-                        whiteSpace: 'nowrap',
-                        boxShadow: 'none',
-                        gap: 0.8,
-                        transition: 'all 0.2s ease',
-                        '& .MuiButton-startIcon': {
-                            marginRight: '4px',
-                        },
-                        '&:hover': {
-                            boxShadow: 'none',
-                            transform: 'translateY(-1px)',
-                        },
-                    };
+                 const pillBtn = {
+    textTransform: "none",
+    borderRadius: "999px",          // rounded-pill
+    px: { xs: 1.75, sm: 2.25 },     // balanced horizontal padding
+    py: 0.55,
+    minHeight: 32,
+    fontSize: { xs: "11px", sm: "12px" },
+    fontWeight: 500,
+    lineHeight: 1.2,
+    whiteSpace: "nowrap",
+    gap: 0.6,
+    boxShadow: "none",
+
+    "& .MuiButton-startIcon": {
+        marginRight: "4px",
+        "& svg": {
+            fontSize: 15,
+        },
+    },
+
+    "&:hover": {
+        boxShadow: "0 2px 8px rgba(0,0,0,.12)",
+        transform: "translateY(-1px)",
+    },
+
+    transition: "all .2s ease",
+};
 
                     const iconSize = 13;
 
@@ -444,7 +451,7 @@ function PDFViewerSigningLoader(props) {
                                                         sx={{ ...pillBtn }}
                                                     >
                                                         <span style={{ color: '#1C4690' }}> Place {isStamp ? 'Stamp' : 'Signature'} Again</span>
-                                                       
+
                                                     </Button>
                                                 </Tooltip>
                                             )}

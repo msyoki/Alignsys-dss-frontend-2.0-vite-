@@ -16,9 +16,168 @@ import * as constants from '../constants/constants';
 import SignersBoxDialog from './SignersBoxDialog';
 import { ListSubheader, CircularProgress, Button } from '@mui/material';
 import { FaPlusCircle } from 'react-icons/fa';
-import { FaEnvelopeOpenText, FaUsers, FaNetworkWired, FaMailBulk } from 'react-icons/fa';
+import { FaEnvelopeOpenText, FaUsers, FaNetworkWired, FaMailBulk, FaTrashAlt } from 'react-icons/fa';
+import { FaUserCircle, FaMobileAlt, FaUserShield, FaTimes, FaArrowRight } from "react-icons/fa";
 
 import TimedAlert from '../TimedAlert';
+
+// --- Defined OUTSIDE the parent component to prevent unmount/remount on re-render ---
+
+const SignersList = ({ signers, removeSigner }) => (
+  <div
+    className="d-flex flex-wrap align-items-center mt-2 mb-2 p-2"
+    style={{ backgroundColor: '#e9f2ff', maxHeight: '12vh', overflowY: 'auto', gap: '4px' }}
+  >
+    {signers.map((item, index) => (
+      <React.Fragment key={item.email}>
+        <div
+          className="d-flex align-items-center shadow-sm px-2 py-1"
+          style={{
+            borderRadius: '20px',
+            backgroundColor: 'white',
+            fontSize: '12px',
+            flexShrink: 0,
+            maxWidth: '100%',
+            gap: '4px',
+          }}
+        >
+          <FaUserCircle style={{ color: '#2757aa', fontSize: '14px' }} />
+
+          <span className="text-dark text-truncate" style={{ maxWidth: 120 }}>
+            {item.email}
+          </span>
+
+          {item.phone && (
+            <Tooltip title="OTP authentication enabled" placement="top">
+              <FaMobileAlt style={{ fontSize: '14px', color: '#0d6efd' }} />
+            </Tooltip>
+          )}
+
+          {item.authenticate && (
+            <Tooltip title="Account verification enabled" placement="top">
+              <FaUserShield style={{ fontSize: '14px', color: '#0d6efd' }} />
+            </Tooltip>
+          )}
+
+          <FaTimes
+            style={{ cursor: 'pointer', fontSize: '14px', color: 'red' }}
+            onClick={e => removeSigner(e, item.email)}
+          />
+        </div>
+
+        {index < signers.length - 1 && (
+          <FaArrowRight
+            style={{ color: '#2757aa', fontSize: '14px', alignSelf: 'center' }}
+          />
+        )}
+      </React.Fragment>
+    ))}
+  </div>
+);
+
+
+const AddSignerForm = ({
+  onSubmit,
+  checked,
+  setChecked,
+  loadingAddSigner,
+  emailInputRef,
+  phoneNumberRef,
+  phoneCodeRef,
+}) => (
+  <form onSubmit={onSubmit}>
+    <div className="rounded mb-2">
+
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+        <input
+          ref={emailInputRef}
+          className="form-control form-control-sm"
+          type="email"
+          name="to"
+          placeholder="Email e.g. jdoe@mail.com"
+          required
+          aria-label="Signer email"
+          style={{ flex: 1, minWidth: 0, height: '36px', fontSize: '13px' }}
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          size="small"
+          disabled={loadingAddSigner}
+          startIcon={<FaPlusCircle size={13} />}
+          style={{
+            backgroundColor: '#2757aa',
+            textTransform: 'none',
+            fontSize: '12px',
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '0 12px',
+            whiteSpace: 'nowrap',
+            fontWeight: 300,
+            boxShadow: 'none',
+            flexShrink: 0,
+          }}
+        >
+          Add Signer
+        </Button>
+      </div>
+      <div className="d-flex align-items-center gap-2 mb-2 flex-wrap" style={{ fontSize: 13 }}>
+        <label
+          htmlFor="otpSwitch"
+          className="text-dark mb-0"
+          style={{ userSelect: 'none', whiteSpace: 'nowrap', fontSize: 13 }}
+        >
+          Enable SMS OTP verification
+        </label>
+        <Switch
+          id="otpSwitch"
+          checked={checked}
+          onChange={e => setChecked(e.target.checked)}
+          inputProps={{ 'aria-label': 'Enable SMS OTP verification' }}
+          className="ms-1"
+          size="small"
+        />
+      </div>
+
+      {checked && (
+        <div className="d-flex gap-1 mb-2" style={{ maxWidth: 300 }}>
+          <select
+            ref={phoneCodeRef}
+            className="form-control form-control-sm"
+            name="phoneCode"
+            style={{ maxWidth: 100, padding: '0.25rem 0.5rem' }}
+            aria-label="Select country code"
+          >
+            <option value="+254">Kenya (+254)</option>
+            {jsonPhoneCodesData.map((item, index) => (
+              <option key={index} value={item.dial_code}>
+                {item.name} ({item.dial_code})
+              </option>
+            ))}
+          </select>
+          <input
+            ref={phoneNumberRef}
+            type="tel"
+            className="form-control form-control-sm"
+            maxLength={15}
+            name="phoneNumber"
+            placeholder="e.g. 722XXXXXX"
+            pattern="[1-9][0-9]{6,14}"
+            title="Enter a valid phone number without the country code"
+            aria-label="Phone number"
+            style={{ minWidth: 160, padding: '0.25rem 0.5rem' }}
+          />
+        </div>
+      )}
+    </div>
+  </form>
+);
+
+// --- Main component ---
 
 const AddSignersDialog = (props) => {
   // --- Refs ---
@@ -67,9 +226,7 @@ const AddSignersDialog = (props) => {
     setSelectedAnnotationId(null);
   };
 
-  const changeForm = (e) => setChecked(e.target.checked);
   const changeForm2 = (e) => setChecked2(e.target.checked);
-  const changeForm3 = (e) => setChecked3(e.target.checked);
 
   const validateEmail = (email) =>
     /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/.test(email);
@@ -239,8 +396,10 @@ const AddSignersDialog = (props) => {
     const mydata = JSON.stringify({
       documentid: filename,
       signers,
-      ...(assignmentDescription ? { assignmentd: assignmentDescription } : { annotations: signatureBoxes || null }),
+      ...(assignmentDescription ? { assignmentd: assignmentDescription } : {}),
+      ...(signatureBoxes?.length > 0 ? { annotations: signatureBoxes } : {}),
     });
+    console.log(mydata);
     console.log(filename);
     try {
       const response = await axios.post(`${constants.devApiBaseUrl}/api/othersigners/`, mydata, {
@@ -253,10 +412,9 @@ const AddSignersDialog = (props) => {
       if (response.status === 200) {
         props.refreshdata();
         props.setOpenDialogAddSigners(false);
-        // Use callback to parent to reset form, not direct DOM manipulation
         if (props.onResetForm) props.onResetForm();
         showAlert("Successfully sent for signing!", "success");
-        props.setActiveForm('file-upload')
+        props.setActiveForm('file-upload');
         setTimeout(() => props.setOpenAlert(false), 6000);
       } else if (response.statusText === "Unauthorized") {
         logoutUser();
@@ -264,173 +422,12 @@ const AddSignersDialog = (props) => {
         showAlert("Something went wrong, try again.", "error");
       }
     } catch (error) {
-
       console.log(error);
       props.setLoading(false);
       showAlert("Failed to send document. Please try again.", error.response ? "error" : "error");
     }
     setLoadingSend(false);
   };
-
-  // --- UI Components ---
-  const SignersList = ({ signers, removeSigner }) => (
-    <div className="d-flex flex-wrap align-items-center mt-2 mb-2 p-2" style={{ backgroundColor: '#e9f2ff', maxHeight: '12vh', overflowY: 'auto', gap: '4px' }}>
-      {signers.map((item, index) => (
-        <React.Fragment key={item.email}>
-          <div
-            className="d-flex align-items-center shadow-sm px-2 py-1"
-            style={{
-              borderRadius: '20px',
-              backgroundColor: 'white',
-              fontSize: '12px',
-              flexShrink: 0,
-              maxWidth: '100%',
-              gap: '4px',
-            }}
-          >
-            <i className="fas fa-user-circle" style={{ color: '#2757aa', fontSize: '14px' }}></i>
-            <span className="text-dark text-truncate" style={{ maxWidth: 120 }}>{item.email}</span>
-            {item.phone && (
-              <Tooltip title="OTP authentication enabled" placement="top">
-                <i className="fas fa-mobile text-primary" style={{ fontSize: '14px' }}></i>
-              </Tooltip>
-            )}
-            {item.authenticate && (
-              <Tooltip title="Account verification enabled" placement="top">
-                <i className="fas fa-user-shield text-primary" style={{ fontSize: '14px' }}></i>
-              </Tooltip>
-            )}
-            <i
-              className="fas fa-times text-danger"
-              style={{ cursor: 'pointer', fontSize: '14px' }}
-              onClick={e => removeSigner(e, item.email)}
-            ></i>
-          </div>
-
-          {index < signers.length - 1 && (
-            <i
-              className="fas fa-arrow-right text-nowrap"
-              style={{ color: '#2757aa', fontSize: '14px', alignSelf: 'center' }}
-            ></i>
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-
-
-  const AddSignerForm = ({
-    onSubmit, checked, setChecked, emailInputRef, phoneNumberRef, phoneCodeRef
-  }) => (
-    <form onSubmit={onSubmit}>
-      <div className="rounded mb-2">
-        {/* <h5 className="mb-2" style={{ fontSize: 13, color: '#2757aa' }}>
-          <i className="fas fa-user-plus me-2"></i>Add new signer
-        </h5> */}
-        <div className="d-flex align-items-center gap-2 mb-2 flex-wrap" style={{ fontSize: 13 }}>
-
-
-
-          <label htmlFor="otpSwitch" className="text-dark mb-0" style={{ userSelect: 'none', whiteSpace: 'nowrap', fontSize: 13 }}>
-            Enable SMS OTP verification
-          </label>
-          <Switch
-            id="otpSwitch"
-            checked={checked}
-            onChange={e => setChecked(e.target.checked)}
-            inputProps={{ 'aria-label': 'Enable SMS OTP verification' }}
-            className="ms-1"
-            size="small"
-          />
-        </div>
-
-        {checked && (
-          <div className="d-flex gap-1 mb-2" style={{ maxWidth: 300 }}>
-            <select
-              ref={phoneCodeRef}
-              className="form-control form-control-sm"
-              name="phoneCode"
-              style={{ maxWidth: 100, padding: '0.25rem 0.5rem' }}
-              aria-label="Select country code"
-            >
-              <option value="+254">Kenya (+254)</option>
-              {jsonPhoneCodesData.map((item, index) => (
-                <option key={index} value={item.dial_code}>
-                  {item.name} ({item.dial_code})
-                </option>
-              ))}
-            </select>
-            <input
-              ref={phoneNumberRef}
-              type="tel"
-              className="form-control form-control-sm"
-              maxLength={15}
-              name="phoneNumber"
-              placeholder="e.g. 722XXXXXX"
-              pattern="[1-9][0-9]{6,14}"
-              title="Enter a valid phone number without the country code"
-              aria-label="Phone number"
-              style={{ minWidth: 160, padding: '0.25rem 0.5rem' }}
-            />
-
-          </div>
-        )}
-   <div
-  style={{
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    width: '100%',
-  }}
->
-  <input
-    ref={emailInputRef}
-    className="form-control form-control-sm"
-    type="email"
-    name="to"
-    placeholder="Email e.g. jdoe@mail.com"
-    required
-    aria-label="Signer email"
-    style={{
-      flex: 1,
-      minWidth: 0,
-      height: '36px',
-      fontSize: '13px',
-    }}
-  />
-
-  <Button
-    type="submit"
-    variant="contained"
-    color="primary"
-    size="small"
-    disabled={loadingAddSigner}
-    startIcon={<FaPlusCircle size={13} />}
-    style={{
-      backgroundColor: '#2757aa',
-      textTransform: 'none',
-      fontSize: '12px',
-      height: '36px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '0 12px',
-      whiteSpace: 'nowrap',
-      fontWeight: 300,
-      // borderRadius: '999px',
-      boxShadow: 'none',
-      flexShrink: 0,
-    }}
-  >
-    Add Signer
-  </Button>
-</div>
-
-
-
-      </div>
-    </form>
-  );
 
   function handleWorkflowSelection(value) {
     if (!value) {
@@ -451,10 +448,18 @@ const AddSignersDialog = (props) => {
 
   return (
     <>
-      <SignersBoxDialog selectedAnnotationId={selectedAnnotationId} setSelectedAnnotationId={setSelectedAnnotationId} selectedUser={selectedUser} setSelectedUser={setSelectedUser} file={props.fileurl} signers={signers} open={open} setOpen={setOpen} signatureBoxes={signatureBoxes} setSignatureBoxes={setSignatureBoxes} />
-
-
-
+      <SignersBoxDialog
+        selectedAnnotationId={selectedAnnotationId}
+        setSelectedAnnotationId={setSelectedAnnotationId}
+        selectedUser={selectedUser}
+        setSelectedUser={setSelectedUser}
+        file={props.fileurl}
+        signers={signers}
+        open={open}
+        setOpen={setOpen}
+        signatureBoxes={signatureBoxes}
+        setSignatureBoxes={setSignatureBoxes}
+      />
       <TimedAlert
         open={openalert}
         onClose={() => setOpenAlert(false)}
@@ -469,7 +474,6 @@ const AddSignersDialog = (props) => {
         onClose={handleClose2}
         TransitionProps={{
           onExited: () => {
-            // Reset state only after dialog is fully closed
             setSigners([]);
             setWorkflow('');
             setSelectedWorkflowTitle('');
@@ -488,43 +492,38 @@ const AddSignersDialog = (props) => {
         fullWidth
         maxWidth="md"
       >
-        <div className='row m-0' style={{ width: '100%' }} >
+        <div className='row m-0' style={{ width: '100%' }}>
           <div className='col-md-12 col-lg-5' style={{ backgroundColor: '#fff', color: 'white' }}>
             <div
               className="text-dark p-3"
               style={{ fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}
             >
-              {/* Section: Add new signers */}
               <div style={{ fontSize: '14px', color: '#2757aa', fontWeight: 500 }}>
                 1. Add signer(s)' emails below in the order you would like them to sign
               </div>
 
+              {/* AddSignerForm is now defined outside — no remount on re-render */}
               <AddSignerForm
                 onSubmit={addMailList}
                 checked={checked}
                 setChecked={setChecked}
+                loadingAddSigner={loadingAddSigner}
                 emailInputRef={emailInputRef}
                 phoneNumberRef={phoneNumberRef}
                 phoneCodeRef={phoneCodeRef}
               />
 
-              {/* Divider */}
               <div className="text-center" style={{ margin: '5px 0' }}>
                 <span style={{ fontSize: '13.5px', color: '#2757aa', fontWeight: 500 }}>
                   OR
                 </span>
               </div>
 
-              {/* Section: Select existing workflow */}
               <div style={{ fontSize: '14px', color: '#2757aa', fontWeight: 500 }}>
                 2. Select an existing workflow below
               </div>
 
-              <FormControl
-                variant="filled"
-                size="small"
-                style={{ width: '100%' }}
-              >
+              <FormControl variant="filled" size="small" style={{ width: '100%' }}>
                 <InputLabel id="merged-select-label" style={{ fontSize: '14px', color: 'black' }}>
                   Select Workflow
                 </InputLabel>
@@ -540,14 +539,9 @@ const AddSignersDialog = (props) => {
                   style={{ backgroundColor: 'white' }}
                   inputProps={{ style: { backgroundColor: 'white' } }}
                 >
-                  {/* Personal Workflows */}
                   <ListSubheader
                     disabled
-                    style={{
-                      fontSize: '13px',
-                      backgroundColor: '#f0f0f0',
-                      color: '#2757aa',
-                    }}
+                    style={{ fontSize: '13px', backgroundColor: '#f0f0f0', color: '#2757aa' }}
                   >
                     Personal Workflows ({props.workflows.length})
                   </ListSubheader>
@@ -555,30 +549,19 @@ const AddSignersDialog = (props) => {
                   {props.workflows.map((wf) => {
                     const itemValue = `personal-${wf.id}`;
                     const isSelected = workflow === itemValue;
-
                     return (
-                      <MenuItem
-                        key={itemValue}
-                        value={itemValue}
-                        style={{ fontSize: '12.5px' }}
-                      >
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="center"
-                          width="100%"
-                        >
+                      <MenuItem key={itemValue} value={itemValue} style={{ fontSize: '12.5px' }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" width="100%">
                           <span>{wf.title}</span>
-
-                          {/* Only show delete icon if NOT selected */}
                           {!isSelected && (
                             <Tooltip title="Delete workflow">
                               <span>
-                                <i
-                                  className="fas fa-trash-alt text-danger"
+                                <FaTrashAlt
                                   style={{
-                                    cursor: loadingDeleteWorkflow ? 'not-allowed' : 'pointer',
-                                    marginLeft: '8px',
+                                    color: "red",
+                                    cursor: loadingDeleteWorkflow ? "not-allowed" : "pointer",
+                                    marginLeft: "8px",
+                                    opacity: loadingDeleteWorkflow ? 0.5 : 1,
                                   }}
                                   onClick={
                                     loadingDeleteWorkflow
@@ -590,14 +573,7 @@ const AddSignersDialog = (props) => {
                                   }
                                 />
                                 {loadingDeleteWorkflow && (
-                                  <CircularProgress
-                                    size={14}
-                                    color="inherit"
-                                    style={{
-                                      marginLeft: 4,
-                                      verticalAlign: 'middle',
-                                    }}
-                                  />
+                                  <CircularProgress size={14} color="inherit" style={{ marginLeft: 4, verticalAlign: 'middle' }} />
                                 )}
                               </span>
                             </Tooltip>
@@ -607,25 +583,15 @@ const AddSignersDialog = (props) => {
                     );
                   })}
 
-
-                  {/* Organization Workflows */}
                   <ListSubheader
                     disabled
-                    style={{
-                      fontSize: '13px',
-                      backgroundColor: '#f0f0f0',
-                      color: '#2757aa',
-                    }}
+                    style={{ fontSize: '13px', backgroundColor: '#f0f0f0', color: '#2757aa' }}
                   >
                     Organization Workflows ({props.organizationWorkflows.length})
                   </ListSubheader>
 
                   {props.organizationWorkflows.map((wf) => (
-                    <MenuItem
-                      key={`org-${wf.id}`}
-                      value={`org-${wf.id}`}
-                      style={{ fontSize: '12.5px' }}
-                    >
+                    <MenuItem key={`org-${wf.id}`} value={`org-${wf.id}`} style={{ fontSize: '12.5px' }}>
                       {wf.title}
                     </MenuItem>
                   ))}
@@ -633,23 +599,29 @@ const AddSignersDialog = (props) => {
               </FormControl>
             </div>
 
-
-
-
             <div className='row d-flex justify-content-center my-2'>
               <Button
                 variant="contained"
                 color="warning"
                 onClick={() => props.setOpenDialogAddSigners(false)}
-                style={{ textTransform: 'none', fontSize: '14px', width: "50%", borderRadius: 30, background: '#ffda75', color: '#30343f', boxShadow: 'none', border: 'none' }}
+                style={{
+                  textTransform: 'none',
+                  fontSize: '14px',
+                  width: '50%',
+                  borderRadius: 30,
+                  background: '#ffda75',
+                  color: '#30343f',
+                  boxShadow: 'none',
+                  border: 'none',
+                }}
                 className='m-2 p-2'
                 disableElevation
-                disabled={false}
               >
                 Cancel/ Back home
               </Button>
             </div>
           </div>
+
           <div className='col-md-12 col-lg-7 text-center shadow-lg' id='maillist'>
             <span className="bg-white text-center" style={{ height: 'auto' }}>
               {signers.length < 1 ? (
@@ -668,21 +640,26 @@ const AddSignersDialog = (props) => {
                   {workflow && (
                     <div className="d-flex align-items-center mt-2 mb-4" style={{ fontSize: '14px', color: '#2757aa' }}>
                       <span>Selected Workflow - {selectedworkflowtitle}</span>
-
-                      {/* Only show delete if selected workflow is personal */}
                       {workflow.startsWith('personal-') && (
                         <Tooltip title="Delete workflow">
                           <span
                             className="ms-2"
-                            style={{ display: 'flex', alignItems: 'center', cursor: loadingDeleteWorkflow ? 'not-allowed' : 'pointer' }}
-                            onClick={loadingDeleteWorkflow ? undefined : (e) => {
-                              e.stopPropagation();
-                              const wfId = workflow.split('-')[1];
-                              deleteWorkflow(wfId);
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              cursor: loadingDeleteWorkflow ? 'not-allowed' : 'pointer',
                             }}
+                            onClick={
+                              loadingDeleteWorkflow
+                                ? undefined
+                                : (e) => {
+                                  e.stopPropagation();
+                                  const wfId = workflow.split('-')[1];
+                                  deleteWorkflow(wfId);
+                                }
+                            }
                           >
                             <FaTrashAlt size={15} className="text-danger" />
-
                             {loadingDeleteWorkflow && (
                               <CircularProgress size={14} color="inherit" style={{ marginLeft: 4 }} />
                             )}
@@ -690,8 +667,8 @@ const AddSignersDialog = (props) => {
                         </Tooltip>
                       )}
                     </div>
-
                   )}
+
                   {signers.length > 0 && (
                     <h6 className='my-2' style={textcolor}>
                       <FaUsers size={15} className="mx-1" />
@@ -700,25 +677,35 @@ const AddSignersDialog = (props) => {
                   )}
 
                   <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                    {/* SignersList is now defined outside — no remount on re-render */}
                     <SignersList signers={signers} removeSigner={removeSigner} />
                   </div>
+
                   {signers.length > 0 && (
                     <Button
                       variant="contained"
                       color="primary"
                       className="m-1 p-2"
-                      style={{ textTransform: "none", fontSize: "12px", borderRadius: 30, background: '#2757aa', color: '#fff', boxShadow: 'none', border: 'none' }}
+                      style={{
+                        textTransform: 'none',
+                        fontSize: '12px',
+                        borderRadius: 30,
+                        background: '#2757aa',
+                        color: '#fff',
+                        boxShadow: 'none',
+                        border: 'none',
+                      }}
                       onClick={() => setOpen(true)}
                       disableElevation
-                      disabled={false}
                     >
                       <span className="mx-2">Preview / Mark Where to Sign</span>
                     </Button>
                   )}
+
                   {signers.length > 0 && !workflow && (
-                    <div className='input-group mt-4' style={{ backgroundColor: "#e5e5e5" }}>
+                    <div className='input-group mt-4' style={{ backgroundColor: '#e5e5e5' }}>
                       <label className='m-1 text-dark m-2' style={{ fontSize: '12.5px' }}>
-                        <FaNetworkWired size={15} style={{ color: "#2757aa" }} />
+                        <FaNetworkWired size={15} style={{ color: '#2757aa' }} />
                         Save this order as a workflow?
                       </label>
                       <Switch
@@ -726,7 +713,7 @@ const AddSignersDialog = (props) => {
                         onChange={changeForm2}
                         inputProps={{ 'aria-label': 'controlled' }}
                       />
-                      {checked2.toString() === "true" && (
+                      {checked2.toString() === 'true' && (
                         <input
                           ref={wfTitleRef}
                           className="form-control form-control-sm"
@@ -740,6 +727,7 @@ const AddSignersDialog = (props) => {
                 </>
               )}
             </span>
+
             <div className='row'>
               {signers.length > 0 && (
                 <div className='text-center'>
@@ -758,7 +746,16 @@ const AddSignersDialog = (props) => {
                       variant="contained"
                       color="success"
                       className='m-2 p-2'
-                      style={{ textTransform: 'none', fontSize: '12px', position: 'relative', borderRadius: 30, background: '#43a047', color: '#fff', boxShadow: 'none', border: 'none' }}
+                      style={{
+                        textTransform: 'none',
+                        fontSize: '12px',
+                        position: 'relative',
+                        borderRadius: 30,
+                        background: '#43a047',
+                        color: '#fff',
+                        boxShadow: 'none',
+                        border: 'none',
+                      }}
                       onClick={sendForSigning}
                       disableElevation
                       disabled={loadingSend}

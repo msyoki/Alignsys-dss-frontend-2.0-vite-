@@ -21,7 +21,15 @@ import MultipageInfoDialog from '../dialogs/MultipageInfoDialog';
 import SignSignatureBoxesDialog from '../dialogs/SignSignatureBoxesDialog';
 import ColorPicker from '../ColorPicker';
 import { PDFDocument, rgb } from 'pdf-lib';
-import { Button, Box, Typography } from '@mui/material';
+import { Button, Box, Typography, Switch } from '@mui/material';
+import { FaImages } from "react-icons/fa";
+import { FaChevronRight } from "react-icons/fa";
+import { FaChevronLeft } from "react-icons/fa";
+import { IoDocuments } from "react-icons/io5";
+import { GoSidebarCollapse } from "react-icons/go";
+import { GoSidebarExpand } from "react-icons/go";
+import { TfiLayoutSidebarLeft } from "react-icons/tfi";
+import { TfiLayoutSidebarNone } from "react-icons/tfi";
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
@@ -46,20 +54,22 @@ const PDFViewerSigning = (props) => {
   const [openMultipageInfoDialog, setOpenMultipageInfoDialog] = useState(false);
   const [showSignatureBoxes, setShowSignatureBoxes] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [isAsideOpen, setIsAsideOpen] = useState(true);
+  const [isAsideOpen, setIsAsideOpen] = useState(false);
   const [signatureBox, setSignatureBox] = useState({ x: 200, y: 350, width: 100, height: 25 });
   const [pageOrientations, setPageOrientations] = useState({});
   const [isImageLocked, setIsImageLocked] = useState(false);
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   const [dimensions, setDimensions] = useState({ width: 50, height: 50 });
-
+  const [compact, setCompact] = useState(true);
   // Navigation
   const goToPreviousPage = () => setPageNumber(prevPage => Math.max(prevPage - 1, 1));
   const goToNextPage = () => setPageNumber(prevPage => Math.min(prevPage + 1, numPages));
 
   // Zoom controls
-  const zoomIn = () => setZoom(prev => Math.min(prev + 0.01, 1.51));
-  const zoomOut = () => setZoom(prev => Math.max(prev - 0.01, 0.5));
+  // const zoomIn = () => setZoom(prev => Math.min(prev + 0.01, 1.51));
+  // const zoomOut = () => setZoom(prev => Math.max(prev - 0.01, 0.5));
+  const zoomIn = () => setZoom(prev => Math.min(prev + 0.01, 2));
+  const zoomOut = () => setZoom(prev => Math.max(prev - 0.01, 0.25));
 
 
   const resetZoom = () => setZoom(1);
@@ -89,8 +99,17 @@ const PDFViewerSigning = (props) => {
     const isRotated = rotate % 360 !== 0;
     if (isRotated) props.setIsRotated(true);
 
-    const adjustedWidth = ((rotate % 180 !== 0) ? height : width) / zoom;
-    const adjustedHeight = ((rotate % 180 !== 0) ? width : height) / zoom;
+    // Use the scale-1 viewport directly as the natural page size (it already
+    // accounts for the page's own rotation). Previously this divided the
+    // *rendered* width/height by `zoom` alone, but the page can render at
+    // getScaleForPage(pageNumber) * zoom (landscape pages get fit-scaled),
+    // so that back-calculation baked the fit-scale into the stored size.
+    // That shrank/grew the stored width every render, which fed back into
+    // getScaleForPage's fit calculation and caused an oscillating flicker
+    // (most visible once landscape pages also had signature boxes drawn,
+    // since those pushed the container width enough to tip the loop).
+    const adjustedWidth = viewport.width;
+    const adjustedHeight = viewport.height;
 
     setPageDimensions(prev => {
       const pageExists = prev.find(p => p.pageNumber === pageNumber);
@@ -451,6 +470,8 @@ const PDFViewerSigning = (props) => {
         // Clamp annotation position so it never renders outside page
         const renderX = Math.max(0, Math.min(x * pageScale, (pageWidth * pageScale) - (annotation.width * pageScale)));
         const renderY = Math.max(0, Math.min(y * pageScale, (pageHeight * pageScale) - (annotation.height * pageScale)));
+
+
         return (
           <Draggable
             key={annotation.id}
@@ -632,12 +653,67 @@ const PDFViewerSigning = (props) => {
       });
   };
 
+  // const renderThumbnailAnnotations = (pageNumber) => {
+  //   const pageDim = pageDimensions.find(dim => dim.pageNumber === pageNumber);
+  //   const pageWidth = pageDim?.width || 1;
+  //   const pageHeight = pageDim?.height || 1;
+
+  //   const thumbScale = getScaleForPageThumbnail(pageNumber);
+
+  //   return props.annotations
+  //     .filter(a => a.pageNumber === pageNumber)
+  //     .map(annotation => {
+  //       const x = annotation.x * thumbScale;
+  //       const y = annotation.y * thumbScale;
+
+  //       const width = annotation.width * thumbScale;
+  //       const height = annotation.height * thumbScale;
+
+  //       return (
+  //         <div
+  //           key={`thumb_ann_${annotation.id}`}
+  //           style={{
+  //             position: 'absolute',
+  //             left: `${x}px`,
+  //             top: `${y}px`,
+  //             width: `${width}px`,
+  //             height: `${height}px`,
+  //             pointerEvents: 'none',
+  //             background: annotation.type === 'text'
+  //               ? 'rgba(0,0,0,0.15)'
+  //               : 'transparent',
+  //             border: annotation.type === 'image'
+  //               ? '1px solid rgba(0,0,0,0.2)'
+  //               : 'none',
+  //             fontSize: `${10 * thumbScale}px`,
+  //             overflow: 'hidden'
+  //           }}
+  //         >
+  //           {annotation.type === 'text' ? annotation.content : null}
+
+  //           {annotation.type === 'image' && (
+  //             <img
+  //               src={annotation.src}
+  //               style={{
+  //                 width: '100%',
+  //                 height: '100%',
+  //                 objectFit: 'contain'
+  //               }}
+  //             />
+  //           )}
+  //         </div>
+  //       );
+  //     });
+  // };
+
   const renderSigningBoxAnnotations = (pageNumber) => {
     const container = containerRef.current;
     const containerWidth = container ? container.offsetWidth : 0;
     const containerHeight = container ? container.offsetHeight : 0;
     const filteredAnnotations = (props.signerAnnotations || [])
       .filter((annotation) => annotation && annotation.page_number === pageNumber);
+
+    const pageScale = getScaleForPage(pageNumber) * zoom;
 
     return (
       <>
@@ -654,10 +730,10 @@ const PDFViewerSigning = (props) => {
               }}
               style={{
                 position: "absolute",
-                top: `${(annotation.y * zoom)}px`,
-                left: `${annotation.x * zoom}px`,
-                width: `${annotation.width * zoom}px`,
-                height: `${annotation.height * zoom}px`,
+                top: `${(annotation.y * pageScale)}px`,
+                left: `${annotation.x * pageScale}px`,
+                width: `${annotation.width * pageScale}px`,
+                height: `${annotation.height * pageScale}px`,
                 border: "2px dashed rgba(169, 169, 169, 0.7)",
                 boxShadow: "0 0 5px rgba(0, 0, 0, 0.2)",
                 backgroundColor: annotation.color
@@ -672,7 +748,7 @@ const PDFViewerSigning = (props) => {
                 transition: "background-color 0.3s ease-in-out",
               }}
             >
-              <p style={{ margin: 0, fontSize: `${11 * zoom}px` }}>
+              <p style={{ margin: 0, fontSize: `${11 * pageScale}px` }}>
                 Sign Here
               </p>
             </button>
@@ -683,16 +759,32 @@ const PDFViewerSigning = (props) => {
   };
 
   // Utility
+  // const getScaleForPage = (pageNumber) => {
+  //   const pageDim = pageDimensions.find(dim => dim.pageNumber === pageNumber);
+  //   if (!pageDim) return 1;
+  //   const { width, height } = pageDim;
+  //   const isLandscape = width > height;
+  //   props.setLandscape(isLandscape);
+  //   const rotation = props.pageRotations?.[pageNumber] || 0;
+  //   if (isLandscape) {
+  //     if (rotation === 90 || rotation === 270) return 1;
+  //     return props.isRotated ? 1 : 0.7;
+  //   }
+  //   return 1;
+  // };
   const getScaleForPage = (pageNumber) => {
     const pageDim = pageDimensions.find(dim => dim.pageNumber === pageNumber);
     if (!pageDim) return 1;
     const { width, height } = pageDim;
     const isLandscape = width > height;
     props.setLandscape(isLandscape);
-    const rotation = props.pageRotations?.[pageNumber] || 0;
+
     if (isLandscape) {
-      if (rotation === 90 || rotation === 270) return 1;
-      return props.isRotated ? 1 : 0.7;
+      const container = mainContainerRef.current;
+      // leave some breathing room for page margin/padding
+      const availableWidth = container ? container.clientWidth - 48 : width;
+      const fitScale = availableWidth / width;
+      return Math.min(1, fitScale); // never upscale beyond natural size
     }
     return 1;
   };
@@ -1010,32 +1102,69 @@ const PDFViewerSigning = (props) => {
           flexWrap: "wrap",
           alignItems: { xs: "stretch", sm: "center" },
           justifyContent: "space-between",
-          gap: 1,
-          p: { xs: 1, sm: 1.5 },
+          gap: { xs: 0.75, sm: 0.5 },      // Reduced
+          px: { xs: 1, sm: 1.25 },         // Horizontal padding only
+          py: 0.5,                         // Smaller vertical padding
+          minHeight: 44,                   // Compact toolbar height
           bgcolor: "white",
-          boxShadow: 3,
+          boxShadow: 2,                    // Slightly lighter shadow
           width: "100%",
-          maxWidth: "100%",
           overflow: "hidden",
           zIndex: 10,
-          marginBottom: 1,
+          mb: 0.75,
         }}
       >
         {/* LEFT */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Tooltip title={isAsideOpen ? 'Close thumbnail view' : 'Open thumbnail view'}>
-            <span
+        <Box sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 0.75,
+        }}>
+          <Tooltip title={isAsideOpen ? "Hide page navigation" : "Show page navigation"}>
+            <Box
               onClick={toggleAside}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+              className='shadow-lg'
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                px: 1,
+                height: 32,
+                borderRadius: 1.5,
+                cursor: "pointer",
+                userSelect: "none",
+                bgcolor: isAsideOpen ? "#EEF4FF" : "transparent",
+                color: isAsideOpen ? "#1C4690" : "text.secondary",
+                transition: "all .2s ease",
+
+                "&:hover": {
+                  bgcolor: "#F5F8FD",
+                },
+              }}
             >
-              {isAsideOpen
-                ? <FaThList style={{ fontSize: iconSz, color: '#1C4690' }} />
-                : <FaBars style={{ fontSize: iconSz, color: '#1C4690' }} />
-              }
-              <span className="text-muted" style={{ fontSize: labelSz }}>
-                {isAsideOpen ? 'Close' : 'Open'} Snapshot View
-              </span>
-            </span>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  transition: "transform .2s ease",
+                  // transform: isAsideOpen ? "rotate(0deg)" : "rotate(180deg)",
+                }}
+              >
+               
+                {isAsideOpen?   <TfiLayoutSidebarLeft size={15} />: <TfiLayoutSidebarNone  size={15} />}
+              </Box>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  flexGrow: 1,
+                }}
+              >
+                {isAsideOpen ? "Close" : "Open"} Pages Navigation
+              </Typography>
+
+
+            </Box>
           </Tooltip>
           {/* Page selector moved next to thumbnail toggle */}
           <Typography sx={{ fontSize: "12px", whiteSpace: "nowrap", ml: 2 }}>
@@ -1079,7 +1208,7 @@ const PDFViewerSigning = (props) => {
             value={zoom * 100}
             onChange={(_, v) => setZoom(v / 100)}
             min={25}
-            max={151}
+            max={200}
             sx={{ width: { xs: 90, sm: 120 } }}
           />
 
@@ -1239,6 +1368,7 @@ const PDFViewerSigning = (props) => {
                       className="page-container"
                     />
                     <span className="thumbnail-page-number">{pageIndex + 1}</span>
+
                   </div>
                 ))}
               </Document>
@@ -1251,13 +1381,9 @@ const PDFViewerSigning = (props) => {
           className="pdf-main-viewer scrollbar-custom"
           ref={mainContainerRef}
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            width: '100%',
-            minHeight: 0,
-            overflowX: 'auto',
+
+            height: "80vh"
+
           }}
         >
           <Document
@@ -1276,17 +1402,17 @@ const PDFViewerSigning = (props) => {
                   <div
                     key={`page_${pageIndex + 1}`}
                     id={`page_${pageIndex + 1}`}
-                    className="pdf-page-wrapper"
+                    className="pdf-page-wrapper "
                     onClick={(event) => handleAnnotation(event, pageIndex + 1)}
                     onDoubleClick={() => {
                       setEditingAnnotationId(null);
                       setSelectedAnnotationId(null);
                     }}
-                   style={{
+                    style={{
                       position: 'relative',
                       width: scaledWidth,
                       height: scaledHeight,
-                      margin: '0 auto 24px',
+                      margin: '24px auto 24px',
                       display: 'flex',
                       justifyContent: 'center',
                     }}
@@ -1296,7 +1422,7 @@ const PDFViewerSigning = (props) => {
                       scale={pageScale}
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
-                      className="page-container shadow-sm"
+                      className="page-container"
                       onLoadSuccess={onPageLoadSuccess}
                     />
                     {/* Annotation Layer */}
@@ -1317,7 +1443,7 @@ const PDFViewerSigning = (props) => {
                   </div>
                   {/* Divider between pages, not after last page */}
                   {pageIndex < numPages - 1 && (
-                    <div className="pdf-page-divider" />
+                    <div className="pdf-page-divider" style={{ height: 15 * zoom }} />
                   )}
                 </React.Fragment>
               );

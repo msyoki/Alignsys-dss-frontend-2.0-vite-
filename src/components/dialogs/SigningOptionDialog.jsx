@@ -107,9 +107,9 @@ function SigningOptionDialog(props) {
               onClick={handleSignOnePage}
               startIcon={
                 props.isStamp ? (
-                  <FaStamp size={13} color='#555' />
+                  <FaStamp size={13}  />
                 ) : (
-                  <FaSignature size={13} color='#555' />
+                  <FaSignature size={13}  />
                 )
               }
               sx={{
@@ -129,7 +129,7 @@ function SigningOptionDialog(props) {
             <Button
               variant="outlined"
               onClick={handleSignAllPages}
-              startIcon={<FaCopy size={13} color='#555' />}
+              startIcon={<FaCopy size={13}  />}
               sx={{
                 ...pillBtn,
                 px: { xs: 1.5, sm: 2 },

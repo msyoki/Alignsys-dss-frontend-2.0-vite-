@@ -289,7 +289,7 @@ function Signing_Page_Self() {
           />
           <LoadingDialog opendialogloading={opendialogloading} />
           <HelpBubble content='' base64={sampleURL} filename={docname} />
-          <div className="row bg-white" style={{ maxHeight: '100vh', height: '100vh' }}>
+          <div className="row bg-white" >
             {/* Main Document Viewer */}
             <div className="col-lg-9 col-md-12 col-sm-12 order-lg-1 order-sm-1 bg-white">
               <div>

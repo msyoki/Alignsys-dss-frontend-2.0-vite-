@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Draggable from 'react-draggable';
-import '../../styles/PDFViewerTechedge.css'
-import { Slider, Tooltip, Button } from '@mui/material';
+import '../../styles/Pdfviewersigningareas.css'
+import { Slider, Tooltip, Button,Box,Typography  } from '@mui/material';
 import LoadingDialog from '../loaders/LoadingDialog';
 import {
     FaEraser,
@@ -15,11 +15,12 @@ import {
     FaThList,
 } from 'react-icons/fa';
 
-
+import { TfiLayoutSidebarLeft } from "react-icons/tfi";
+import { TfiLayoutSidebarNone } from "react-icons/tfi";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
-const PDFViewerPreview2 = ({
+const PDFViewerSetSIgningAreas = ({
     title, complete, uploadeddocument, height, signer,
     signatureBoxes, setSignatureBoxes,
     selectedAnnotationId, setSelectedAnnotationId,
@@ -42,8 +43,8 @@ const PDFViewerPreview2 = ({
 
     const selectAnnotation = (annotationId) => setSelectedAnnotationId(annotationId);
 
-    const zoomIn = () => setZoom(prev => Math.min(prev + 0.1, 2));
-    const zoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.5));
+    const zoomIn = () => setZoom(prev => Math.min(prev + 0.01, 2));
+    const zoomOut = () => setZoom(prev => Math.max(prev - 0.01, 0.25));
     const resetZoom = () => setZoom(1);
 
     useEffect(() => {
@@ -71,7 +72,7 @@ const PDFViewerPreview2 = ({
 
     const toggleAside = () => setIsAsideOpen(prev => !prev);
 
-    const onPageLoadSuccess = (page) => {
+    const onPageLoadSuccess = (page, renderScale) => {
         const { pageNumber, width, height, rotate } = page;
 
         if (pageNumber <= numPages) {
@@ -81,8 +82,19 @@ const PDFViewerPreview2 = ({
 
         if (rotate % 360 !== 0) setIsRotated(true);
 
-        const adjustedWidth = rotate % 180 !== 0 ? height : width;
-        const adjustedHeight = rotate % 180 !== 0 ? width : height;
+        // Divide by the scale actually used to render this page (not just `zoom`),
+        // so the stored dimensions are always the true natural (scale=1) size.
+        // Using `zoom` alone here caused a feedback loop for landscape pages:
+        // getScaleForPage's fit-to-width factor would get baked into the stored
+        // width, which shrank the fit calculation next render, which changed the
+        // render scale, which re-fired onLoadSuccess, oscillating forever.
+        const effectiveScale = renderScale || 1;
+
+        const adjustedWidth =
+            (rotate % 180 !== 0 ? height : width) / effectiveScale;
+
+        const adjustedHeight =
+            (rotate % 180 !== 0 ? width : height) / effectiveScale;
 
         setPageDimensions(prev => {
             const exists = prev.find(p => p.pageNumber === pageNumber);
@@ -118,12 +130,17 @@ const PDFViewerPreview2 = ({
         }, 100);
     };
 
-    const getScaleForPage = (pageNumber, zoom = 1) => {
+    const getScaleForPage = (pageNumber) => {
         const pageDim = pageDimensions.find(d => d.pageNumber === pageNumber);
-        if (!pageDim) return zoom;
+        if (!pageDim) return 1;
+
         const isLandscape = pageDim.width > pageDim.height;
-        const baseScale = isLandscape ? (isRotated ? 0.8 : 0.6) : 1;
-        return baseScale * zoom;
+        if (!isLandscape) return 1;
+
+        const container = mainContainerRef.current;
+        const availableWidth = container ? container.clientWidth - 48 : pageDim.width;
+        const fitScale = availableWidth / pageDim.width;
+        return Math.min(1, fitScale); // never upscale past natural size
     };
 
     const getScaleForPageThumbnail = (pageNumber) => {
@@ -156,16 +173,63 @@ const PDFViewerPreview2 = ({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === 'Delete' && selectedAnnotationId) {
+                setDeleteAnnotationDialog(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedAnnotationId]);
+
     const handleDragStop = (annotation, data) => {
-        // Draggable bounds already prevent out-of-bounds positions during drag.
-        // We just unscale the final position and save it.
+
+        const pageDim = pageDimensions.find(
+            p => p.pageNumber === annotation.pageNumber
+        );
+
+        if (!pageDim) return;
+
+        const pageScale =
+            getScaleForPage(annotation.pageNumber) * zoom;
+
+        let newX = data.x / pageScale;
+        let newY = data.y / pageScale;
+
+        // Never let the box's bounds exceed the page itself (extreme zoom-out safeguard)
+        const clampWidth = Math.min(annotation.width, pageDim.width);
+        const clampHeight = Math.min(annotation.height, pageDim.height);
+
+        newX = Math.max(
+            0,
+            Math.min(
+                newX,
+                pageDim.width - clampWidth
+            )
+        );
+
+        newY = Math.max(
+            0,
+            Math.min(
+                newY,
+                pageDim.height - clampHeight
+            )
+        );
+
         setSignatureBoxes(prev =>
             prev.map(box =>
                 box.signer.id === signer.id
                     ? {
-                        ...box, annotations: box.annotations.map(a =>
+                        ...box,
+                        annotations: box.annotations.map(a =>
                             a.id === annotation.id
-                                ? { ...a, x: data.x / zoom, y: data.y / zoom }
+                                ? {
+                                    ...a,
+                                    x: newX,
+                                    y: newY
+                                }
                                 : a
                         )
                     }
@@ -189,6 +253,8 @@ const PDFViewerPreview2 = ({
         const pageWidth = pageDim.width || containerRef.current?.offsetWidth || 0;
         const pageHeight = pageDim.height || containerRef.current?.offsetHeight || 0;
 
+        const pageScale = getScaleForPage(pageNumber) * zoom;
+
         const filteredAnnotations = signatureBoxes
             .flatMap(box => box.annotations)
             .filter(a => a.pageNumber === pageNumber);
@@ -196,15 +262,43 @@ const PDFViewerPreview2 = ({
         return (
             <>
                 {filteredAnnotations.map(annotation => {
+
                     const isSelected = selectedAnnotationId === annotation.id;
                     const backgroundColor = annotation.color ? `${annotation.color}33` : 'rgba(255,255,0,0.1)';
 
+                    let { x, y } = annotation;
+                    // switch (rotation) {
+                    //     case 90:
+                    //         [x, y] = [y, pageWidth - x];
+                    //         break;
+                    //     case 180:
+                    //         x = pageWidth - x;
+                    //         y = pageHeight - y;
+                    //         break;
+                    //     case 270:
+                    //         [x, y] = [pageHeight - y, x];
+                    //         break;
+                    // }
+
+                    // Never let the box be larger than the page itself (extreme zoom-out safeguard)
+                    const renderWidth = Math.min(annotation.width * pageScale, pageWidth * pageScale);
+                    const renderHeight = Math.min(annotation.height * pageScale, pageHeight * pageScale);
+
+                    const renderX = Math.max(0, Math.min(x * pageScale, (pageWidth * pageScale) - renderWidth));
+                    const renderY = Math.max(0, Math.min(y * pageScale, (pageHeight * pageScale) - renderHeight));
+
+
                     return (
                         <Draggable
-                            key={annotation.id}
-                            position={{ x: annotation.x * zoom, y: annotation.y * zoom }}
+                            key={`${annotation.id}_${pageScale.toFixed(3)}`}
+                            position={{ x: renderX, y: renderY }}
                             onStop={(e, data) => handleDragStop(annotation, data)}
-                            bounds="parent"
+                            bounds={{
+                                left: 0,
+                                top: 0,
+                                right: Math.max(0, (pageWidth * pageScale) - renderWidth),
+                                bottom: Math.max(0, (pageHeight * pageScale) - renderHeight),
+                            }}
                         >
                             <div
                                 onClick={(e) => {
@@ -216,8 +310,8 @@ const PDFViewerPreview2 = ({
                                 }}
                                 style={{
                                     position: 'absolute',
-                                    width: `${annotation.width * zoom}px`,
-                                    height: `${annotation.height * zoom}px`,
+                                    width: `${renderWidth}px`,
+                                    height: `${renderHeight}px`,
                                     border: '2px dashed rgba(169,169,169,0.7)',
                                     boxShadow: '0 0 5px rgba(0,0,0,0.2)',
                                     backgroundColor,
@@ -229,7 +323,7 @@ const PDFViewerPreview2 = ({
                                     transition: 'background-color 0.3s ease-in-out',
                                 }}
                             >
-                                <p style={{ margin: 0, fontSize: `${11 * zoom}px` }}>Sign Here</p>
+                                <p style={{ margin: 0, fontSize: `${11 * pageScale}px` }}>Sign Here</p>
                                 {isSelected && (
                                     <FaTrash
                                         className="delete-icon"
@@ -257,22 +351,45 @@ const PDFViewerPreview2 = ({
     };
 
     const handleAnnotation = (event, pageNumber) => {
+        // alert(pageNumber)
         event.preventDefault();
         if (!addSignatureBox) return;
 
+        // const pageElement = document.getElementById(`page_${pageNumber}`);
+        // if (!pageElement) return;
+
+        // const { left, top } = pageElement.getBoundingClientRect();
+        // const x = (event.clientX - left) / zoom;
+        // const y = (event.clientY - top) / zoom;
         const pageElement = document.getElementById(`page_${pageNumber}`);
         if (!pageElement) return;
-
+        const { clientX, clientY } = event;
         const { left, top } = pageElement.getBoundingClientRect();
-        const x = (event.clientX - left) / zoom;
-        const y = (event.clientY - top) / zoom;
+        const pageDim = pageDimensions.find(dim => dim.pageNumber === pageNumber);
+        const pageWidth = pageDim?.width || 0;
+        const pageHeight = pageDim?.height || 0;
+        // Use the same scale the render pipeline uses: baseScale * zoom
+        const pageScale = getScaleForPage(pageNumber) * zoom;
+
+        let x = (clientX - left) / pageScale;
+        let y = (clientY - top) / pageScale;
+
+        // Keep box fully inside page (guard against the page itself being
+        // smaller than the default box size at extreme zoom-out)
+        const boxWidth = Math.min(125, pageWidth);
+        const boxHeight = Math.min(35, pageHeight);
+        x = Math.max(0, Math.min(x, pageWidth - boxWidth));
+        y = Math.max(0, Math.min(y, pageHeight - boxHeight));
+        // alert(`Clicked at page coords: (${x.toFixed(2)}, ${y.toFixed(2)}) on page ${pageNumber}`);
+
+
 
         const newAnnotation = {
             id: Date.now(),
             pageNumber,
             x, y,
-            width: 125,
-            height: 35,
+            width: boxWidth,
+            height: boxHeight,
             text: signer.email,
             color: signer.color,
         };
@@ -325,20 +442,52 @@ const PDFViewerPreview2 = ({
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginLeft: '1rem' }}>
 
                     {/* Thumbnail toggle */}
-                    <Tooltip title={isAsideOpen ? 'Close thumbnail view' : 'Open thumbnail view'}>
-                        <span
-                            onClick={toggleAside}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                        >
-                            {isAsideOpen
-                                ? <FaThList style={{ fontSize: iconSz, color: '#1C4690' }} />
-                                : <FaBars style={{ fontSize: iconSz, color: '#1C4690' }} />
-                            }
-                            <span className="text-muted" style={{ fontSize: labelSz }}>
-                                {isAsideOpen ? 'Close' : 'Open'} Snapshot View
-                            </span>
-                        </span>
-                    </Tooltip>
+     <Tooltip title={isAsideOpen ? "Hide page navigation" : "Show page navigation"}>
+            <Box
+              onClick={toggleAside}
+              className='shadow-lg'
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                px: 1,
+                height: 32,
+                borderRadius: 1.5,
+                cursor: "pointer",
+                userSelect: "none",
+                bgcolor: isAsideOpen ? "#EEF4FF" : "transparent",
+                color: isAsideOpen ? "#1C4690" : "text.secondary",
+                transition: "all .2s ease",
+
+                "&:hover": {
+                  bgcolor: "#F5F8FD",
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  transition: "transform .2s ease",
+                  // transform: isAsideOpen ? "rotate(0deg)" : "rotate(180deg)",
+                }}
+              >
+               
+                 {isAsideOpen?   <TfiLayoutSidebarLeft size={15} />: <TfiLayoutSidebarNone  size={15} />}
+              </Box>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  flexGrow: 1,
+                }}
+              >
+                {isAsideOpen ? "Close" : "Open"} Pages Navigation
+              </Typography>
+
+
+            </Box>
+          </Tooltip>
 
                     {/* Page input */}
                     <span className="text-dark" style={{ fontSize: labelSz }}>
@@ -399,7 +548,7 @@ const PDFViewerPreview2 = ({
                             value={zoom * 100}
                             onChange={(_, v) => setZoom(v / 100)}
                             min={25}
-                            max={151}
+                            max={200}
                             aria-label="Zoom"
                             sx={{ width: 120 }}
                         />
@@ -423,11 +572,11 @@ const PDFViewerPreview2 = ({
             </div>
 
             {/* ── Body: thumbnail sidebar + main viewer side by side ── */}
-            <div className="pdf-viewer-container">
+            <div className="sa-viewer-container">
 
                 {isAsideOpen && (
-                    <aside className="pdf-thumbnail-panel scrollbar-custom1" ref={containerRef}>
-                        <div className="thumbnail-scroll-container">
+                    <aside className="sa-thumbnail-panel sa-scrollbar-thumbs" ref={containerRef}>
+                        <div className="sa-thumbnail-scroll-container">
                             <Document className="pdf-container" file={uploadeddocument}>
                                 {[...Array(numPages).keys()].map((pageIndex) => (
                                     <div
@@ -452,43 +601,75 @@ const PDFViewerPreview2 = ({
                 )}
 
                 {/* Main PDF viewer */}
-                <main className="pdf-main-viewer scrollbar-custom" ref={mainContainerRef}>
+                <main
+                    className="sa-main-viewer sa-scrollbar-main"
+                    ref={mainContainerRef}
+                    style={{
+
+                        height: "90vh"
+
+                    }}
+
+                >
                     <Document
                         className="pdf-container"
                         file={uploadeddocument}
                         onLoadSuccess={onDocumentLoadSuccess}
-                        loading={<div>Loading PDF...</div>}
+                        loading={<div className="pdf-skeleton" />}
                         error={<div>Error loading PDF!</div>}
                     >
-                        {[...Array(numPages).keys()].map((pageIndex) => (
-                            <div
-                                key={`page_${pageIndex + 1}`}
-                                id={`page_${pageIndex + 1}`}
-                                className="pdf-page-wrapper"
-                                onClick={(e) => handleAnnotation(e, pageIndex + 1)}
-                            >
-                                <Page
-                                    pageNumber={pageIndex + 1}
-                                    scale={getScaleForPage(pageIndex + 1, zoom)}
-                                    renderTextLayer={false}
-                                    renderAnnotationLayer={false}
-                                    className="page-container shadow-sm"
-                                    onLoadSuccess={onPageLoadSuccess}
-                                />
-                                <div
-                                    className="annotation-canvas"
-                                    style={{
-                                        position: 'absolute',
-                                        top: 0, left: 0,
-                                        width: '100%', height: '100%',
-                                        zIndex: 5,
-                                        pointerEvents: 'auto',
-                                    }}
-                                >
-                                    {renderSigningBoxAnnotations(pageIndex + 1)}
-                                </div>
-                            </div>
-                        ))}
+
+                        {[...Array(numPages).keys()].map((pageIndex) => {
+                            const { width, height } = getPageSize(pageIndex + 1);
+                            const pageScale = getScaleForPage(pageIndex + 1) * zoom;
+                            const scaledWidth = width * pageScale;
+                            const scaledHeight = height * pageScale;
+                            return (
+                                <React.Fragment key={`pagefrag_${pageIndex + 1}`}>
+                                    <div
+                                        key={`page_${pageIndex + 1}`}
+                                        id={`page_${pageIndex + 1}`}
+                                        className="sa-page-wrapper"
+                                        onClick={(event) => handleAnnotation(event, pageIndex + 1)}
+                                        onDoubleClick={() => {
+                                            setSelectedAnnotationId(null);
+                                        }}
+                                        style={
+                                            width > 0 && height > 0
+                                                ? {
+                                                    width: `${scaledWidth}px`,
+                                                    height: `${scaledHeight}px`,
+                                                }
+                                                : undefined
+                                        }
+                                    >
+                                        <Page
+                                            pageNumber={pageIndex + 1}
+                                            scale={pageScale}
+                                            renderTextLayer={false}
+                                            renderAnnotationLayer={false}
+                                            className="sa-page-canvas"
+                                            onLoadSuccess={(page) => onPageLoadSuccess(page, pageScale)}
+                                        />
+                                        {/* Annotation Layer */}
+                                        <div
+                                            // className="annotation-canvas"
+                                            className="sa-annotation-overlay" style={{ width: scaledWidth, height: scaledHeight }}
+                                        >
+                                            {renderSigningBoxAnnotations(pageIndex + 1)}
+
+
+                                        </div>
+                                    </div>
+                                    {/* Divider between pages, not after last page.
+                                        Scales with zoom so spacing stays proportional
+                                        whether the current/next page is portrait or landscape. */}
+                                    {pageIndex < numPages - 1 && (
+                                        <div className="sa-page-divider" style={{ height: 15 * zoom }} />
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
                     </Document>
                 </main>
             </div>
@@ -496,4 +677,4 @@ const PDFViewerPreview2 = ({
     );
 };
 
-export default PDFViewerPreview2;
+export default PDFViewerSetSIgningAreas;

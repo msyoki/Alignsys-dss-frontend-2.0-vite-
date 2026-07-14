@@ -62,7 +62,7 @@ const AuthGuestDialog = (props) => {
       keepMounted
       aria-describedby="alert-dialog-slide-description"
       PaperProps={{
-        style: { borderRadius: 18, minWidth: 380, background: '#f8fafc' }
+        style: { borderRadius: 18, minWidth: 380, background: 'white' }
       }}
     >
       <DialogContent style={{ padding: '32px 24px 24px 24px' }}>

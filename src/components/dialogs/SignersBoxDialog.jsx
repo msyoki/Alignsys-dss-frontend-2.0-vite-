@@ -14,7 +14,11 @@ import PDFViewerPreviewLoader2 from '../preview/PDFViewerPreviewLoader2';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { FaPencilAlt, FaUserCircle, FaCheckSquare } from 'react-icons/fa';
-
+import {
+    Grid,
+    Paper,
+} from '@mui/material';
+import { FaArrowLeft, FaTimes } from "react-icons/fa";
 
 function CustomTabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -183,7 +187,15 @@ function SignersBoxDialog(props) {
 
 
 
+    const actionButtonSx = {
+        textTransform: 'none',
+        fontSize: '12px',
+        fontWeight: 500,
+        borderRadius: '999px',
+        boxShadow: 'none',
+        margin: '20px'
 
+    };
 
 
 
@@ -224,35 +236,33 @@ function SignersBoxDialog(props) {
 
 
     return (
-        <div>
 
-            <Dialog fullScreen open={props.open} onClose={handleClose} TransitionComponent={Transition}>
-                <DialogContent >
-                    <Box className='bg-dark' sx={{ margin: '0', padding: '0', display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100%', overflow: 'hidden' }}>
-                        {/* Toggle Button for Mobile */}
-                        {isMobile && (
-                            <Button
-                                onClick={toggleSidebar}
-                                variant="contained"
-                                sx={{
-                                    position: 'fixed',
-                                    top: '10px',
-                                    left: '20px',
-                                    zIndex: 1000,
-                                    backgroundColor: '#1C4690',
-                                }}
-                            >
-                                {sidebarOpen ? 'Hide Details' : 'Show Details'}
-                            </Button>
-                        )}
 
-                        {/* PDF Viewer Content */}
-                        <Box
-
+        <Dialog fullScreen open={props.open} onClose={handleClose} TransitionComponent={Transition}>
+            <Dialog
+                fullScreen
+                open={props.open}
+                onClose={handleClose}
+                TransitionComponent={Transition}
+            >
+                <DialogContent sx={{ p: 0, height: '100%' }}>
+                    <Grid
+                        container
+                        sx={{
+                            height: '100%',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {/* PDF Viewer */}
+                        <Grid
+                            item
+                            xs={12}
+                            md={8}
+                            lg={9}
                             sx={{
-                                flex: sidebarOpen ? (isMobile ? '1' : isTablet ? 2 : 3) : 1,
-                                mt: isMobile && sidebarOpen ? '50vh' : 0,
-                                backgroundColor: '#666666'
+                                height: '100%',
+                                overflow: 'hidden',
+                                p: 2,
                             }}
                         >
                             <PDFViewerPreviewLoader2
@@ -270,163 +280,182 @@ function SignersBoxDialog(props) {
                                 handleSelectUser={handleSelectUser}
                                 signers={props.signers}
                             />
-                        </Box>
+                        </Grid>
 
-                        {/* Sidebar */}
-                        {sidebarOpen && (
-                            <div
-                                className={`${isMobile ? 'col-12' : isTablet ? 'col-md-3' : 'col-lg-3'} text-center shadow-sm`}
-                                style={{
-                                    borderRadius: '0',
-                                    borderTop: 'none',
-                                    boxShadow: 'none',
-                                    position: isMobile ? 'fixed' : 'relative',
-                                    zIndex: isMobile ? 999 : 1,
-                                    backgroundColor: 'white',
-                                    height: isMobile ? '100vh' : 'auto',
-                                    overflow: 'hidden',
-                                    display: 'flex',
-                                    flexDirection: 'column',
+                        {/* Metadata */}
+
+                        <Grid
+                            item
+                            xs={12}
+                            md={4}
+                            lg={3}
+                            className='shadow-lg'
+                            sx={{
+                                bgcolor: '#fff',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                height: '100%',
+                                padding: '20px'
+
+                            }}
+                        >
+                            {/* Header */}
+                            <Box
+                                sx={{
+                                    bgcolor: '#2757aa',
+                                    color: '#fff',
+                                    p: 1,
+                                    textAlign: 'center',
                                 }}
                             >
-                                {/* Header */}
-                                <div
-                                    className="card-header btn text-white shadow-lg"
-                                    style={{
-                                        backgroundColor: '#2757aa',
-                                        width: '100%',
-                                        margin: 0,
-                                        padding: '0.5rem',
-                                        border: '2px solid white', // 👈 Add this line
-                                        borderRadius: '0.25rem', // Optional: smooth corners
-                                    }}
-                                >
-                                    <p style={{ fontSize: isMobile ? '10px' : '12px', margin: 0 }}>ORDER OF SIGNERS</p>
-                                    <p style={{ fontSize: isMobile ? '10px' : '12px', margin: 0 }}>
-                                        Number of signers ({props.signers.length})
-                                    </p>
-                                </div>
-                                <div className='p-3' style={{ backgroundColor: '#e9f2ff', borderRadius: '8px', marginBottom: '16px', fontSize: '13px' }}>
-                                    <span style={{ color: '#2757aa' }}>Instructions</span>: Select a user from the list below, then click on the document to mark where their signature box should appear.
-                                </div>
+                                <Typography fontSize={isMobile ? 10 : 12}>
+                                    ORDER OF SIGNERS
+                                </Typography>
 
-                                {/* Scrollable Signer List */}
-                                <div style={{ flex: 1, overflowY: 'auto' }}>
+                                <Typography fontSize={isMobile ? 10 : 12}>
+                                    Number of signers ({props.signers.length})
+                                </Typography>
+                            </Box>
 
-                                    <ul style={{ listStyle: 'none' }} className='bg-white p-2'>
-                                        {props.signers.map((item, index) => (
-                                            <li
-                                                key={index}
-                                                onClick={() => handleSelectUser(index, item, true)}
+                            {/* Instructions */}
+                            <Box
+                                sx={{
+                                    bgcolor: '#e9f2ff',
+                                    borderRadius: 1,
+                                    m: 2,
+                                    p: 1.5,
+                                    fontSize: 12,
+                                }}
+                            >
+                                <strong style={{ color: '#2757aa' }}>
+                                    Instructions:
+                                </strong>{' '}
+                                Select a user, then click on the document to place assign a
+                                signature box/ signing.
+                            </Box>
+
+                            {/* Signers */}
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    overflowY: 'auto',
+                                    px: 1,
+                                }}
+                            >
+                                {props.signers.map((item, index) => {
+                                    const isActive =
+                                        props.selectedUser?.id === index &&
+                                        addSignatureBox;
+
+                                    return (
+                                        <Box
+                                            key={index}
+                                            onClick={() =>
+                                                handleSelectUser(index, item, true)
+                                            }
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                cursor: 'pointer',
+                                                mb: 1,
+                                            }}
+                                        >
+                                            <FaCheckSquare
                                                 style={{
-                                                    cursor: 'pointer',
-                                                    backgroundColor: '#fff',
-                                                    borderRadius: '25px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    padding: '4px',
+                                                    color: isActive
+                                                        ? userColors[index]
+                                                        : '#ccc',
+                                                    fontSize: 20,
+                                                    minWidth: 20,
+                                                }}
+                                            />
 
+                                            <Box
+                                                sx={{
+                                                    ml: 1,
+                                                    flex: 1,
+                                                    p: 1,
+                                                    borderRadius: '25px',
+                                                    boxShadow: 1,
+                                                    bgcolor: '#fff',
+                                                    fontSize: '12px',
                                                 }}
                                             >
-                                                {/* Flag icon */}
-                                                <FaCheckSquare
-                                                    className="mx-2"
+                                                {index + 1}.{' '}
+                                                <FaUserCircle
                                                     style={{
                                                         color:
-                                                            props.selectedUser?.id === index && addSignatureBox
-                                                                ? userColors[index]
-                                                                : '#ccc',
-                                                        fontSize: '20px',
-                                                        minWidth: '16px',
+                                                            userColors[index] ||
+                                                            '#1C4690',
                                                     }}
-                                                />
+                                                />{' '}
+                                                {item.email}
 
-                                                {/* Signer button */}
-                                                <small
-                                                    className="btn m-1 shadow-lg"
-                                                    style={{
-                                                        fontSize: '12.5px',
-                                                        borderRadius: '25px',
-                                                        backgroundColor: 'white',
-                                                        flex: 1,
-                                                        textAlign: 'left',
-                                                    }}
-                                                >
-                                                    {index + 1}.{" "}
-                                                    <FaUserCircle
-                                                        className="m-1"
-                                                        style={{ color: userColors[index] || "#1C4690" }}
-                                                    />{" "}
+                                                {isActive && (
+                                                    <FaPencilAlt
+                                                        style={{
+                                                            marginLeft: 8,
+                                                            fontSize: 14,
+                                                        }}
+                                                    />
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
 
-                                                    <small className="mx-1">{item.email}</small>
+                            {/* Footer */}
+                            <Box
+                                sx={{
+                                    p: 2,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: 1,
+                                }}
+                            >
+                                <Button
+                                    variant="contained"
+                                    color="success"
+                                    className='rounded-pill'
+                                    sx={{
+                                        fontSize: '12px',
+                                        textTransform: "none",
+                                    }}
+                                    onClick={handleClose}
+                                >
+                                    Go Back to Signers
+                                </Button>
 
-                                                    {props.selectedUser?.id === index && addSignatureBox && (
+                                {/* <Button
+                                    variant="contained"
+                                    color="warning"
+                                    sx={{
+                                        ...actionButtonSx,
+                                        width: "80%",
+                                        maxWidth: 220,
+                                        textTransform: "none",
+                                    }}
+                                    onClick={handleClose}
+                                >
+                                    Close Previewer
+                                </Button> */}
+                            </Box>
+                        </Grid>
 
-                                                        <FaPencilAlt style={{ fontSize: '14px' }} />
-
-                                                    )}
-                                                </small>
-
-                                            </li>
-                                        ))}
-                                    </ul>
-
-                                </div>
-
-                                {/* Sticky Bottom Buttons */}
-                                <div className="p-3" style={{ marginTop: 'auto' }}>
-
-                                    <Button
-
-                                        variant='contained'
-                                        color='success'
-                                        className='m-2 p-2'
-                                        sx={{
-                                            textTransform: 'none',
-                                            fontSize: '12px',
-                                            fontWeight: 500,
-                                            borderRadius: '999px',
-                                            px: 1.8,
-                                            py: 0.8,
-                                            minHeight: 34,
-                                            boxShadow: 'none',
-
-                                        }}
-                                        onClick={handleClose}
-                                        disabled={false}
-                                    >
-                                        <span className='mx-2'> Back to Signers Window</span>
-                                    </Button>
-                                    <Button
-                                        variant='contained'
-                                        color='warning'
-                                        className='m-2 p-2'
-                                        sx={{
-                                            textTransform: 'none',
-                                            fontSize: '12px',
-                                            fontWeight: 500,
-                                            borderRadius: '999px',
-                                            px: 1.8,
-                                            py: 0.8,
-                                            minHeight: 34,
-                                            boxShadow: 'none',
-
-                                        }}
-                                        onClick={handleClose}
-                                        disabled={false}
-                                    >
-                                        <span className='mx-2'>Close Previewer</span>
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
-                    </Box>
+                    </Grid>
                 </DialogContent>
             </Dialog>
+        </Dialog>
 
-        </div>
+
     );
 }
 
 export default SignersBoxDialog
+
+
+
+
+

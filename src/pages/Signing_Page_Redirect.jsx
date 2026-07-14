@@ -239,13 +239,24 @@ function Signing_Page_Redirect() {
 
   // Fetch annotations by signer email and document
   const getAnnotationsBySignerEmailAndDocument = async (email) => {
-    const parts = fileurl.split('_')[1].split('.')[0];
-    axios.post(`${constants.devApiBaseUrl}/api/annotations-by-email-and-document/`, {
-      email: email,
-      documentId: parts
-    })
-      .then((response) => setSignerAnnotations(response.data))
-      .catch(() => { });
+    try {
+      const documentId = fileurl?.split("_")?.[1]?.split(".")?.[0];
+
+      if (!documentId || !email) return;
+
+      const { data } = await axios.post(
+        `${constants.devApiBaseUrl}/api/annotations-by-email-and-document/`,
+        {
+          email,
+          documentId,
+        }
+      );
+      console.log("Fetched signer annotations:", data);
+
+      setSignerAnnotations(data);
+    } catch (error) {
+      console.error("Failed to fetch signer annotations:", error);
+    }
   };
 
   // Add comment
@@ -651,7 +662,7 @@ function Signing_Page_Redirect() {
                       py: 0.8,
                       minHeight: 34,
                       boxShadow: 'none',
-                     
+
                     }}
                   >
                     Comments ({comments.length})

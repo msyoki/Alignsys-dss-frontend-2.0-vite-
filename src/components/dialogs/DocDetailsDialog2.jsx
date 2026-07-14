@@ -19,6 +19,7 @@ import TimedAlert from '../TimedAlert.jsx';
 import logo from '../../images/ZFWHITE.webp';
 import Alerts from '../Alert.jsx';
 import SimpleAlert from '../SimpleAlert.jsx';
+import HumanizedDate from '../HumanizeDate.jsx';
 
 const DocDetailsDialog2 = ({
   opendialogdocdetails,
@@ -302,7 +303,8 @@ const DocDetailsDialog2 = ({
                           {s.signed === 'True' ? (
                             <>
                               signed <FaCheckCircle className="text-success mx-1" />:
-                              {s.signed_time_stamp}
+                        
+                               <HumanizedDate dateStr={s.signed_time_stamp} />
                             </>
                           ) : (
                             <>
@@ -376,7 +378,7 @@ const DocDetailsDialog2 = ({
               }
             />
           </Tooltip>
-          {document.owner === user.email && (type === 'inbox' || type === 'outbox' ) && (
+          {document.owner === user.email && (type === 'inbox' || type === 'outbox') && (
             <Tooltip title={type === 'outbox' ? 'Recall Document' : 'Void Document'}>
               <span style={{ position: 'relative', display: 'inline-block' }}>
                 {isLoadingVoid ? (
@@ -399,9 +401,14 @@ const DocDetailsDialog2 = ({
             <p className="my-1">
               <span>Owner:</span> {document.owner}
             </p>
-            <p className="my-1">
-              <span>Expiry Date:</span> <DocExpiryDate expirydate={document.expirydate} />
-            </p>
+            {document.signedcomplete !== 'True' &&
+              document.declined !== 'True' &&
+              documentsigners.length > 0 ? (
+              <p className="my-1">
+                <span>Expiry Date:</span>{" "}
+                <DocExpiryDate expirydate={document.expirydate} />
+              </p>
+            ) : null}
             <p className="my-1">
               <span>Status:</span>
               {document.signedcomplete === 'True' ? (
@@ -412,14 +419,14 @@ const DocDetailsDialog2 = ({
                 <span>
                   <FaCircle className="mx-1 text-danger" /> Voided
                 </span>
-              ) :  document.trashed === 'True' ? (
+              ) : document.trashed === 'True' ? (
                 <span>
                   <FaCircle className="mx-1 text-warning" /> Trashed
                 </span>
               ) : (
-              <span>
-                <FaCircle className="mx-1 text-warning" /> Pending Signing
-              </span>
+                <span>
+                  <FaCircle className="mx-1 text-warning" /> Pending Signing
+                </span>
               )}
             </p>
             <p className="mt-1" style={{ fontSize: '11px' }}>

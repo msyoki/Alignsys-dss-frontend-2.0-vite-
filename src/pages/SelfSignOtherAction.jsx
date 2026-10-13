@@ -52,6 +52,18 @@ function SelfSignOtherAction() {
   const location = useLocation();
 
   const sendforSigning = () => setOpenDialogAddSigners(true);
+
+  const handleSendSuccess = () => {
+    if (location.pathname === '/selfsign/otheractions') {
+      navigate('/', {
+        state: {
+          openalert: true,
+          alertmsg: 'Document sent for signing successfully',
+          alertseverity: 'success',
+        },
+      });
+    }
+  };
   const preview = () => setOpenPreviewerDialog(true);
 
   const selfSignComplete = () => {
@@ -140,6 +152,7 @@ function SelfSignOtherAction() {
             loading={loading}
             setLoading={setLoading}
             docTitle={location.state.doctitle}
+            onSuccess={handleSendSuccess}
           />
 
           {/* dialogs */}

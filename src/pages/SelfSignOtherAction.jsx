@@ -155,29 +155,46 @@ function SelfSignOtherAction() {
             sx={{
               minHeight: "100vh",
               bgcolor: "#1C4690",
-              py: { xs: 2, md: 3 },
-              px: { xs: 1.5, md: 3 },
+              py: { xs: 2, md: 1 },
+              px: { xs: 1.5, md: 1 },
             }}
           >
-            <Box
+<Box
               sx={{
                 display: "flex",
                 flexDirection: { xs: "column", md: "row" },
                 gap: 2,
                 maxWidth: 1600,
                 mx: "auto",
+                height: { xs: "auto", md: "100vh" },
               }}
             >
-              {/* LEFT PANEL */}
+              {/* LEFT PANEL - VIEWER */}
+              <Paper
+                elevation={3}
+                sx={{
+                  width: { xs: "100%", md: "75%" },
+                  height: { xs: "auto", md: "100%" },
+                  minHeight: { xs: "60vh", md: 0 },
+                  borderRadius: 0,
+                  overflow: "hidden",
+                }}
+              >
+                <PDFViewerPreviewLoader height="100%" document={`${location.state.docguid}.pdf`} />
+              </Paper>
+
+              {/* RIGHT PANEL - BUTTONS */}
               <Paper
                 elevation={3}
                 sx={{
                   width: { xs: "100%", md: "25%" },
-                  height: { xs: "auto", md: "90vh" },
+                  height: { xs: "auto", md: "100%" },
+                  flexShrink: { xs: 0, md: 1 },
+                  minWidth: { md: 300 },
                   display: "flex",
                   flexDirection: "column",
                   p: 3,
-                  borderRadius: 2,
+                  borderRadius: 0,
                   textAlign: "center",
                 }}
               >
@@ -205,7 +222,7 @@ function SelfSignOtherAction() {
                   Document {voided ? "voided" : "signed"} successfully.
                 </Typography>
 
-                <Box sx={{ mt: 3, display: "flex", flexDirection: "column", gap: 1.25 }}>
+                <Box sx={{ mt: 3, display: "flex", flexDirection: "column", gap: 1.25, flexShrink: 0 }}>
                   {voided ? (
                     <ActionButton
                       variant="contained"
@@ -256,19 +273,6 @@ function SelfSignOtherAction() {
                 </Box>
 
                 <Box sx={{ flexGrow: 1 }} />
-              </Paper>
-
-              {/* RIGHT PANEL */}
-              <Paper
-                elevation={3}
-                sx={{
-                  width: { xs: "100%", md: "75%" },
-                  height: { xs: "75vh", md: "90vh" },
-                  borderRadius: 2,
-                  overflow: "hidden",
-                }}
-              >
-                <PDFViewerPreviewLoader height="100%" document={`${location.state.docguid}.pdf`} />
               </Paper>
             </Box>
           </Box>

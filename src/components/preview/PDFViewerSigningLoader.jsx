@@ -377,33 +377,33 @@ function PDFViewerSigningLoader(props) {
 
             <div className="row bg-white shadow-lg p-2 align-items-center">
                 {(() => {
-                 const pillBtn = {
-    textTransform: "none",
-    borderRadius: "999px",          // rounded-pill
-    px: { xs: 1.75, sm: 2.25 },     // balanced horizontal padding
-    py: 0.55,
-    minHeight: 32,
-    fontSize: { xs: "11px", sm: "12px" },
-    fontWeight: 500,
-    lineHeight: 1.2,
-    whiteSpace: "nowrap",
-    gap: 0.6,
-    boxShadow: "none",
+                    const pillBtn = {
+                        textTransform: "none",
+                        borderRadius: "999px",          // rounded-pill
+                        px: { xs: 1.75, sm: 2.25 },     // balanced horizontal padding
+                        py: 0.55,
+                        minHeight: 32,
+                        fontSize: { xs: "11px", sm: "12px" },
+                        fontWeight: 500,
+                        lineHeight: 1.2,
+                        whiteSpace: "nowrap",
+                        gap: 0.6,
+                        boxShadow: "none",
 
-    "& .MuiButton-startIcon": {
-        marginRight: "4px",
-        "& svg": {
-            fontSize: 15,
-        },
-    },
+                        "& .MuiButton-startIcon": {
+                            marginRight: "4px",
+                            "& svg": {
+                                fontSize: 15,
+                            },
+                        },
 
-    "&:hover": {
-        boxShadow: "0 2px 8px rgba(0,0,0,.12)",
-        transform: "translateY(-1px)",
-    },
+                        "&:hover": {
+                            boxShadow: "0 2px 8px rgba(0,0,0,.12)",
+                            transform: "translateY(-1px)",
+                        },
 
-    transition: "all .2s ease",
-};
+                        transition: "all .2s ease",
+                    };
 
                     const iconSize = 13;
 

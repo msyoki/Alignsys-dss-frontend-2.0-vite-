@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { FaEye, FaEnvelopeOpen, FaDownload, FaHome } from 'react-icons/fa';
-import { Button, Typography } from '@mui/material';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
+import { FaEnvelopeOpen, FaDownload, FaHome, FaCheckCircle } from 'react-icons/fa';
+import { Button, Typography, Box, Paper, Alert, AlertTitle } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import AuthContext from '../context/Authcontext';
@@ -12,10 +12,6 @@ import PDFViewerPreviewLoader from '../components/preview/PDFViewerPreviewLoader
 
 import logo from '../images/ZFBLU.webp';
 import * as constants from '../components/constants/constants';
-
-import Grid from '@mui/material/Grid';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
 
 /* ---------------- PILL BUTTON STYLE ---------------- */
 const pillBtn = {
@@ -35,23 +31,35 @@ const pillBtn = {
 /* icon consistency */
 const iconStyle = { fontSize: '13px', flexShrink: 0 };
 
+/* Defined outside the component so it isn't recreated/remounted on every render */
+const ActionButton = ({ children, ...props }) => (
+  <Button sx={pillBtn} {...props}>
+    {children}
+  </Button>
+);
+
+/* "prefix_guid.ext" -> "guid" */
+const getFileGuid = (filename = '') => {
+  const base = filename.substring(0, filename.lastIndexOf('.')) || filename;
+  return base.split('_')[1];
+};
+
 function SelfSignOtherAction() {
   const { authTokens } = useContext(AuthContext);
-
-  const [fileurl, setFileUrl] = useState('');
-  const [voided, setVoided] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const [workflows, setWorkflows] = useState([]);
-  const [organizationWorkflows, setOrganizationWorkflows] = useState([]);
-
-  const [opendialogaddsigners, setOpenDialogAddSigners] = useState(false);
-  const [openpreviewerdialog, setOpenPreviewerDialog] = useState(false);
-
   const navigate = useNavigate();
   const location = useLocation();
 
-  const sendforSigning = () => setOpenDialogAddSigners(true);
+  const { docguid, doctitle, fileurl, voided = false } = location.state || {};
+
+  const [loading, setLoading] = useState(false);
+  const [workflows, setWorkflows] = useState([]);
+  const [organizationWorkflows, setOrganizationWorkflows] = useState([]);
+  const [opendialogaddsigners, setOpenDialogAddSigners] = useState(false);
+  const [openpreviewerdialog, setOpenPreviewerDialog] = useState(false);
+
+  const pdfPath = `${docguid}.pdf`;
+  const download = () =>
+    window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${docguid}`);
 
   const handleSendSuccess = () => {
     if (location.pathname === '/selfsign/otheractions') {
@@ -64,233 +72,199 @@ function SelfSignOtherAction() {
       });
     }
   };
-  const preview = () => setOpenPreviewerDialog(true);
-
-  const selfSignComplete = () => {
-    const g = location.state.fileurl;
-
-    function removeExtension(filename) {
-      const x = filename.substring(0, filename.lastIndexOf('.')) || filename;
-      const y = x.split('_');
-      return y[1];
-    }
-
-    const newfilename = removeExtension(g);
-
-    const data = JSON.stringify({ fileGuid: newfilename });
-
-    axios.post(
-      `${constants.devApiBaseUrl}/api/selfsign/closesigning/`,
-      data,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authTokens.access}`,
-        },
-      }
-    ).catch(() => { });
-  };
 
   const home = () => {
     navigate('/', {
       state: {
         openalert: true,
-        alertmsg: voided
-          ? 'Document voided successfully'
-          : 'Document signed successfully',
+        alertmsg: voided ? 'Document voided successfully' : 'Document signed successfully',
         alertseverity: 'success',
       },
     });
   };
 
-  const getWorkflows = async () => {
+  const getWorkflows = useCallback(async () => {
     const headers = { Authorization: `Bearer ${authTokens.access}` };
-
     try {
       const [w, ow] = await Promise.all([
         axios.get(`${constants.devApiBaseUrl}/api/workflows/`, { headers }),
         axios.get(`${constants.devApiBaseUrl}/api/organization/workflows/`, { headers }),
       ]);
-
       setWorkflows(w.data);
       setOrganizationWorkflows(ow.data);
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [authTokens.access]);
 
   useEffect(() => {
     getWorkflows();
-    setFileUrl(location.state.fileurl);
-    setVoided(location.state.voided);
 
-    if (!location.state.voided) {
-      selfSignComplete();
+    if (!voided && fileurl) {
+      axios
+        .post(
+          `${constants.devApiBaseUrl}/api/selfsign/closesigning/`,
+          { fileGuid: getFileGuid(fileurl) },
+          { headers: { Authorization: `Bearer ${authTokens.access}` } }
+        )
+        .catch(() => {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const ActionButton = ({ children, ...props }) => (
-    <Button sx={pillBtn} {...props}>
-      {children}
-    </Button>
-  );
+  if (loading) return <Loading />;
 
   return (
     <>
-      {loading ? (
-        <Loading />
-      ) : (
-        <>
-          <AddSignersDialogMerged
-            getWorkflows={getWorkflows}
-            workflows={workflows}
-            setOrganizationWorkflows={setOrganizationWorkflows}
-            organizationWorkflows={organizationWorkflows}
-            opendialogaddsigners={opendialogaddsigners}
-            setOpenDialogAddSigners={setOpenDialogAddSigners}
-            file={location.state.docguid}
-            loading={loading}
-            setLoading={setLoading}
-            docTitle={location.state.doctitle}
-            onSuccess={handleSendSuccess}
-          />
+      <AddSignersDialogMerged
+        getWorkflows={getWorkflows}
+        workflows={workflows}
+        setOrganizationWorkflows={setOrganizationWorkflows}
+        organizationWorkflows={organizationWorkflows}
+        opendialogaddsigners={opendialogaddsigners}
+        setOpenDialogAddSigners={setOpenDialogAddSigners}
+        file={docguid}
+        loading={loading}
+        setLoading={setLoading}
+        docTitle={doctitle}
+        onSuccess={handleSendSuccess}
+      />
 
-          {/* dialogs */}
-          <PreviewerDialog2
-            openpreviewerdialog={openpreviewerdialog}
-            setOpenPreviewerDialog={setOpenPreviewerDialog}
-            filepreviewurl={`${location.state.docguid}.pdf`}
-          />
+      <PreviewerDialog2
+        openpreviewerdialog={openpreviewerdialog}
+        setOpenPreviewerDialog={setOpenPreviewerDialog}
+        filepreviewurl={pdfPath}
+      />
 
-          {/* ---------------- MAIN UI ---------------- */}
-          {opendialogaddsigners?<></>:
+      {/* ---------------- MAIN UI ---------------- */}
+      {!opendialogaddsigners && (
+        <Box sx={{ minHeight: '100vh', bgcolor: '#1C4690' }}>
           <Box
             sx={{
-              minHeight: "100vh",
-              bgcolor: "#1C4690",
-              py: { xs: 2, md: 1 },
-              px: { xs: 1.5, md: 1 },
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              maxWidth: 1600,
+              mx: 'auto',
+              height: { md: '100vh' },
             }}
           >
-<Box
+            {/* LEFT PANEL - VIEWER */}
+            <Paper
+              elevation={3}
+              square
               sx={{
-                display: "flex",
-                flexDirection: { xs: "column", md: "row" },
-                gap: 2,
-                maxWidth: 1600,
-                mx: "auto",
-                height: { xs: "auto", md: "100vh" },
+                flex: { md: 1 },
+                minWidth: 0,
+                minHeight: { xs: '60vh', md: 0 },
+                overflow: 'hidden',
               }}
             >
-              {/* LEFT PANEL - VIEWER */}
-              <Paper
-                elevation={3}
-                sx={{
-                  width: { xs: "100%", md: "75%" },
-                  height: { xs: "auto", md: "100%" },
-                  minHeight: { xs: "60vh", md: 0 },
-                  borderRadius: 0,
-                  overflow: "hidden",
-                }}
-              >
-                <PDFViewerPreviewLoader height="100%" document={`${location.state.docguid}.pdf`} />
-              </Paper>
+              <PDFViewerPreviewLoader height="100%" document={pdfPath} />
+            </Paper>
 
-              {/* RIGHT PANEL - BUTTONS */}
-              <Paper
-                elevation={3}
-                sx={{
-                  width: { xs: "100%", md: "25%" },
-                  height: { xs: "auto", md: "100%" },
-                  flexShrink: { xs: 0, md: 1 },
-                  minWidth: { md: 300 },
-                  display: "flex",
-                  flexDirection: "column",
-                  p: 3,
-                  borderRadius: 0,
-                  textAlign: "center",
-                }}
-              >
-                {/* Logo */}
-                <Box sx={{ mb: 2 }}>
-                  <a href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
-                    <Box
-                      component="img"
-                      src={logo}
-                      alt="Logo"
-                      sx={{ width: 180, maxWidth: "100%", height: "auto" }}
-                    />
-                  </a>
-                </Box>
+            {/* RIGHT PANEL - BUTTONS */}
+            <Paper
+              elevation={3}
+              square
+              sx={{
+                width: { md: '25%' },
+                minWidth: { md: 300 },
+                flexShrink: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                p: 3,
+                textAlign: 'center',
+                overflowY: 'auto',
+              }}
+            >
+              {/* Logo */}
+              <Box sx={{ mb: 2 }}>
+                <a href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
+                  <Box
+                    component="img"
+                    src={logo}
+                    alt="Logo"
+                    sx={{ width: 180, maxWidth: '100%', height: 'auto' }}
+                  />
+                </a>
+              </Box>
 
-                <Typography variant="subtitle1" fontWeight={600} color="primary">
-                  Document Title
-                </Typography>
+              <Typography variant="subtitle1" fontWeight={600} color="primary">
+                Document Title
+              </Typography>
 
-                <Typography variant="body2" sx={{ mt: 1, wordBreak: "break-word" }}>
-                  {location.state.doctitle}
-                </Typography>
+              <Typography variant="body2" sx={{ mt: 1, wordBreak: 'break-word' }}>
+                {doctitle}
+              </Typography>
 
+              {voided ? (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Document {voided ? "voided" : "signed"} successfully.
+                  Document voided successfully.
                 </Typography>
+              ) : (
+                <Alert
+                  severity="success"
+                  icon={<FaCheckCircle style={{ fontSize: '18px' }} />}
+                  sx={{
+                    mt: 2,
+                    borderRadius: '12px',
+                    alignItems: 'center',
+                    textAlign: 'left',
+                  }}
+                >
+                  <AlertTitle sx={{ mb: 0.25, fontSize: '14px', fontWeight: 600 }}>
+                    Signed successfully
+                  </AlertTitle>
+                  <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                    You've self-signed this document. Download it or send it to others to sign.
+                  </Typography>
+                </Alert>
+              )}
 
-                <Box sx={{ mt: 3, display: "flex", flexDirection: "column", gap: 1.25, flexShrink: 0 }}>
-                  {voided ? (
+              <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                {voided ? (
+                  <ActionButton
+                    variant="contained"
+                    color="primary"
+                    onClick={download}
+                    startIcon={<FaEnvelopeOpen style={iconStyle} />}
+                  >
+                    Download Voided Document
+                  </ActionButton>
+                ) : (
+                  <>
                     <ActionButton
                       variant="contained"
                       color="primary"
-                      onClick={() =>
-                        window.open(
-                          `${constants.devApi2BaseUrl}/api/Doc/FileDownload/${location.state.docguid}`
-                        )
-                      }
+                      onClick={() => setOpenDialogAddSigners(true)}
                       startIcon={<FaEnvelopeOpen style={iconStyle} />}
                     >
-                      Download Voided Document
+                      Send to Others to Sign
                     </ActionButton>
-                  ) : (
-                    <>
-                      <ActionButton
-                        variant="contained"
-                        color="primary"
-                        onClick={sendforSigning}
-                        startIcon={<FaEnvelopeOpen style={iconStyle} />}
-                      >
-                        Send to Others to Sign
-                      </ActionButton>
 
-                      <ActionButton
-                        variant="contained"
-                        color="success"
-                        onClick={() =>
-                          window.open(
-                            `${constants.devApi2BaseUrl}/api/Doc/FileDownload/${location.state.docguid}`
-                          )
-                        }
-                        startIcon={<FaDownload style={iconStyle} />}
-                      >
-                        Download Signed Document
-                      </ActionButton>
-                    </>
-                  )}
+                    <ActionButton
+                      variant="contained"
+                      color="success"
+                      onClick={download}
+                      startIcon={<FaDownload style={iconStyle} />}
+                    >
+                      Download Signed Document
+                    </ActionButton>
+                  </>
+                )}
 
-                  <ActionButton
-                    variant="outlined"
-                    color="warning"
-                    onClick={home}
-                    startIcon={<FaHome style={iconStyle} />}
-                  >
-                    Go Back Home
-                  </ActionButton>
-                </Box>
-
-                <Box sx={{ flexGrow: 1 }} />
-              </Paper>
-            </Box>
+                <ActionButton
+                  variant="outlined"
+                  color="warning"
+                  onClick={home}
+                  startIcon={<FaHome style={iconStyle} />}
+                >
+                  Go Back Home
+                </ActionButton>
+              </Box>
+            </Paper>
           </Box>
-          }
-        </>
+        </Box>
       )}
     </>
   );

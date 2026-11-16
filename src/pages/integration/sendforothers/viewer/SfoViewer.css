@@ -1,0 +1,192 @@
+/* Styles for the send-for-others page's copy of PDFViewerSetSIgningAreas.
+   Prefixed with `sfov-` (not `sa-`) so they never mix with the app's own signing-areas viewer
+   (src/components/preview/PDFViewerSetSIgningAreas.jsx + src/styles/Pdfviewersigningareas.css). */
+
+/* Toolbar on top, pages below filling the remaining height. */
+.sfov-viewer-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+/* Phones/tablets: the page scrolls normally, so give the viewer its own height. */
+@media (max-width: 899px) {
+  .sfov-viewer-root { height: 80vh; }
+}
+.sfov-toolbar { flex-shrink: 0; position: relative; z-index: 2; }
+
+.sfov-viewer-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden; /* each side (thumbnails, pages) scrolls on its own */
+  background-color: #bfc0be;
+}
+
+/* Sidebar / Thumbnail Panel */
+.sfov-thumbnail-panel {
+  position: relative;
+  overflow-x: hidden; /* thumbnails are drawn at the panel width */
+  height: 100%;
+  width: 20%;
+  background-color: #666666;
+  color: black;
+  z-index: 1000;
+  flex-shrink: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 500px) {
+  .sfov-thumbnail-panel {
+    width: 200px;
+    padding: 5px;
+  }
+
+  .sfov-thumbnail-item {
+    margin-bottom: 15px;
+  }
+
+  .sfov-thumbnail-page-number {
+    font-size: 9px;
+  }
+}
+
+.sfov-thumbnail-scroll-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+}
+
+/* One block per page: the thumbnail with its number underneath. The highlight is the whole
+   block, so the number sits on the highlight instead of needing its own background.
+   The 8px side padding fits inside the 24px usePanelWidth leaves around each thumbnail. */
+.sfov-thumbnail-item {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 8px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* page and its number centred */
+  color: #fff;
+  cursor: pointer;
+  transition: background-color .2s ease;
+  /* No forced width/height here -- let the Page canvas dictate its own
+     size from `scale`, so it always matches the JS-calculated dimensions. */
+}
+.sfov-thumbnail-item:hover { background-color: rgba(192, 220, 245, .18); }
+.sfov-thumbnail-item.active { background-color: #C0DCF5; }
+
+.sfov-thumbnail-page-number {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  color: #fff;
+}
+.sfov-thumbnail-item.active .sfov-thumbnail-page-number {
+  color: #1c4690;
+  font-weight: 700;
+}
+
+/* Main PDF Viewer */
+.sfov-main-viewer {
+  position: relative;
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0;
+  gap: 24px;           /* guarantees page-to-page spacing independent of scale math */
+  box-sizing: border-box;
+}
+
+/* Wrapper around each page + its annotation overlay.
+   Deliberately unstyled beyond position/box-sizing -- width/height/margin
+   are set inline from the JS scale calculation so there is exactly ONE
+   source of truth for page pixel size (no CSS rule can silently override it). */
+.sfov-page-wrapper {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+}
+
+/* The rendered PDF canvas itself.
+   IMPORTANT: no width/max-width/height rules here. The `scale` prop passed
+   to react-pdf's <Page> is the only thing that should determine its pixel
+   size. Any CSS width override here will desync the canvas's actual
+   rendered size from `scaledWidth`/`scaledHeight`, which is what causes
+   the annotation boxes to look slightly misplaced. */
+.sfov-page-canvas {
+  display: block;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* Overlay that holds the draggable signature boxes.
+   Sized identically to the wrapper via inline style; this class only
+   handles stacking/interaction, never geometry. */
+.sfov-annotation-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+}
+
+.sfov-page-divider {
+  width: 100%;
+  height: 0; /* spacing now comes from `gap` on .sfov-main-viewer, not this */
+}
+
+.sfov-skeleton {
+  width: 100%;
+  height: 300px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 37%, #e0e0e0 63%);
+  background-size: 400% 100%;
+  animation: sfov-skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes sfov-skeleton-loading {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* Custom Scrollbars */
+.sfov-scrollbar-thumbs::-webkit-scrollbar {
+  width: 8px;
+}
+.sfov-scrollbar-thumbs::-webkit-scrollbar-track {
+  background: #666666;
+}
+.sfov-scrollbar-thumbs::-webkit-scrollbar-thumb {
+  background-color: #e5e6e4;
+  border-radius: 4px;
+}
+.sfov-scrollbar-thumbs {
+  scrollbar-width: thin;
+  scrollbar-color: #e5e6e4 #666666;
+}
+
+.sfov-scrollbar-main::-webkit-scrollbar {
+  width: 8px;
+}
+.sfov-scrollbar-main::-webkit-scrollbar-track {
+  background: #bfc0be;
+}
+.sfov-scrollbar-main::-webkit-scrollbar-thumb {
+  background-color: #666666;
+  border-radius: 4px;
+}
+.sfov-scrollbar-main {
+  scrollbar-width: thin;
+  scrollbar-color: #666666 #bfc0be;
+}

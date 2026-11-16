@@ -10,6 +10,7 @@ import "./styles/style.css";
 import "./styles/Dashboard.css";
 import "./styles/DataTable.css";
 
+import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 
 
@@ -34,6 +35,10 @@ import PasswordResetConfirm from "./pages/auth/PasswordResetConfirm.jsx";
 import PasswordResetRequest from "./pages/auth/PasswordResetRequest.jsx";
 import QRPreview from "./pages/QRPreview.jsx";
 
+// M-Files "send for others" integration (public: the DSS session comes in the link).
+// Lazy-loaded so its code and styles only load on that route.
+const SendForOthersPage = lazy(() => import("./pages/integration/sendforothers/SendForOthersPage.jsx"));
+
 function App() {
   registerLicense('Mgo+DSMBPh8sVXJ0S0J+XE9HflRDX3xKf0x/TGpQb19xflBPallYVBYiSV9jS31TckVnWHlbcXFWT2NbVA==');
   return (
@@ -55,6 +60,7 @@ function App() {
           <Route element={<PrivateRoute><Signing_Page_Self/></PrivateRoute>} path="/sign"/>
           <Route element={<Signing_Page_Redirect/>} path="/mail/sign/:fileurl/:signerguid"/>
           <Route element={<QRPreview/>} path="/qr/preview/:guid"/>
+          <Route element={<Suspense fallback={null}><SendForOthersPage/></Suspense>} path="/integration/sendforothers/:guid"/>
           <Route element={<NotFound/>} path="/404" />
           <Route path="*" element={<NotFound/>} />
         </Routes>

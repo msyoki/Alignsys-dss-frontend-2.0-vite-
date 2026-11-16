@@ -152,23 +152,47 @@
 }
 
 /* --- Section header and cards --- */
+/* One compact line: the tab already names the section, so the title and its
+   description sit side by side instead of stacking. */
 .admin-panel-header {
-  padding: 8px 4px 12px;
-  margin-bottom: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 4px 6px;
+  margin-bottom: 8px;
   border-bottom: 1px solid #eef1f5;
 }
 
 .admin-panel-title {
   margin: 0;
-  font-size: 15px;
+  flex-shrink: 0;
+  font-size: 14px;
   font-weight: 600;
   color: #1f2a44;
 }
 
 .admin-panel-subtitle {
-  margin: 2px 0 0;
-  font-size: 12.5px;
+  margin: 0;
+  min-width: 0;
+  font-size: 12px;
   color: #667085;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-panel-subtitle::before {
+  content: '·';
+  margin-right: 8px;
+  color: #c0c6d0;
+}
+
+/* Phones: the description wraps under the title rather than being cut off. */
+@media (max-width: 575.98px) {
+  .admin-panel-header { flex-wrap: wrap; row-gap: 0; }
+  .admin-panel-subtitle { white-space: normal; flex-basis: 100%; }
+  .admin-panel-subtitle::before { content: none; }
 }
 
 .admin-card {

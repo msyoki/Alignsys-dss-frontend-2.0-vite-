@@ -64,7 +64,7 @@ function CustomTabPanel({ children, value, index, fill = false, className = '', 
 const PanelHeader = ({ title, subtitle }) => (
     <div className="admin-panel-header">
         <h2 className="admin-panel-title">{title}</h2>
-        {subtitle && <p className="admin-panel-subtitle">{subtitle}</p>}
+        {subtitle && <p className="admin-panel-subtitle" title={subtitle}>{subtitle}</p>}
     </div>
 )
 

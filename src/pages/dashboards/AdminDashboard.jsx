@@ -9,6 +9,11 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import NewUserDialog from '../../components/NewUserDialog'
 import UserUpdateDialog from '../../components/dialogs/UserUpdateDialog'
 import ActivityLogs from '../../components/ActivityLogs'
+import OtpLogs from '../../components/admin/OtpLogs'
+import ReportsOverview from '../../components/admin/ReportsOverview'
+import useProfileEditor from '../../hooks/useProfileEditor'
+import { TiArrowBack } from 'react-icons/ti'
+import { FaShieldAlt, FaChartLine } from 'react-icons/fa'
 import { companyLogoUrl } from '../../utils/companyLogo'
 import AppShell from '../../components/layout/AppShell'
 import BrandLogo from '../../components/common/BrandLogo'
@@ -231,6 +236,14 @@ function AdminDashboard() {
     const [openalert, setOpenAlert] = useState(false)
     const [alertseverity, setAlertSeverity] = useState('')
     const [alertmsg, setAlertMsg] = useState('')
+    // Same "Edit my profile" / "Reset password" as the home page's account menu.
+    const profile = useProfileEditor({
+        user, authTokens, avatar, setAvatar,
+        notify: (msg, severity) => {
+            setAlertMsg(msg); setAlertSeverity(severity); setOpenAlert(true)
+            setTimeout(() => setOpenAlert(false), 3000)
+        },
+    })
     const [companylogs, setCompanyLogs] = useState([])
     const [companydocs, setCompanyDocs] = useState([])
     const [companylogo, setCompanyLogo] = useState('')
@@ -438,17 +451,17 @@ function AdminDashboard() {
     const getlogs = useCallback(() => {
         setLoadingActivity(true)
         setValue(2)
-        const admin_email = user.email
-        const admin_domain = admin_email.substring(admin_email.indexOf("@") + 1)
-        let data = { domain: admin_domain }
+        // The server scopes the log to this admin's organisation from the login token.
+        let data = {}
         if (filters.startDate) data.start_date = filters.startDate
         if (filters.endDate) data.end_date = filters.endDate
         axios.post(`${constants.devApiBaseUrl}/api/logs/`, data, {
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authTokens.access}` }
         }).then(res => {
             setCompanyLogs(res.data)
-        }).finally(() => setLoadingActivity(false))
-    }, [user, filters])
+        }).catch(() => setCompanyLogs([]))
+            .finally(() => setLoadingActivity(false))
+    }, [authTokens, filters])
 
     const getusers = useCallback(() => {
         setLoadingUsers(true)
@@ -595,10 +608,48 @@ function AdminDashboard() {
         // eslint-disable-next-line
     }, [])
 
+    // One list drives both the tab bar and the sidebar, grouped by purpose so
+    // neither gets cluttered. `index` is the tab's panel (fixed); the order here
+    // is only the display order. `load` fetches the tab's data (and selects it).
+    const adminTabGroups = [
+        {
+            key: 'manage', label: 'Manage', tabs: [
+                { index: 0, label: 'Users', Icon: FaUser, load: getusers },
+                { index: 1, label: 'Documents', Icon: FaFolderOpen, load: getDocLogs },
+                { index: 4, label: 'Workflows', Icon: FaProjectDiagram },
+            ],
+        },
+        {
+            key: 'insights', label: 'Reports & logs', tabs: [
+                { index: 7, label: 'Reports', Icon: FaChartLine },
+                { index: 2, label: 'Account Logs', Icon: FaList, load: getlogs },
+                { index: 6, label: 'OTP Activity', Icon: FaShieldAlt },
+            ],
+        },
+        {
+            key: 'settings', label: 'Settings', tabs: [
+                { index: 3, label: 'Email (SMTP)', Icon: FaCog },
+                { index: 5, label: 'SMS / OTP Provider', Icon: FaMobile },
+            ],
+        },
+    ].map((g) => ({
+        ...g,
+        tabs: g.tabs.map((t) => ({ ...t, icon: <t.Icon />, tabIcon: <t.Icon style={{ fontSize: 15 }} /> })),
+    }))
+    const adminTabs = adminTabGroups.flatMap((g) => g.tabs)
+
+    const openAdminTab = (index) => {
+        const tab = adminTabs.find((t) => t.index === index)
+        if (!tab) return
+        if (tab.load) tab.load()
+        else setValue(index)
+    }
+
     // --- Render ---
     return (
         <>
             <CompanyEdits getCompanyLogo={getCompanyLogo} setCompanyLogo={setCompanyLogo} companylogo={companylogo} opendialogcompanyedits={opendialogcompanyedits} setOpenDialogCompanyEdits={setOpenDialogCompanyEdits} />
+            {profile.profileDialog}
             <NewUserDialog
                 user={user}
                 getusers={getusers}
@@ -669,18 +720,37 @@ function AdminDashboard() {
                 <AppShell
                     caption="Admin Dashboard"
                     orgName={user.company}
-                    // Top: Home, then actions on this page. Bottom (just above "Signed in as"): the other dashboard.
+                    // Top: Home; then the dashboard's tabs (same list as the tab bar); then
+                    // actions on this page. Bottom (just above "Signed in as"): the other dashboard.
                     sections={[
-                        { key: 'home', label: 'Home', icon: <FaHome /> },
-                        { key: 'new-user', label: 'Add new user', icon: <FaUserPlus /> },
-                        { key: 'logo', label: 'Change organization logo', icon: <FaImages /> },
+                        { key: 'home', label: 'Back home', icon: <TiArrowBack size={18} /> },
+                        ...adminTabGroups.flatMap((g) => [
+                            { key: `h-${g.key}`, type: 'heading', label: g.label },
+                            ...g.tabs.map((t) => ({ key: `tab-${t.index}`, label: t.label, icon: t.icon })),
+                            // Page actions sit with the group they belong to.
+                            ...(g.key === 'manage' ? [{ key: 'new-user', label: 'Add new user', icon: <FaUserPlus /> }] : []),
+                        ]),
                     ]}
-                    footerSections={user.is_superuser === 'True' ? [{ key: 'sadmin', label: 'Super Admin Dashboard', icon: <FaUserShield /> }] : []}
+                    // Account (profile) menu, top right: the same profile options as the home
+                    // page, plus the organisation logo for admins only (the server also
+                    // refuses logo changes from anyone else).
+                    onOpenProfile={profile.openProfile}
+                    accountMenuItems={[
+                        profile.resetPasswordItem,
+                        ...(user.is_admin === "True" ? [
+                            { key: 'logo', label: 'Organization logo', icon: <FaImages size={14} />, onClick: () => setOpenDialogCompanyEdits(true) },
+                        ] : []),
+                        // Super admins only: the platform-wide dashboard.
+                        ...(user.is_superuser === 'True' ? [
+                            { key: 'sadmin', label: 'Super Admin Dashboard', icon: <FaUserShield size={14} />, onClick: () => navigate('/super/admin/dashboard') },
+                        ] : []),
+                    ]}
+                    activeKey={`tab-${value}`}
                     onSelect={(key) => {
-                        if (key === 'home') navigate('/')
+                        if (key.startsWith('tab-')) openAdminTab(Number(key.slice(4)))
+                        else if (key === 'home') navigate('/')
                         else if (key === 'new-user') setOpenDialogNewUser(true)
                         else if (key === 'logo') setOpenDialogCompanyEdits(true)
-                        else if (key === 'sadmin') navigate('/super/admin/dashboard')
                     }}
                     open={sidebarOpen}
                     onOpenChange={setSidebarOpen}
@@ -701,13 +771,13 @@ function AdminDashboard() {
                         />
                         <Box className='admin-tabs-shell'>
                             <Box className='admin-tabs-bar'>
-                                <Tabs value={value} onChange={handleChange} aria-label="admin dashboard tabs" variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
-                                    <Tab iconPosition='start' icon={<FaUser style={{ fontSize: 15 }} />} onClick={getusers} label="Login Accounts" {...a11yProps(0)} />
-                                    <Tab iconPosition='start' icon={<FaFolderOpen style={{ fontSize: 15 }} />} onClick={getDocLogs} label="Documents" {...a11yProps(1)} />
-                                    <Tab iconPosition='start' icon={<FaList style={{ fontSize: 15 }} />} onClick={getlogs} label="Account Logs" {...a11yProps(2)} />
-                                    <Tab iconPosition='start' icon={<FaCog style={{ fontSize: 15 }} />} label='Mailer SMTP Settings' {...a11yProps(3)} />
-                                    <Tab iconPosition='start' icon={<FaProjectDiagram style={{ fontSize: 15 }} />} label='Manage Workflows' {...a11yProps(4)} />
-                                    <Tab iconPosition='start' icon={<FaMobile style={{ fontSize: 15 }} />} label='SMS / OTP Provider' {...a11yProps(5)} />
+                                <Tabs value={value} onChange={handleChange} aria-label="admin dashboard tabs" variant="standard" className="admin-tabs-wrap">
+                                    {/* Same groups and order as the sidebar; a thin divider starts each group. */}
+                                    {adminTabGroups.flatMap((g, gi) => g.tabs.map((t, ti) => (
+                                        <Tab key={t.index} value={t.index} iconPosition='start' icon={t.tabIcon} onClick={t.load}
+                                            label={t.label} className={gi > 0 && ti === 0 ? 'tab-group-start' : undefined}
+                                            {...a11yProps(t.index)} />
+                                    )))}
                                 </Tabs>
                             </Box>
                             <CustomTabPanel value={value} index={0} className='admin-tabpanel' fill>
@@ -901,6 +971,16 @@ function AdminDashboard() {
                                 <div className='admin-card'>
                                     {value === 5 && <SmsProviderSettings onSaved={otpAvailability.refresh} />}
                                 </div>
+                            </CustomTabPanel>
+                            <CustomTabPanel value={value} index={6} className='admin-tabpanel' fill>
+                                <PanelHeader title="OTP activity" subtitle="SMS one-time code events on your organisation's documents. Read-only; codes are never shown." />
+                                <div className='admin-card admin-fill-card'>
+                                    {value === 6 && <OtpLogs />}
+                                </div>
+                            </CustomTabPanel>
+                            <CustomTabPanel value={value} index={7} className='admin-tabpanel'>
+                                <PanelHeader title="Reports" subtitle="Signing activity, turnaround, SMS verification and sign-ins for your organisation." />
+                                {value === 7 && <ReportsOverview />}
                             </CustomTabPanel>
                             {/* --- Organization Workflows Tab --- */}
                             <CustomTabPanel value={value} index={4} className='admin-tabpanel'>

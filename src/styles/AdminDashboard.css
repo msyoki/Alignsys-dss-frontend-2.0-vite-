@@ -49,6 +49,56 @@
   padding: 6px 14px;
 }
 
+/* Tab headers never scroll: they wrap onto another row when they don't fit.
+   MUI's sliding indicator assumes one row, so the selected tab draws its own
+   underline instead. */
+.admin-tabs-bar .admin-tabs-wrap,
+.admin-tabs-bar .admin-tabs-wrap .MuiTabs-scroller {
+  overflow: visible !important;
+}
+
+.admin-tabs-bar .admin-tabs-wrap .MuiTabs-flexContainer {
+  flex-wrap: wrap;
+}
+
+.admin-tabs-bar .admin-tabs-wrap .MuiTabs-indicator {
+  display: none;
+}
+
+.admin-tabs-bar .admin-tabs-wrap .MuiTab-root {
+  min-width: 0;
+  max-width: none;
+  border-bottom: 2px solid transparent;
+}
+
+.admin-tabs-bar .admin-tabs-wrap .MuiTab-root.Mui-selected {
+  border-bottom-color: currentColor;
+}
+
+/* First tab of each group (Reports & logs, Settings): a thin divider before it,
+   matching the group headings in the sidebar. */
+.admin-tabs-bar .admin-tabs-wrap .MuiTab-root.tab-group-start {
+  margin-left: 6px;
+  position: relative;
+}
+
+.admin-tabs-bar .admin-tabs-wrap .MuiTab-root.tab-group-start::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 25%;
+  height: 50%;
+  border-left: 1px solid #d9dee7;
+}
+
+@media (max-width: 767.98px) {
+  .admin-tabs-bar .admin-tabs-wrap .MuiTab-root {
+    min-height: 40px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+}
+
 .admin-tabpanel:not([hidden]) {
   flex: 1;
   min-height: 0;
@@ -74,6 +124,22 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* A card that fills the rest of a table tab (filters + summary + table);
+   the table inside is the only part that scrolls. */
+.admin-tabpanel.tabpanel-fill .admin-fill-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 575.98px) {
+  /* Phones: let the panel scroll; the card just takes its natural height. */
+  .admin-tabpanel.tabpanel-fill .admin-fill-card {
+    flex: none;
+  }
 }
 
 .admin-grid {
@@ -237,9 +303,58 @@
 
 .sms-fields {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px 14px;
   align-items: start;
+}
+
+/* SMS settings alerts: pinned to the top of the scrolling panel, i.e. right
+   under the tab headers, while the form scrolls beneath them. */
+.sms-alerts {
+  position: sticky;
+  top: 0;                /* the tab panel is the scroll container, directly under the tabs */
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Span the card's padding so content doesn't show through at the sides. */
+  margin: -16px -16px 0;
+  padding: 16px 16px 8px;
+  border-radius: 10px 10px 0 0;
+  background: #fff;
+  box-shadow: 0 6px 6px -6px rgba(16, 24, 40, 0.12);
+}
+
+@media (max-width: 575.98px) {
+  .sms-alerts {
+    margin: -12px -12px 0;
+    padding: 12px 12px 6px;
+  }
+}
+
+/* Provider picker + its one-line description side by side; stacked on phones. */
+.sms-provider-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+.sms-provider-select {
+  flex: 0 1 300px;
+  min-width: 220px;
+}
+
+.sms-provider-desc {
+  flex: 1 1 260px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (max-width: 575.98px) {
+  .sms-provider-select {
+    flex: 1 1 100%;
+  }
 }
 
 .sms-settings-side {
@@ -271,7 +386,7 @@
   /* Keep test/save visible while scrolling through long Custom HTTP forms. */
   .sms-settings-side {
     position: sticky;
-    top: 0;
+    top: calc(var(--sms-alerts-h, 0px) + 8px);   /* just below the pinned alerts */
   }
 }
 

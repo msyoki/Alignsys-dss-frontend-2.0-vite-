@@ -105,6 +105,7 @@ const SidebarRow = ({ item, active, onClick }) => (
  * account. Phones and tablets get an overlay drawer that closes after a pick.
  *
  * sections / footerSections: [{ key, label, icon, hint?, count? }]
+ *   An item with type: 'heading' is a small group label (no icon, not clickable).
  * accountMenuItems: [{ key, label, icon, onClick }] extra entries in the account menu
  */
 const AppShell = ({
@@ -207,11 +208,24 @@ const AppShell = ({
 
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', ...contentWidthSx }}>
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-          {sections.map((item) => (
+          {sections.map((item) => (item.type === 'heading' ? (
+            // Group label, e.g. "Admin" above the dashboard's tabs.
+            <li key={item.key} role="presentation">
+              <Box
+                component="span"
+                sx={{
+                  display: 'block', px: 2, pt: 1.75, pb: 0.5, fontSize: 10.5, fontWeight: 600,
+                  letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.65, whiteSpace: 'nowrap',
+                }}
+              >
+                {item.label}
+              </Box>
+            </li>
+          ) : (
             <li key={item.key}>
               <SidebarRow item={item} active={item.key === activeKey} onClick={() => select(item.key)} />
             </li>
-          ))}
+          )))}
         </Box>
 
         {/* Bottom: extra links, the signed-in user (click to edit the profile) and Sign out. */}

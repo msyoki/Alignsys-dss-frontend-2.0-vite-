@@ -15,13 +15,20 @@ function ActivityLogs(props) {
 
 
   const columns = [
+    {
+      // Sorts by the real time (created_at); older servers only send the text version.
+      field: 'created_at', headerName: 'Time', width: 160, type: 'dateTime',
+      valueGetter: (params) => (params.row.created_at ? new Date(params.row.created_at) : null),
+      renderCell: (params) => (params.value instanceof Date && !isNaN(params.value)
+        ? params.value.toLocaleString()
+        : (params.row.created || '')),
+    },
     { field: 'user', headerName: 'User', width: 200 },
-    { field: 'created', headerName: 'TimeStatmp', width: 160, filterable: false, sortable: false },
-    { field: 'activity', headerName: 'Activity', width: 100 },
+    { field: 'activity', headerName: 'Activity', width: 120 },
     { field: 'description', headerName: 'Description', width: 500 },
     { field: 'ip', headerName: 'IP', width: 130 },
-    { field: 'guid', headerName: 'Document Guid', width: 300 },
-    { field: 'otpnumber', headerName: 'OTP Number', width: 200 },
+    { field: 'guid', headerName: 'Document', width: 300 },
+    { field: 'otpnumber', headerName: 'Phone (masked)', width: 150 },
 
 
 

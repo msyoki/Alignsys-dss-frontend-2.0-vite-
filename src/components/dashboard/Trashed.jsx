@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import AuthContext from '../../context/Authcontext';
 import mergeActionColumns from '../common/mergeActionColumns';
 import autoSizeColumns from '../common/autoSizeColumns';
 const ICON_COLOR = '#2757aa';
@@ -20,6 +21,7 @@ import {
 import HumanizedDate from '../HumanizeDate';
 
 function Trashed(props) {
+  const { authTokens } = useContext(AuthContext);
   const [opendialogdocdetails, setOpenDialogDocDetails] = useState(false);
   const [document, setDocument] = useState({});
   const [documentsigners, setDocumentSigners] = useState([]);
@@ -38,7 +40,8 @@ function Trashed(props) {
       maxBodyLength: Infinity,
       url: `${constants.devApiBaseUrl}/api/untrash/document/`,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authTokens?.access}`
       },
       data: data
     };

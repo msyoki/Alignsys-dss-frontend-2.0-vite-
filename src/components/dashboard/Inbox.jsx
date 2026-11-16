@@ -54,7 +54,8 @@ function Inbox(props) {
       maxBodyLength: Infinity,
       url: `${constants.devApiBaseUrl}/api/trash/document/`,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authTokens?.access}`
       },
       data: data
     };

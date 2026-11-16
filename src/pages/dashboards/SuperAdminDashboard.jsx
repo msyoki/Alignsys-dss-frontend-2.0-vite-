@@ -24,6 +24,11 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import TimedAlert from '../../components/TimedAlert';
 import OrganizationDocChart from '../../components/DocumentStats';
+import ReportsOverview from '../../components/admin/ReportsOverview';
+import OtpLogs from '../../components/admin/OtpLogs';
+import useProfileEditor from '../../hooks/useProfileEditor';
+import { TiArrowBack } from 'react-icons/ti';
+import { FaChartLine, FaShieldAlt } from 'react-icons/fa';
 
 function CustomTabPanel({ children, value, index, fill = false, className = '', ...other }) {
   return (
@@ -98,6 +103,14 @@ function SuperAdminDashboard() {
 
   const location = useLocation();
   const { authTokens, logoutUser, user } = useContext(AuthContext);
+  // Same "Edit my profile" / "Reset password" as the home page's account menu.
+  const profile = useProfileEditor({
+    user, authTokens, avatar, setAvatar,
+    notify: (msg, severity) => {
+      setAlertMsg(msg); setAlertSeverity(severity); setOpenAlert(true);
+      setTimeout(() => setOpenAlert(false), 3000);
+    },
+  });
   const navigate = useNavigate();
 
 
@@ -200,8 +213,41 @@ function SuperAdminDashboard() {
     getCompanies();
   }, []);
 
+  // One list drives both the tab bar and the sidebar, grouped by purpose.
+  // `index` is the tab's panel (fixed); the order here is only display order.
+  // `load` fetches the tab's data.
+  const superTabGroups = [
+    {
+      key: 'accounts', label: 'Accounts', tabs: [
+        { index: 0, label: 'Organisations', Icon: FaBuilding, load: getCompanies },
+        { index: 3, label: 'Pending Approval', Icon: FaInbox, load: getNewCompanies },
+        { index: 1, label: 'Organisation Admins', Icon: FaUsers, load: getUsers },
+        { index: 2, label: 'Individual Accounts', Icon: FaCircleUser, load: getIndividualUsers },
+      ],
+    },
+    {
+      key: 'insights', label: 'Reports & logs', tabs: [
+        { index: 5, label: 'Reports', Icon: FaChartLine },
+        { index: 4, label: 'Document Stats', Icon: FaChartSimple },
+        { index: 6, label: 'OTP Activity', Icon: FaShieldAlt },
+      ],
+    },
+  ].map((g) => ({
+    ...g,
+    tabs: g.tabs.map((t) => ({ ...t, icon: <t.Icon />, tabIcon: <t.Icon style={{ fontSize: 15 }} /> })),
+  }));
+  const superTabs = superTabGroups.flatMap((g) => g.tabs);
+
+  const openSuperTab = (index) => {
+    const t = superTabs.find((x) => x.index === index);
+    if (!t) return;
+    setTab(index);
+    if (t.load) t.load();
+  };
+
   return (
     <>
+      {profile.profileDialog}
       <ApproveCompanyDialog
         getUsers={getUsers}
         getCompanies={getCompanies}
@@ -271,15 +317,20 @@ function SuperAdminDashboard() {
           <AppShell
               caption="Super Admin Dashboard"
               orgName={user.company}
-              // Top: Home. Bottom (just above "Signed in as"): the other dashboard (same as the Admin page).
+              // Top: Back home and the organisation Admin dashboard, then this
+              // dashboard's tabs in groups (same list as the tab bar).
               sections={[
-                  { key: 'home', label: 'Home', icon: <FaHome /> },
-              ]}
-              footerSections={[
+                  { key: 'home', label: 'Back home', icon: <TiArrowBack size={18} /> },
                   { key: 'admin', label: 'Admin Dashboard', icon: <FaUserShield /> },
+                  ...superTabGroups.flatMap((g) => [
+                      { key: `h-${g.key}`, type: 'heading', label: g.label },
+                      ...g.tabs.map((t) => ({ key: `tab-${t.index}`, label: t.label, icon: t.icon })),
+                  ]),
               ]}
+              activeKey={`tab-${tab}`}
               onSelect={(key) => {
-                  if (key === 'home') homePage()
+                  if (key.startsWith('tab-')) openSuperTab(Number(key.slice(4)))
+                  else if (key === 'home') homePage()
                   else if (key === 'admin') adminPage()
               }}
               open={sidebarOpen}
@@ -287,6 +338,8 @@ function SuperAdminDashboard() {
               userName={[user.first_name, user.last_name].filter(Boolean).join(' ') || user.username}
               avatarSrc={avatar}
               onLogout={logoutUser}
+              onOpenProfile={profile.openProfile}
+              accountMenuItems={[profile.resetPasswordItem]}
               headerExtra={<BrandLogo src={companylogo} alt="Organization logo" className="admin-topbar-logo" />}
               mainSx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
           >
@@ -302,17 +355,13 @@ function SuperAdminDashboard() {
             <Box className='admin-tabs-shell'>
               <Box className='admin-tabs-bar'>
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} aria-label="super admin tabs"
-                  variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
-                  <Tab iconPosition='start' icon={<FaBuilding style={{ fontSize: 15 }} />}
-                    onClick={getCompanies} label="Company Accounts" {...a11yProps(0)} />
-                  <Tab iconPosition='start' icon={<FaUsers style={{ fontSize: 15 }} />}
-                    onClick={getUsers} label="Admin Accounts" {...a11yProps(1)} />
-                  <Tab iconPosition='start' icon={<FaCircleUser style={{ fontSize: 15 }} />}
-                    onClick={getIndividualUsers} label="Individual Accounts" {...a11yProps(2)} />
-                  <Tab iconPosition='start' icon={<FaInbox style={{ fontSize: 15 }} />}
-                    onClick={getNewCompanies} label="Pending Approval" {...a11yProps(3)} />
-                  <Tab iconPosition='start' icon={<FaChartSimple style={{ fontSize: 15 }} />}
-                    label="Document Stats" {...a11yProps(4)} />
+                  variant="standard" className="admin-tabs-wrap">
+                  {/* Same groups and order as the sidebar; a thin divider starts each group. */}
+                  {superTabGroups.flatMap((g, gi) => g.tabs.map((t, ti) => (
+                    <Tab key={t.index} value={t.index} iconPosition='start' icon={t.tabIcon} onClick={t.load}
+                      label={t.label} className={gi > 0 && ti === 0 ? 'tab-group-start' : undefined}
+                      {...a11yProps(t.index)} />
+                  )))}
                 </Tabs>
               </Box>
               <CustomTabPanel value={tab} index={0} className='admin-tabpanel'>
@@ -382,6 +431,16 @@ function SuperAdminDashboard() {
                 <PanelHeader title="Document stats" subtitle="Document distribution across organisations." />
                 <div id='Chart' className='admin-card' style={{ minHeight: 450 }}>
                   <OrganizationDocChart />
+                </div>
+              </CustomTabPanel>
+              <CustomTabPanel value={tab} index={5} className='admin-tabpanel'>
+                <PanelHeader title="Reports" subtitle="Signing activity, turnaround, SMS verification and sign-ins across all organisations, or pick one to narrow down." />
+                {tab === 5 && <ReportsOverview />}
+              </CustomTabPanel>
+              <CustomTabPanel value={tab} index={6} className='admin-tabpanel' fill>
+                <PanelHeader title="OTP activity" subtitle="SMS one-time code events for all organisations. Read-only; codes are never shown." />
+                <div className='admin-card admin-fill-card'>
+                  {tab === 6 && <OtpLogs showOrganization />}
                 </div>
               </CustomTabPanel>
             </Box>

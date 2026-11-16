@@ -753,7 +753,13 @@ function Dashboard() {
                             avatarSrc={avatar}
                             onOpenProfile={showProfile}
                             onLogout={logoutUser}
-                            accountMenuItems={[{ key: 'reset', label: 'Reset password', icon: <FaKey size={14} />, onClick: () => { window.location.href = '/password-reset' } }]}
+                            accountMenuItems={[
+                                { key: 'reset', label: 'Reset password', icon: <FaKey size={14} />, onClick: () => { window.location.href = '/password-reset' } },
+                                // Super admins only: the platform-wide dashboard (kept out of the sidebar).
+                                ...(user.is_superuser === 'True' ? [
+                                    { key: 'sadmin', label: 'Super Admin Dashboard', icon: <FaUserShield size={14} />, onClick: () => navigate('/super/admin/dashboard') },
+                                ] : []),
+                            ]}
                             headerExtra={
                                 <BrandLogo
                                     src={companylogo}

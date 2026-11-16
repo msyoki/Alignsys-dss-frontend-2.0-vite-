@@ -1,9 +1,9 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { PILL_OUTLINE } from '../common/pillButton';
 import {
-  Button, CircularProgress, FormControl, InputLabel, MenuItem, Select, Switch, TextField, Tooltip,
+  Button, CircularProgress, Collapse, FormControl, InputAdornment, InputLabel, MenuItem, Select, Switch, TextField, Tooltip,
 } from '@mui/material';
-import { FaCheckCircle, FaExclamationTriangle, FaPaperPlane, FaSave } from 'react-icons/fa';
+import { FaCheckCircle, FaChevronDown, FaChevronRight, FaExclamationTriangle, FaInfoCircle, FaPaperPlane, FaSave } from 'react-icons/fa';
 import AuthContext from '../../context/Authcontext';
 import { getOtpConfig, otpError, saveOtpConfig, testOtpConfig } from '../../api/otp';
 
@@ -14,6 +14,8 @@ import { getOtpConfig, otpError, saveOtpConfig, testOtpConfig } from '../../api/
 // blank keeps the saved value.
 
 const fieldSx = { mb: 0 };
+// Help longer than this goes into an ⓘ tooltip instead of under the field.
+const LONG_HELP = 70;
 const small = { fontSize: 13 };
 
 export const EXAMPLE_TEMPLATE =
@@ -57,7 +59,22 @@ export default function SmsProviderSettings({ onSaved }) {
   const [errors, setErrors] = useState({});
   const [banner, setBanner] = useState(null); // { severity, text }
   const [busy, setBusy] = useState(''); // '' | 'test' | 'save'
-  const [dirty, setDirty] = useState(false); // credentials changed since load
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // The pinned alerts change height (banner shown/hidden); expose it as a CSS
+  // variable so the pinned Test/Save panel sits just below them.
+  const formRef = useRef(null);
+  const alertsRef = useRef(null);
+  useEffect(() => {
+    const el = alertsRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => {
+      formRef.current?.style.setProperty('--sms-alerts-h', `${el.offsetHeight}px`);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+  const [loadedValues, setLoadedValues] = useState({}); // credentials as loaded, restored when switching back to the saved provider
   const [saved, setSaved] = useState(''); // snapshot of the form as loaded, to detect unsaved changes
 
   const providers = config?.providers || [];
@@ -78,17 +95,17 @@ export default function SmsProviderSettings({ onSaved }) {
       const plain = Object.fromEntries(Object.entries(data.credentials || {}).filter(([k]) => !secretNames.has(k)));
       const loadedValues = { ...defaultsFor(p), ...plain };
       setValues(loadedValues);
+      setLoadedValues(loadedValues);
       setTemplate(data.message_template || '');
       setEnabled(!!data.enabled);
       setSaved(snapshot(data.provider || '', loadedValues, data.message_template || '', !!data.enabled));
       setTestToken('');
       setErrors({});
-      setDirty(false);
     } catch (err) {
       const e = otpError(err, '');
       const reasons = {
         403: 'Only organisation administrators can manage the SMS provider.',
-        404: 'The server does not have the SMS settings feature yet. Deploy the latest backend.',
+        404: 'The server does not have the SMS settings feature yet. Contact your service provider.',
         500: 'The server failed to load SMS settings. If this is a new deployment, run the database migrations (python manage.py migrate).',
       };
       const text = e.message || reasons[e.status]
@@ -115,17 +132,16 @@ export default function SmsProviderSettings({ onSaved }) {
   const changeProvider = (key) => {
     setProvider(key);
     if (!key) setEnabled(false); // no provider: nothing to use
-    setValues(defaultsFor(providers.find((p) => p.key === key)));
+    // Back on the saved provider: bring its saved details back instead of blank defaults.
+    setValues(key && key === config?.provider ? loadedValues : defaultsFor(providers.find((p) => p.key === key)));
     setErrors({});
     setTestToken('');
-    setDirty(true);
   };
 
   const setValue = (name, value) => {
     setValues((v) => ({ ...v, [name]: value }));
     setErrors((e) => ({ ...e, [name]: undefined }));
     setTestToken(''); // any change needs a new test before enabling
-    setDirty(true);
   };
 
   const payload = () => ({ provider, credentials: values, message_template: template.trim(), enabled });
@@ -211,11 +227,20 @@ export default function SmsProviderSettings({ onSaved }) {
   const availability = config?.availability || {};
   const savedSecrets = new Set(config?.provider === provider ? config?.secrets_set || [] : []);
   const savedMasks = config?.provider === provider ? config?.credentials || {} : {};
+  // Same rule as the server: enabling needs a passing test unless the provider and its
+  // credentials are exactly what was saved and that setup already passed a test.
+  const credentialsChanged = snapshot(provider, values, '', false) !== snapshot(config?.provider || '', loadedValues, '', false);
   const needsTest = enabled && !testToken
-    && (dirty || !(config?.last_test_ok && config?.provider === provider));
+    && (credentialsChanged || !config?.last_test_ok);
   const hasChanges = snapshot(provider, values, template, enabled) !== saved;
   const saveHint = !hasChanges ? 'No changes to save'
-    : needsTest ? 'Send a successful test SMS first' : '';
+    : needsTest ? 'Send a successful test SMS first, or turn off "Use this provider" to save without enabling it' : '';
+
+  // Rarely used fields (e.g. Custom HTTP extra headers / success check) start
+  // folded away; they open by themselves when filled in or in error.
+  const advancedFields = (schema?.fields || []).filter((f) => f.advanced && isVisible(f, values));
+  const advancedOpen = showAdvanced
+    || advancedFields.some((f) => (values[f.name] && values[f.name] !== f.default) || errors[f.name]);
 
   const renderField = (f) => {
     if (!isVisible(f, values)) return null;
@@ -238,29 +263,50 @@ export default function SmsProviderSettings({ onSaved }) {
             onChange={(e) => setValue(f.name, e.target.value)}>
             {f.options.map((o) => <MenuItem key={o.value} value={o.value} style={small}>{o.label}</MenuItem>)}
           </Select>
-          {(errors[f.name] || f.help) && <small className={errors[f.name] ? 'text-danger' : 'text-muted'}>{errors[f.name] || f.help}</small>}
+          {(errors[f.name] || (f.help && f.help.length <= LONG_HELP)) && (
+            <small className={errors[f.name] ? 'text-danger' : 'text-muted'}>{errors[f.name] || f.help}</small>
+          )}
         </FormControl>
       );
     }
+    // Errors and short hints stay under the field; long help moves into an ⓘ
+    // icon so it doesn't push the form down (hover or tap to read it).
+    const longHelp = f.help && f.help.length > LONG_HELP ? f.help : '';
     const helper = errors[f.name]
-      || (f.secret && savedSecrets.has(f.name) ? `Saved (${savedMasks[f.name]}). Leave blank to keep it.` : f.help);
+      || (f.secret && savedSecrets.has(f.name) ? `Saved (${savedMasks[f.name]}). Leave blank to keep it.` : '')
+      || (longHelp ? '' : f.help);
     return (
       <TextField
         {...common}
         type={f.secret ? 'password' : 'text'}
         multiline={f.type === 'textarea'}
-        minRows={f.type === 'textarea' ? 3 : undefined}
+        minRows={f.type === 'textarea' ? 2 : undefined}
+        maxRows={f.type === 'textarea' ? 6 : undefined}
         value={values[f.name] || ''}
         placeholder={f.secret && savedSecrets.has(f.name) ? savedMasks[f.name] : ''}
         onChange={(e) => setValue(f.name, e.target.value)}
-        helperText={helper}
+        helperText={helper || undefined}
         FormHelperTextProps={{ style: { fontSize: 11 } }}
+        InputProps={longHelp ? {
+          endAdornment: (
+            <InputAdornment position="end" sx={{ alignSelf: f.type === 'textarea' ? 'flex-start' : 'center', mt: f.type === 'textarea' ? 1 : 0 }}>
+              <Tooltip title={longHelp} enterTouchDelay={0} leaveTouchDelay={6000} placement="top-end">
+                <span aria-label={longHelp} role="img" style={{ display: 'inline-flex', color: '#6b7280', cursor: 'help' }}>
+                  <FaInfoCircle size={13} />
+                </span>
+              </Tooltip>
+            </InputAdornment>
+          ),
+        } : undefined}
       />
     );
   };
 
   return (
-    <form onSubmit={save} autoComplete="off" className="sms-settings">
+    <form onSubmit={save} autoComplete="off" className="sms-settings" ref={formRef}>
+      {/* Status + result messages stay pinned just under the tab headers, so the
+          outcome of Test / Save is visible without scrolling back up. */}
+      <div className="sms-alerts" aria-live="polite" ref={alertsRef}>
       <div className={`alert py-2 mb-0 ${availability.available ? 'alert-success' : 'alert-warning'}`} style={small}>
         {availability.available ? (
           <><FaCheckCircle className="me-2" />
@@ -283,24 +329,44 @@ export default function SmsProviderSettings({ onSaved }) {
           )}
         </div>
       )}
+      </div>
 
       <div className="sms-settings-grid">
         {/* Left: provider and its credentials, in as many columns as fit */}
         <section className="sms-settings-main">
-          <h3 className="admin-card-title">Provider</h3>
-          <FormControl fullWidth size="small" sx={{ maxWidth: 480 }}>
-            <InputLabel style={small}>SMS provider</InputLabel>
-            <Select label="SMS provider" value={provider} style={small} onChange={(e) => changeProvider(e.target.value)}>
-              <MenuItem value="" style={small}><em>Not configured</em></MenuItem>
-              {providers.map((p) => <MenuItem key={p.key} value={p.key} style={small}>{p.label}</MenuItem>)}
-            </Select>
-            {schema?.description && <small className="text-muted mt-1">{schema.description}</small>}
-          </FormControl>
+          {/* Provider picker and its description share one row on wider screens. */}
+          <div className="sms-provider-row">
+            <FormControl size="small" className="sms-provider-select">
+              <InputLabel style={small}>SMS provider</InputLabel>
+              <Select label="SMS provider" value={provider} style={small} onChange={(e) => changeProvider(e.target.value)}>
+                <MenuItem value="" style={small}><em>Not configured</em></MenuItem>
+                {providers.map((p) => <MenuItem key={p.key} value={p.key} style={small}>{p.label}</MenuItem>)}
+              </Select>
+            </FormControl>
+            {schema?.description && <small className="text-muted sms-provider-desc">{schema.description}</small>}
+          </div>
 
           {schema ? (
             <>
-              <h3 className="admin-card-title mt-3">Credentials</h3>
-              <div className="sms-fields">{schema.fields.map(renderField)}</div>
+              <h3 className="admin-card-title mt-3 mb-2">Connection details</h3>
+              <div className="sms-fields">{schema.fields.filter((f) => !f.advanced).map(renderField)}</div>
+              {advancedFields.length > 0 && (
+                <div className="mt-3">
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={() => setShowAdvanced((v) => !v)}
+                    aria-expanded={advancedOpen}
+                    startIcon={advancedOpen ? <FaChevronDown size={10} /> : <FaChevronRight size={10} />}
+                    style={{ textTransform: 'none', fontSize: 12.5, padding: '2px 6px' }}
+                  >
+                    Advanced settings ({advancedFields.length}) — optional
+                  </Button>
+                  <Collapse in={advancedOpen} unmountOnExit>
+                    <div className="sms-fields mt-2">{advancedFields.map(renderField)}</div>
+                  </Collapse>
+                </div>
+              )}
             </>
           ) : (
             <p className="text-muted mt-3 mb-0" style={small}>Select your SMS provider to enter its details.</p>
@@ -371,7 +437,10 @@ export default function SmsProviderSettings({ onSaved }) {
             {needsTest && hasChanges && (
               <div className="w-100 d-flex align-items-center flex-wrap gap-2" role="status" style={{ fontSize: 12, color: '#8a6100', background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 6, padding: '6px 10px' }}>
                 <FaExclamationTriangle aria-hidden />
-                <span style={{ flex: 1, minWidth: 180 }}>Send a test SMS to confirm these settings before using this provider.</span>
+                <span style={{ flex: 1, minWidth: 180 }}>
+                  Send a test SMS to confirm these settings before using this provider.
+                  To save without enabling it, turn off "Use this provider for signer OTP".
+                </span>
                 <Button size="small" onClick={() => { testPhoneRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }); testPhoneRef.current?.focus(); }}
                   style={{ textTransform: 'none', fontSize: 12, padding: '0 6px', minWidth: 0 }}>
                   Go to test

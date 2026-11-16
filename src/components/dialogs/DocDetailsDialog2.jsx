@@ -1,4 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { DialogHeader } from '../common/dialogKit';
+import { FaFileAlt } from 'react-icons/fa';
 import {
   Button,
   Dialog,
@@ -165,19 +167,8 @@ const DocDetailsDialog2 = ({
         fullWidth
         maxWidth="sm"
       >
-        {/* Header */}
-        <DialogTitle
-          className="p-2 d-flex justify-content-between align-items-center"
-          style={{ backgroundColor: '#2757aa', color: '#fff', fontSize: '15px' }}
-        >
-          <img src={logo} alt="Logo" width="130px" className="mx-3" />
-          <span className="flex items-center mx-3 cursor-pointer">
-            <span className="font-bold mx-1">Document Details</span>
-            <IconButton onClick={handleClose} style={{ color: 'white' }}>
-              <FaRegWindowClose />
-            </IconButton>
-          </span>
-        </DialogTitle>
+        {/* Header: what the dialog is about (no logo; the app frame already shows it) */}
+        <DialogHeader icon={<FaFileAlt />} title="Document details" subtitle={document.title} onClose={handleClose} />
 
         {/* Content */}
         <DialogContent style={{ fontSize: '14px', maxHeight: '60vh', overflowY: 'auto' }}>
@@ -370,13 +361,15 @@ const DocDetailsDialog2 = ({
             </Tooltip>
           )}
           <Tooltip title="Download">
-            <FaDownload
-              className="mx-2"
-              style={{ fontSize: '30px', color: '#2757aa', cursor: 'pointer' }}
-              onClick={() =>
-                window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${document.guid}`)
-              }
-            />
+            <span style={{ display: 'inline-block' }}>
+              <FaDownload
+                className="mx-2"
+                style={{ fontSize: '30px', color: '#2757aa', cursor: 'pointer' }}
+                onClick={() =>
+                  window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${document.guid}`)
+                }
+              />
+            </span>
           </Tooltip>
           {document.owner === user.email && (type === 'inbox' || type === 'outbox') && (
             <Tooltip title={type === 'outbox' ? 'Recall Document' : 'Void Document'}>

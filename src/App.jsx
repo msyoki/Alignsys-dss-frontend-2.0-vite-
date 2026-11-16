@@ -7,7 +7,8 @@ import "./styles/Login.css";
 import "./styles/Otp.css";
 import "./styles/SignatureDialog.css";
 import "./styles/style.css";
-import "./styles/Dashboard.css";import "./styles/index.css";
+import "./styles/Dashboard.css";
+import "./styles/DataTable.css";
 
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 

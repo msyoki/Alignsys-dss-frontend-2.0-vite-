@@ -4,7 +4,8 @@ import React, {useState,useContext} from 'react'
 import Authcontext from '../context/Authcontext';
 import SweetPagination from "sweetpagination";
 import { fontFamily } from '@mui/system';
-import { ButtonComponent  } from '@syncfusion/ej2-react-buttons';
+import Button from '@mui/material/Button';
+import { PILL } from './common/pillButton';
 
 import Pagination from './Pagination'
 
@@ -92,7 +93,7 @@ function NewCompanies(props) {
                                             {/* <button className='btn btn-outline-success btn-sm ' onClick={(e)=>approveAccount(c.id,c.email)}>
                                                 <small>Approve</small>
                                             </button>  */}
-                                            <ButtonComponent cssClass='e-success e-outline' onClick={(e)=>approveAccount(c.id,c.email)} style={{textTransform: 'none',fontWeight:'lighter',fontSize:'12px'}} className='m-1'  disabled={false}>  Approve</ButtonComponent>
+                                            <Button variant="outlined" color="success" size="small" className="m-1" onClick={(e)=>approveAccount(c.id,c.email)} sx={{ ...PILL, fontSize: '12px', fontWeight: 400 }}>Approve</Button>
                         
                                         </td>
                                     </tr>

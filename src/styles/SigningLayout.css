@@ -1,0 +1,62 @@
+/* Signing pages (email-link and self-sign): document viewer + Document
+   Details panel. body has overflow: hidden app-wide (Dashboard.css), so the
+   page area itself must scroll when the two columns stack. */
+
+.signing-layout {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  /* Bootstrap .row's negative gutters would make the page wider than the screen. */
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Toolbar slot that only has content sometimes (Finish appears once a
+   signature is placed). On phones the slots stack as rows, so an empty one
+   should take no space; on wider screens it keeps its column. */
+@media (max-width: 767.98px) {
+  .empty-collapse:empty {
+    display: none !important;
+  }
+
+  /* Phones: give the full-width toolbar buttons room to breathe. */
+  .signing-toolbar {
+    padding: 14px 10px !important;
+  }
+
+  .signing-toolbar > div {
+    gap: 12px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .signing-toolbar > div:last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+.signing-layout > .signing-details {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Below Bootstrap's lg breakpoint the columns stack: scroll the whole area so
+   the Document Details (signers, instructions, comments) can be reached. */
+@media (max-width: 991.98px) {
+  .signing-layout {
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .signing-layout > .signing-details {
+    height: auto;
+    min-height: 50vh;
+    padding-bottom: 24px;
+  }
+
+  /* Let the details list grow with its content instead of scrolling inside. */
+  .signing-layout > .signing-details .signing-details-list {
+    overflow-y: visible !important;
+  }
+}

@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import SmoothPage from './SmoothPage';
+import useFitWidthZoom from './useFitWidthZoom';
+import usePanelWidth from './usePanelWidth';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Draggable from 'react-draggable';
 import '../../styles/PDFViewerTechedge.css'
@@ -15,7 +18,12 @@ import { TfiLayoutSidebarNone } from "react-icons/tfi";
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
-const PDFViewerPreview = ({ title, complete, document, height, handleClose }) => {
+/**
+ * `fill` (opt-in): fit exactly inside the parent element (toolbar + document area
+ * filling the rest, scrolling inside). Without it the viewer keeps its original
+ * viewport-based sizing, so other screens that reuse it are unaffected.
+ */
+const PDFViewerPreview = ({ title, complete, document, height, handleClose, fill = false }) => {
   const [numPages, setNumPages] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [pageNumber, setPageNumber] = useState(1);
@@ -268,33 +276,22 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
   }, [numPages]);
 
 
-  useEffect(() => {
-    const checkScreenSizeAndSetZoom = () => {
-      if (window.innerWidth <= 768) {
-        setZoom(0.5);
-      } else {
-        setZoom(1);
-      }
-    };
-
-    // Run on mount
-    checkScreenSizeAndSetZoom();
-
-    // Listen for resize
-    window.addEventListener('resize', checkScreenSizeAndSetZoom);
-
-    // Cleanup
-    return () => window.removeEventListener('resize', checkScreenSizeAndSetZoom);
-  }, []);
+  // Start every page fitted to the viewer's width (phones, tablets, desktop).
+  useFitWidthZoom(mainContainerRef, setZoom);
+  // Thumbnails are drawn at the side panel's width, so the panel never scrolls sideways.
+  const thumbWidth = usePanelWidth(containerRef, isAsideOpen);
   const iconSz = isMobile ? 14 : 18;
   const labelSz = isMobile ? '10px' : '12px';
 
 
+  const FillWrapper = fill ? 'div' : React.Fragment;
+  const fillWrapperProps = fill ? { style: { display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, minWidth: 0 } } : {};
+
   return (
-    <>
+    <FillWrapper {...fillWrapperProps}>
       {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
 
-      <div className="controls bg-white shadow-lg text-dark p-2 shadow-sm">
+      <div className="controls bg-white shadow-lg text-dark p-2 shadow-sm" style={fill ? { flexShrink: 0 } : undefined}>
         <div className="d-flex flex-wrap flex-md-nowrap align-items-center justify-content-between w-100 gap-2">
           {/* Toggle Button */}
           <div className="d-flex align-items-center" style={{ minWidth: '150px' }}>
@@ -440,11 +437,11 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
       </div>
 
 
-      <div className={`pdf-viewer-container `} >
+      <div className={`pdf-viewer-container `} style={fill ? { flex: 1, minHeight: 0, height: 'auto' } : undefined}>
 
         {/* Sidebar Thumbnails */}
         {isAsideOpen && (
-          <aside className="pdf-thumbnail-panel scrollbar-custom1" ref={containerRef}>
+          <aside className="pdf-thumbnail-panel scrollbar-custom1" ref={containerRef} style={fill ? { height: '100%' } : undefined}>
             <div className="thumbnail-scroll-container">
               <Document className="pdf-container" file={document}>
                 {[...Array(numPages).keys()].map((pageIndex) => (
@@ -457,7 +454,7 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
                     <Page
                       pageNumber={pageIndex + 1}
 
-                      scale={getScaleForPageThumbnail(pageIndex + 1)}
+                      {...(thumbWidth ? { width: thumbWidth } : { scale: getScaleForPageThumbnail(pageIndex + 1) })}
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
                       className="page-container"
@@ -473,7 +470,7 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
         {/* Main PDF Viewer */}
         <main className="pdf-main-viewer scrollbar-custom" ref={mainContainerRef}
           style={{
-            height: "80vh"
+            height: fill ? '100%' : "80vh"
           }}
         >
 
@@ -505,7 +502,7 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
                       justifyContent: 'center',
                     }}
                   >
-                    <Page
+                    <SmoothPage
                       pageNumber={pageIndex + 1}
                       scale={pageScale}
                       renderTextLayer={false}
@@ -532,7 +529,7 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose }) =>
           </Document>
         </main>
       </div>
-    </>
+    </FillWrapper>
   );
 };
 

@@ -1,12 +1,12 @@
 import * as React from 'react';
-import { FaPlus, FaComments, FaTimes } from 'react-icons/fa';
+import { FaComments, FaPaperPlane } from 'react-icons/fa';
 
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import AlignItemsList from '../Comments';
+import { DialogHeader } from '../common/dialogKit';
 
 const CommentsDialog = (props) => {
   const [localText, setLocalText] = React.useState('');
@@ -29,10 +29,10 @@ const CommentsDialog = (props) => {
     <Dialog
       open={props.opendialogcomments}
       onClose={handleClose}
-      aria-describedby="alert-dialog-slide-description"
+      aria-labelledby="comments-title"
       PaperProps={{
         sx: {
-          borderRadius: 3,
+          // Same corner radius as the other dialogs (MUI's default 4px).
           minWidth: { xs: '95%', sm: 600 },
           maxWidth: 700,
           overflow: 'hidden',
@@ -40,28 +40,7 @@ const CommentsDialog = (props) => {
       }}
     >
       {/* Header */}
-      <DialogTitle
-        sx={{
-          backgroundColor: '#2757aa',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          py: 1.2,
-          px: 2,
-          fontSize: '14px',
-          fontWeight: 500,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FaComments />
-          <span>Comments</span>
-        </div>
-
-        <IconButton onClick={handleClose} size="small" sx={{ color: '#fff' }}>
-          <FaTimes size={14} />
-        </IconButton>
-      </DialogTitle>
+      <DialogHeader id="comments-title" icon={<FaComments />} title="Comments" subtitle={props.ccdoctitle} onClose={handleClose} />
 
       <DialogContent
         sx={{
@@ -136,7 +115,7 @@ const CommentsDialog = (props) => {
           )}
         </div>
 
-        {/* Messenger Input Area */}
+        {/* Comment input: text box with the send (comment) button right beside it */}
         <div
           style={{
             padding: 12,
@@ -147,54 +126,55 @@ const CommentsDialog = (props) => {
             gap: 6,
           }}
         >
-          <textarea
-            id="textarea"
-            rows={2}
-            className="form-control"
-            placeholder="Write your comment here..."
-            value={localText}
-            onChange={(e) => { setLocalText(e.target.value); setTouched(true); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-            style={{
-              resize: 'none',
-              fontSize: '12.5px',
-              background: '#f8fafc',
-              borderRadius: 10,
-              border: `1px solid ${touched && isEmpty ? '#e57373' : '#dbe3ee'}`,
-              padding: 10,
-              flex: 1,
-            }}
-          />
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {touched && isEmpty ? (
-              <small style={{ fontSize: '11px', color: '#e57373' }}>
-                Comment cannot be empty.
-              </small>
-            ) : (
-              <span />
-            )}
-
-            <Button
-              variant="contained"
-              disabled={isEmpty}
-              onClick={handleSubmit}
-              sx={{
-                minWidth: '42px',
-                width: '42px',
-                height: '42px',
-                borderRadius: '50%',
-                p: 0,
-                backgroundColor: '#2757aa',
-                boxShadow: 'none',
-                marginLeft: 'auto',
-                '&:hover': { backgroundColor: '#1d4f9c', boxShadow: 'none' },
-                '&.Mui-disabled': { backgroundColor: '#b0bec5', color: '#fff' },
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
+            <textarea
+              id="textarea"
+              rows={2}
+              className="form-control"
+              placeholder="Write your comment here..."
+              aria-label="Comment"
+              value={localText}
+              onChange={(e) => { setLocalText(e.target.value); setTouched(true); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+              style={{
+                resize: 'none',
+                fontSize: '12.5px',
+                background: '#f8fafc',
+                borderRadius: 10,
+                border: `1px solid ${touched && isEmpty ? '#e57373' : '#dbe3ee'}`,
+                padding: 10,
+                flex: 1,
               }}
-            >
-              <FaPlus size={14} />
-            </Button>
+            />
+            <Tooltip title="Send comment">
+              <span style={{ display: 'flex' }}>
+                <IconButton
+                  aria-label="Send comment"
+                  disabled={isEmpty}
+                  onClick={handleSubmit}
+                  sx={{
+                    // Plain icon, no button background: just the paper plane beside the input.
+                    width: 44,
+                    alignSelf: 'center',
+                    borderRadius: '10px',
+                    bgcolor: 'transparent',
+                    color: '#2757aa',
+                    '&:hover': { bgcolor: '#ecf4fc' },
+                    '&.Mui-disabled': { color: '#b8c0cc' },
+                    '&:focus-visible': { outline: '2px solid #2757aa', outlineOffset: 2 },
+                  }}
+                >
+                  <FaPaperPlane size={20} />
+                </IconButton>
+              </span>
+            </Tooltip>
           </div>
+
+          {touched && isEmpty ? (
+            <small style={{ fontSize: '11px', color: '#e57373' }}>Comment cannot be empty.</small>
+          ) : (
+            <small style={{ fontSize: '11px', color: '#9ca3af' }}>Enter to send · Shift+Enter for a new line</small>
+          )}
         </div>
       </DialogContent>
     </Dialog>

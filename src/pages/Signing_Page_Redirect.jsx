@@ -6,9 +6,11 @@ import axios from 'axios';
 import Authcontext from '../context/Authcontext';
 import Loading from '../components/loaders/Loading';
 import logo from '../images/ZFBLU.webp';
+import BrandLogo from '../components/common/BrandLogo';
 import ConfirmVoid from '../components/ConfirmVoid';
 import { getComponent } from '@syncfusion/ej2-base';
 import HelpBubble from '../components/HelpBubble';
+import '../styles/SigningLayout.css';
 import LoadingDialog from '../components/loaders/LoadingDialog';
 import CommentsDialog from '../components/dialogs/CommentsDialog';
 import * as constants from '../components/constants/constants';
@@ -17,8 +19,9 @@ import AuthGuestDialog from '../components/AuthenticateGuest';
 import HumanizedDate from '../components/HumanizeDate';
 import PDFViewerSigningLoader from '../components/preview/PDFViewerSigningLoader';
 
-import CommentIcon from '@mui/icons-material/Comment';
+import { Comment as CommentIcon } from '@mui/icons-material';
 import Button from '@mui/material/Button';
+import { PILL } from '../components/common/pillButton';
 
 function Signing_Page_Redirect() {
   const { user, authTokens } = useContext(Authcontext);
@@ -32,7 +35,6 @@ function Signing_Page_Redirect() {
   const [loading, setLoading] = useState(false);
   const [verifysigner, setVerify] = useState(false);
   const [ip, setIp] = useState('');
-  const [otpnumber, setOtpNumber] = useState('');
   const [signed, setSigned] = useState(false);
   const [voided, setVoided] = useState(false);
   const [singlepage, setSinglepage] = useState(false);
@@ -48,10 +50,6 @@ function Signing_Page_Redirect() {
   const [opendialogvoid, setOpenDialogVoid] = useState(false);
   const [opendialogotp, setOpenDialogOtp] = useState(false);
   const [opendialogcomments, setOpenDialogComments] = useState(false);
-  const [newotp, setOTP] = useState('');
-  const [otpphone, setOtpPhone] = useState('');
-  const [maskedotpphone, setMaskedOtpPhone] = useState('');
-  const [trialcount, setTrialCount] = useState(0);
   const [openalert, setOpenAlert] = useState(true);
   const [alertmsg, setAlertMsg] = useState('');
   const [alertseverity, setAlertSeverity] = useState('');
@@ -81,8 +79,6 @@ function Signing_Page_Redirect() {
   const [sampleURL, setSampleUrl] = useState('');
   const [opendialogauthguest, setOpenDialogAuthGuest] = useState(false);
   const [loadingPercentage, setLoadingPercentage] = useState(0);
-  const [time, setTime] = useState(600);
-  const [resetTimer, setResetTimer] = useState(false);
   const [placedSignature, setPlacedSignature] = useState('');
   const [signerAnnotations, setSignerAnnotations] = useState([]);
   const [fileLocked, setFileLocked] = useState(true);
@@ -91,24 +87,6 @@ function Signing_Page_Redirect() {
   const handleComments = () => {
     setOpenDialogComments(true);
   };
-
-  // Timer logic
-  function timerClock() {
-    const timer = setInterval(() => {
-      setTime(prevTime => {
-        if (prevTime > 0 && !resetTimer) {
-          return prevTime - 1;
-        } else if (prevTime > 0 && resetTimer) {
-          clearInterval(timer);
-          return 600;
-        } else {
-          clearInterval(timer);
-          return 0;
-        }
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }
 
   // Fetch file as base64
   const getFileURL = async () => {
@@ -182,7 +160,6 @@ function Signing_Page_Redirect() {
         log(data.docname, data.guid, "hidden", data.email);
       }
 
-      if (data.verify === 'True') setOtpNumber(data.phone);
     } catch (error) {
       // console.log(error);
     }
@@ -289,20 +266,6 @@ function Signing_Page_Redirect() {
       ip: ip,
       user: email
     }).catch(() => { });
-  }
-
-  // OTP
-  async function sendOTP(phone) {
-    axios.post(`${constants.devApiBaseUrl}/api/sms/otp/`, { phone })
-      .then(() => {
-        timerClock();
-        setTrialCount(trialcount + 1);
-        setOpenAlert(true);
-        setAlertMsg('Otp was sent successfully!!');
-        setAlertSeverity('success');
-        setTimeout(() => setOpenAlert(false), 3000);
-      })
-      .catch(() => { });
   }
 
   // Signature box logic
@@ -464,7 +427,7 @@ function Signing_Page_Redirect() {
           />
           <LoadingDialog opendialogloading={opendialogloading} />
           <HelpBubble content='' base64={sampleURL} filename={docname} />
-          <div className="row bg-white" style={{ maxHeight: '100vh', height: '100vh' }}>
+          <div className="row bg-white signing-layout">
             <div className="col-lg-9 col-md-12 col-sm-12 order-lg-1 order-sm-1 bg-white">
               {sampleURL ? (
                 <PDFViewerSigningLoader
@@ -476,10 +439,6 @@ function Signing_Page_Redirect() {
                   setFileLocked={setFileLocked}
                   setPlacedSignature={setPlacedSignature}
                   currentsignerphone={currentsignerphone}
-                  time={time}
-                  setResetTimer={setResetTimer}
-                  setTime={setTime}
-                  timerClock={timerClock}
                   pdfInstance={pdfInstance}
                   setPdfInstance={setPdfInstance}
                   opendialogsignature={opendialogsignature}
@@ -536,17 +495,9 @@ function Signing_Page_Redirect() {
                   alertseverity={alertseverity}
                   alertmsg={alertmsg}
                   openalert={openalert}
-                  maskedotpphone={maskedotpphone}
-                  otpphone={otpphone}
-                  newotp={newotp}
-                  setOtpPhone={setOtpPhone}
-                  setMaskedOtpPhone={setMaskedOtpPhone}
-                  trialcount={trialcount}
-                  setTrialCount={setTrialCount}
                   setAlertMsg={setAlertMsg}
                   setAlertSeverity={setAlertSeverity}
                   setOpenAlert={setOpenAlert}
-                  setOTP={setOTP}
                   setOpenDialogOtp={setOpenDialogOtp}
                   opendialogotp={opendialogotp}
                   signerAnnotations={signerAnnotations}
@@ -566,7 +517,7 @@ function Signing_Page_Redirect() {
                 </div>
               )}
             </div>
-            <div className="bg-white col-lg-3 col-md-12 col-sm-12 text-center shadow-lg order-lg-2 order-sm-2 d-flex flex-column" style={{ height: '100vh' }}>
+            <div className="bg-white col-lg-3 col-md-12 col-sm-12 text-center shadow-lg order-lg-2 order-sm-2 d-flex flex-column signing-details">
               {/* Logo Section */}
               <div
                 className="d-flex flex-column justify-content-center align-items-center"
@@ -577,8 +528,9 @@ function Signing_Page_Redirect() {
                   overflow: "hidden",
                 }}
               >
-                <img
-                  src={companylogo || logo}
+                <BrandLogo
+                  src={companylogo}
+                  fallback={logo}
                   alt="Organization logo"
                   className="logo"
                   style={{
@@ -593,7 +545,7 @@ function Signing_Page_Redirect() {
               {/* Document Details Section - This will grow to fill available space */}
               <div className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
                 <p className="text-white p-2" style={{ fontSize: '11px', backgroundColor: '#1C4690' }}>Document Details</p>
-                <ul className="list-unstyled m-0 p-0 flex-grow-1" style={{ overflowY: 'auto' }}>
+                <ul className="list-unstyled m-0 p-0 flex-grow-1 signing-details-list" style={{ overflowY: 'auto' }}>
                   <li className="mb-2" style={{ fontSize: "12px", fontWeight: 450, color: "#1C4690" }}>Title</li>
                   <li className="mt-2 mb-2" style={{ fontSize: "12px", fontWeight: 440 }}>{docname}</li>
                   <li className="mt-2 mb-2" style={{ fontSize: "12px", color: "#1C4690" }}>
@@ -654,15 +606,7 @@ function Signing_Page_Redirect() {
                     disabled={false}
                     startIcon={<FaComment size={13} />}
                     sx={{
-                      textTransform: 'none',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      borderRadius: '999px',
-                      px: 1.8,
-                      py: 0.8,
-                      minHeight: 34,
-                      boxShadow: 'none',
-
+                      ...PILL,
                     }}
                   >
                     Comments ({comments.length})
@@ -670,7 +614,7 @@ function Signing_Page_Redirect() {
                 </div>
                 <div className="mt-3 p-1 bg-white">
                   <a className="my-4" href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
-                    <img src={logo} style={{ width: '40%' }} alt="Footer Logo" />
+                    <img src={logo} alt="Alignsys" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }} />
                   </a>
                 </div>
               </div>

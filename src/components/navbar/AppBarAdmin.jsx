@@ -5,15 +5,14 @@ import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Menu from '@mui/material/Menu';
-import MenuIcon from '@mui/icons-material/Menu';
+import { Menu as MenuIcon } from '@mui/icons-material';
 import Container from '@mui/material/Container';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
-import AdbIcon from '@mui/icons-material/Adb';
+import { Adb as AdbIcon } from '@mui/icons-material';
 import logo from '../../images/ZFBLU.webp'
-import { ButtonComponent  } from '@syncfusion/ej2-react-buttons';
 const pages = ['New User', 'Document Log','Accounts','User Log '];
 const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
 

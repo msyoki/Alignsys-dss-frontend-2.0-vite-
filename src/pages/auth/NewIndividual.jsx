@@ -20,14 +20,15 @@ import InputAdornment from '@mui/material/InputAdornment';
 import FormControl from '@mui/material/FormControl';
 import Input from '@mui/material/Input';
 
-import EmailIcon from '@mui/icons-material/Email';
+import { Email as EmailIcon } from '@mui/icons-material';
 
-import { FaIdBadge } from 'react-icons/fa';
-import PhoneIcon from '@mui/icons-material/Phone';
-import AddCardIcon from '@mui/icons-material/AddCard';
+import { FaIdBadge, FaEnvelope, FaPhone, FaRegCreditCard } from 'react-icons/fa';
+import { Phone as PhoneIcon } from '@mui/icons-material';
+import { AddCard as AddCardIcon } from '@mui/icons-material';
 import NativeSelect from '@mui/material/NativeSelect';
 import { useNavigate } from 'react-router-dom';
 import LoadingMini from '../../components/loaders/LoadingMini';
+import { PILL_LARGE } from '../../components/common/pillButton';
 
 const NewIndividual = () => {
   registerLicense('Mgo+DSMBPh8sVXJ0S0J+XE9HflRDX3xKf0x/TGpQb19xflBPallYVBYiSV9jS31TckVnWHlbcXFWT2NbVA==');
@@ -302,14 +303,12 @@ const NewIndividual = () => {
                     <Button
                       type="submit"
                       variant="contained"
-                      className="mb-3 rounded-pill my-3"
-                      style={{
-                        fontSize: '13px',
+                      className="my-3"
+                      sx={{
+                        ...PILL_LARGE,
                         color: '#fff',
                         backgroundColor: '#2757aa',
                         width: '100%',
-                        padding: '10px',
-                        textTransform: 'none',
                       }}
                     >
                       REGISTER

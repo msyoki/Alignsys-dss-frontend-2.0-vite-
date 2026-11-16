@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { PILL } from '../common/pillButton';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -131,24 +132,13 @@ function ConfirmCompleteDialog(props) {
               I confirm the placed signature is in order. Let's proceed.
             </p>
           </DialogContentText>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, paddingBottom: 8 }}>
             <Button
               variant="outlined"
               color="warning"
               onClick={handleClose}
-              sx={{
-                borderRadius: '25px',
-                textTransform: 'none',
-                fontSize: '12px',
-                px: 2.5,
-                py: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                m: 1,
-                minWidth: 100,
-              }}
-              startIcon={<FaTimes style={{ fontSize: 14, marginRight: 2 }} />}
+              sx={{ ...PILL, minWidth: 100 }}
+              startIcon={<FaTimes />}
             >
               Cancel
             </Button>
@@ -156,20 +146,8 @@ function ConfirmCompleteDialog(props) {
               variant="contained"
               color="primary"
               onClick={handleCloseAgree}
-              sx={{
-                borderRadius: '25px',
-                textTransform: 'none',
-                fontSize: '12px',
-                px: 2.5,
-                py: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                m: 1,
-                minWidth: 100,
-                boxShadow: '0 2px 8px rgba(28,70,144,0.08)',
-              }}
-              startIcon={<FaCheck style={{ fontSize: 14, marginRight: 2 }} />}
+              sx={{ ...PILL, minWidth: 100 }}
+              startIcon={<FaCheck />}
             >
               Proceed
             </Button>

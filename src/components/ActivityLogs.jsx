@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { FaFilter } from 'react-icons/fa';
+import autoSizeColumns from './common/autoSizeColumns';
+import DateRangeFilter from './common/DateRangeFilter';
 import { Box, CircularProgress } from '@mui/material';
 import {
   DataGrid,
@@ -64,50 +65,10 @@ function ActivityLogs(props) {
         </div>
       ) : (
         <>
-          <div className='col-lg-12 col-md-12 col-sm-12 p-3' style={{ display: 'flex', gap: '16px' }}>
-            <div className='input-group'>
-              <label className='mx-3 text-dark'>Start Date:</label>
-              <input
-                type="date"
-                name="start_date"
-                value={props.filters.start_date}
-                onChange={handleFilterChange}
-                className="form-control form-control-sm"
-              />
-
-              <label className='mx-3 text-dark'>End Date:</label>
-              <input
-                type="date"
-                name="end_date"
-                value={props.filters.end_date}
-                onChange={handleFilterChange}
-                className="form-control form-control-sm"
-              />
-              <button
-                style={{
-                  backgroundColor: '#2757aa',
-                  color: '#fff',
-                  border: 'none',           // To remove any default border
-                  padding: '4px 8px',      // Adjust the padding to make the button look better
-                  fontSize: '14px',        // Adjust font size if needed
-                  display: 'flex',         // Use flexbox to align the text and icon
-                  alignItems: 'center',    // Vertically center the text and icon
-                  gap: '5px'               // Add space between text and icon
-                }}
-                className="btn btn-sm rounded mx-2"
-                onClick={props.getLogs}
-              >
-                <FaFilter /> Filter
-              </button>
-
-            </div>
-
-
-
-          </div>
+          <DateRangeFilter filters={props.filters} onChange={handleFilterChange} onApply={props.getLogs} />
           <DataGrid
             rows={props.logs}
-            columns={columns}
+            columns={autoSizeColumns(columns, props.logs)}
             density='compact'
             components={{
               Toolbar: CustomToolbar,
@@ -123,7 +84,7 @@ function ActivityLogs(props) {
             // checkboxSelection
             disableRowSelectionOnClick
             style={{ fontSize: '12px', flex: 1, minHeight: 0, height: '100%' }}
-            className='bg-light '
+            className='app-table'
           />
         </>
       )}

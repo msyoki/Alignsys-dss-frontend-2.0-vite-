@@ -71,15 +71,16 @@ const SuggestedActions = memo(({ onSubmit, summarized }) => {
     ], []);
 
     return (
-        <div className="d-flex flex-column align-items-center justify-content-center p-3">
+        <div className="d-flex flex-column align-items-center justify-content-center gap-2 p-3">
             {actions.map((action, index) => (
                 <button
                     key={index}
                     onClick={(e) => onSubmit(e, action)}
                     disabled={summarized}
-                    className="summarize-btn btn btn-sm rounded-pill m-2 text-dark d-flex align-items-center p-2"
+                    className="summarize-btn btn btn-sm rounded-pill text-dark d-flex align-items-center justify-content-center px-3"
+                    style={{ minHeight: 34, fontSize: '12.5px', lineHeight: 1.2 }}
                 >
-                    <span className="mx-auto">{action}</span>
+                    {action}
                 </button>
             ))}
         </div>

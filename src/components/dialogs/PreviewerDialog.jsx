@@ -1,5 +1,7 @@
 import * as React from 'react';
-import { FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaComments, FaTimes } from 'react-icons/fa';
+import { FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaComments, FaEye } from 'react-icons/fa';
+import { DialogHeader } from '../common/dialogKit';
+import alignsysLogo from '../../images/ZFBLU.webp';
 import { useState, useEffect } from 'react';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -22,6 +24,7 @@ import HumanizedDate from '../HumanizeDate';
 import PDFViewerPreviewLoader from '../preview/PDFViewerPreviewLoader';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import { PILL } from '../common/pillButton';
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -154,9 +157,14 @@ function PreviewerDialog(props) {
                     className='col-md-9 col-12 bg-white px-2 order-lg-1 order-sm-1'
                     style={{
 
-                      order: isMobile ? 2 : 1, // Main below sidebar on mobile if desired
+                      order: 1, // Document first; on small screens the details panel follows below it
                     }}
                   >
+                    {/* Close is always reachable here (on phones the details panel, with its
+                        own Close Preview button, sits below the document). */}
+                    <Box sx={{ mx: -1, mb: 1 }}>
+                      <DialogHeader icon={<FaEye />} title="Preview" subtitle={props.filepreviewtitle} onClose={handleClose} closeLabel="Close preview" />
+                    </Box>
                     {props.previewComplete ? (
                       <Box sx={{ width: '100%' }}>
                         <Tabs
@@ -207,10 +215,12 @@ function PreviewerDialog(props) {
                   <div
                     className={`col-md-3 col-12 px-3 text-center order-lg-2 order-sm-2 shadow-lg`}
                     style={{
-                      order: isMobile ? 1 : 2,
+                      order: 2, // Details always after the document (beside it on desktop, below it on small screens)
                       backgroundColor: '#fff',
                       paddingTop: '1rem',
-                      height:'auto'
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: isMobile ? 'auto' : '100dvh',
                     }}
                   >
                     {/* Sidebar Header */}
@@ -286,52 +296,20 @@ function PreviewerDialog(props) {
                       </ul>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="my-3 d-flex flex-column">
-                      <div className="mb-4 mt-4 ">
-                        <Button
-                          variant="contained"
-                            color='primary'
-                          className='rounded-pill'
-
-
-                          startIcon={<FaComments />}
-                          onClick={handleComments}
-                          sx={{
-                           
-                            fontSize: '12px',
-                            borderRadius: '30px', // rounded corners
-                           
-                            textTransform: 'none',
-                          }}
-
-                        >
-                          Comments ({props.comments.length})
-                        </Button>
-                      </div>
-                      <div>
-                        <Button
-                          variant="contained"
-                          color='warning'
-                          className='mx-3 mt-3 rounded-pill'
-
-                          startIcon={<FaTimes className="mx-1" />}
-                          onClick={handleClose}
-                                  sx={{
-                      textTransform: 'none',
-                      fontSize: '12px',
-               
-                      px: 1.8,
-                      py: 0.8,
-           
-                    
-                    }}
-                        >
-                          Close Preview
-                        </Button>
-                      </div>
-
-
+                    {/* Footer: Comments + Alignsys logo, at the bottom of the panel (as on the signing page) */}
+                    <div className="d-flex flex-column align-items-center gap-3 pt-3 pb-4" style={{ marginTop: 'auto' }}>
+                      <Button
+                        variant="contained"
+                        color='primary'
+                        startIcon={<FaComments />}
+                        onClick={handleComments}
+                        sx={PILL}
+                      >
+                        Comments ({props.comments.length})
+                      </Button>
+                      <a href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
+                        <img src={alignsysLogo} alt="Alignsys" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }} />
+                      </a>
                     </div>
 
 

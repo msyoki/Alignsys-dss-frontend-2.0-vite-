@@ -91,31 +91,38 @@
 
 /* Bump Toggle */
 .bump-toggle {
+  box-sizing: border-box;
   position: fixed;
-  top: 50%;
-  width: 13px;
-  height: 70px;
-  background: #ddd;
+  top: 45%;
+  width: 10px;
+  height: 80px;
+  padding: 0;
+  border: 0;
+  background: var(--primary-color);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: left 0.0s ease-in-out;
   z-index: 1100;
-  
-  /* Clip-path for triangle effect on left and right */
+  /* Tapered tab: full height against the sidebar, narrower on the outer edge */
   clip-path: polygon(0% 0%, 100% 8px, 100% calc(100% - 8px), 0% 100%);
-  border-color: var(--secondary-color);
-  
-  /* Maintain the shadow effect */
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+  /* Slide in step with the sidebar's width transition */
+  transition: left 0.3s ease;
 }
 
+.bump-toggle:focus-visible {
+  outline: 2px solid var(--secondary-color);
+  outline-offset: 2px;
+}
 
+.bump-toggle.attached {
+  left: 200px; /* sidebar width */
+}
 
 .bump-toggle.moved {
-  left: 0; /* Keeps it on the edge of the sidebar even when it’s open */
+  left: 0;
 }
 
 .bump-toggle.hidden {

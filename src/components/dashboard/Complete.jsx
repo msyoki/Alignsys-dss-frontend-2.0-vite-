@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import mergeActionColumns from '../common/mergeActionColumns';
+import autoSizeColumns from '../common/autoSizeColumns';
+import CollapsibleFilters from '../common/CollapsibleFilters';
+import { PILL_COMPACT } from '../common/pillButton';
 const ICON_COLOR = '#2757aa';
-import { FaDownload, FaEye, FaInfoCircle, FaCircle } from 'react-icons/fa';
+import { FaCircle, FaDownload, FaEye, FaInfoCircle } from 'react-icons/fa';
 import Box from '@mui/material/Box';
 import DocDetailsDialog2 from '../dialogs/DocDetailsDialog2';
-import { ButtonComponent } from '@syncfusion/ej2-react-buttons';
 import logo from '../../images/ZFBLU.webp';
 import * as constants from '../constants/constants';
 import axios from 'axios';
@@ -149,7 +152,7 @@ function Complete(props) {
   const getRowId = (row) => row.guid;
 
   return (
-    <div>
+    <div className="tab-fill">
       <DocDetailsDialog2
         setOpenDialogDocDetails={setOpenDialogDocDetails}
         opendialogdocdetails={opendialogdocdetails}
@@ -161,7 +164,7 @@ function Complete(props) {
 
 
 
-      <Box sx={{ height: '60vh', width: '100%', fontSize: '12px' }}>
+      <Box className="tab-table-fill" sx={{ width: '100%', fontSize: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ecf4fc', padding: '5px 5px' }}>
           <div className='row '>
             <h6 className='text-dark col-lg-12 col-md-12 col-sm-12 p-1 mx-3' style={{ fontSize: '12.8px' }}>
@@ -201,7 +204,7 @@ function Complete(props) {
                   className="btn btn-sm rounded mx-2"
                   onClick={() => props.getComplete(props.filters.start_date, props.filters.end_date)}
                 >
-                  <i className="fa-solid fa-filter"></i> Filter
+                  <FaFilter style={{ verticalAlign: '-0.125em' }} aria-hidden /> Filter
                 </button>
 
               </div>
@@ -229,94 +232,88 @@ function Complete(props) {
           <>
    
 
-              <div className="col-12 px-3 py-2">
-              <div
-                className="d-flex flex-column flex-md-row align-items-md-end gap-2 flex-wrap"
-              >
-                {/* Start Date */}
+              <CollapsibleFilters startDate={props.filters.start_date} endDate={props.filters.end_date}>
+                  <div className="col-12 px-3 py-2">
                 <div
-                  className="d-flex flex-column"
-                  style={{ minWidth: '160px', flex: 1 }}
+                  className="d-flex flex-column flex-md-row align-items-md-end gap-2 flex-wrap"
                 >
-                  <label
-                    className="mb-1 text-dark fw-medium"
-                    style={{ fontSize: '12px', lineHeight: 1.1 }}
+                  {/* Start Date */}
+                  <div
+                    className="d-flex flex-column"
+                    style={{ minWidth: '160px', flex: 1 }}
                   >
-                    Start Date
-                  </label>
+                    <label
+                      className="mb-1 text-dark fw-medium"
+                      style={{ fontSize: '12px', lineHeight: 1.1 }}
+                    >
+                      Start Date
+                    </label>
 
-                  <input
-                    type="date"
-                    name="start_date"
-                    value={props.filters.start_date}
-                    onChange={handleFilterChange}
-                    className="form-control form-control-sm"
-                    style={{
-                      minHeight: '32px',
-                      paddingTop: '2px',
-                      paddingBottom: '2px',
-                      fontSize: '12px',
-                    }}
-                  />
-                </div>
+                    <input
+                      type="date"
+                      name="start_date"
+                      value={props.filters.start_date}
+                      onChange={handleFilterChange}
+                      className="form-control form-control-sm"
+                      style={{
+                        minHeight: '32px',
+                        paddingTop: '2px',
+                        paddingBottom: '2px',
+                        fontSize: '12px',
+                      }}
+                    />
+                  </div>
 
-                {/* End Date */}
-                <div
-                  className="d-flex flex-column"
-                  style={{ minWidth: '160px', flex: 1 }}
-                >
-                  <label
-                    className="mb-1 text-dark fw-medium"
-                    style={{ fontSize: '12px', lineHeight: 1.1 }}
+                  {/* End Date */}
+                  <div
+                    className="d-flex flex-column"
+                    style={{ minWidth: '160px', flex: 1 }}
                   >
-                    End Date
-                  </label>
+                    <label
+                      className="mb-1 text-dark fw-medium"
+                      style={{ fontSize: '12px', lineHeight: 1.1 }}
+                    >
+                      End Date
+                    </label>
 
-                  <input
-                    type="date"
-                    name="end_date"
-                    value={props.filters.end_date}
-                    onChange={handleFilterChange}
-                    className="form-control form-control-sm"
-                    style={{
-                      minHeight: '32px',
-                      paddingTop: '2px',
-                      paddingBottom: '2px',
-                      fontSize: '12px',
-                    }}
-                  />
-                </div>
+                    <input
+                      type="date"
+                      name="end_date"
+                      value={props.filters.end_date}
+                      onChange={handleFilterChange}
+                      className="form-control form-control-sm"
+                      style={{
+                        minHeight: '32px',
+                        paddingTop: '2px',
+                        paddingBottom: '2px',
+                        fontSize: '12px',
+                      }}
+                    />
+                  </div>
 
-                {/* Filter Button */}
-                <div className="d-flex align-items-end">
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    size="small"
-                    startIcon={<FaFilter size={12} />}
-                    sx={{
-                      textTransform: 'none',
-                      fontSize: '11px',
-                      fontWeight: 500,
-                      borderRadius: '999px',
-                      px: 1.8,
-                      py: 0.5,
-                      minHeight: 32,
-                      boxShadow: 'none',
-                      whiteSpace: 'nowrap',
-                    }}
-                     onClick={() => props.getComplete(props.filters.start_date, props.filters.end_date)}
-                  >
-                    Filter
-                  </Button>
+                  {/* Filter Button */}
+                  <div className="d-flex align-items-end">
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      startIcon={<FaFilter size={12} />}
+                      sx={{
+                        ...PILL_COMPACT,
+                      }}
+                       onClick={() => props.getComplete(props.filters.start_date, props.filters.end_date)}
+                    >
+                      Filter
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+              </CollapsibleFilters>
             <DataGrid
               rows={sortedComplete}
-              columns={columns}
+              columns={autoSizeColumns(mergeActionColumns(columns), sortedComplete)}
               density="compact"
-              className="App-header5"
+              className="App-header5 app-table"
               components={{
                 Toolbar: CustomToolbar,
               }}
@@ -337,7 +334,7 @@ function Complete(props) {
 
         <div className="d-flex justify-content-end card-footer  mx-3 mt-2 bg-white mb-0">
           <a href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
-            <img src={logo} width="auto" height='30' alt="TechEdge Logo" />
+            <img src={logo} alt="Alignsys" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }} />
           </a>
         </div>
       </Box>

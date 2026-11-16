@@ -7,6 +7,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Slide from '@mui/material/Slide';
 import Button from '@mui/material/Button';
 import { FaTimes, FaTrash } from 'react-icons/fa';
+import { PILL } from './common/pillButton';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
     return <Slide direction="up" ref={ref} {...props} />;
@@ -34,17 +35,9 @@ function DeleteAnnotationDialog(props) {
 
     
 const pillBtn = {
-    textTransform: 'none',
-    borderRadius: '999px',
-    px: 2.5,
-    py: 1.2,
-    fontSize: { xs: '13px', sm: '14px' },
-    minHeight: '36px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 0.7,
-    fontWeight: '400',
-    lineHeight: 1.2,
+  ...PILL,
+  display: 'flex',
+  alignItems: 'center',
 };
 
     return (
@@ -101,26 +94,24 @@ const pillBtn = {
                             </>
                         )}
                     </div>
-                    <div className='d-flex justify-content-center'>
+                    <div className='d-flex justify-content-center flex-wrap gap-2 mt-3'>
                         <Button
                             variant="outlined"
                             color="warning"
-                            className='m-2 p-2'
                             sx={pillBtn}
                             onClick={handleClose}
-                            startIcon={<FaTimes style={{ fontSize: 17, marginLeft: 0, marginRight: 4, verticalAlign: 'middle' }} />}
+                            startIcon={<FaTimes />}
                         >
-                            <span style={{ verticalAlign: 'middle', marginLeft: 0, marginRight: 4 }}>Cancel</span>
+                            Cancel
                         </Button>
                         <Button
                             variant="contained"
                             color="error"
-                            className='m-2 p-2'
                             sx={pillBtn}
                             onClick={handleCloseAgree}
-                            startIcon={<FaTrash style={{ fontSize: 17, marginLeft: 0, marginRight: 4, verticalAlign: 'middle' }} />}
+                            startIcon={<FaTrash />}
                         >
-                            <span style={{ verticalAlign: 'middle', marginLeft: 0, marginRight: 4 }}>Delete</span>
+                            Delete
                         </Button>
                     </div>
                 </DialogContent>

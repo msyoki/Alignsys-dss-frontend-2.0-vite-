@@ -5,8 +5,8 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import { ButtonComponent } from '@syncfusion/ej2-react-buttons';
 import { FaCheck, FaTimes } from 'react-icons/fa';
+import { PILL } from '../common/pillButton';
 
 
 export default function SignSignatureBoxesDialog(props) {
@@ -32,44 +32,24 @@ export default function SignSignatureBoxesDialog(props) {
       <DialogContent>
 
         <p className=' text-center p-3' style={{fontSize:"13px"}}>Are you certain you want to finalize the signatures in the designated areas? </p>
-        <div className="d-flex justify-content-center">
+        <div className="d-flex justify-content-center flex-wrap gap-2 pb-2">
                     <Button
                       variant="outlined"
                       color="warning"
-                      className="m-2 p-2"
-                      sx={{
-                      textTransform: 'none',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      borderRadius: '999px',
-                      px: 1.8,
-                      py: 0.8,
-                      minHeight: 34,
-                      boxShadow: 'none',
-                     
-                    }}
+                      sx={PILL}
+                      startIcon={<FaTimes />}
                       onClick={handleClose}
                     >
-                      <FaTimes size={15} className="mx-1" /> <span className="mx-2">Cancel</span>
+                      Cancel
                     </Button>
                     <Button
                       variant="contained"
                       color="primary"
-                      className="m-2 p-2"
-                      sx={{
-                      textTransform: 'none',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      borderRadius: '999px',
-                      px: 1.8,
-                      py: 0.8,
-                      minHeight: 34,
-                      boxShadow: 'none',
-                     
-                    }}
+                      sx={PILL}
+                      startIcon={<FaCheck />}
                       onClick={handleComplete}
                     >
-                      <FaCheck size={15} className="mx-1" /> <span className="mx-2">Proceed</span>
+                      Proceed
                     </Button>
                   </div>
   

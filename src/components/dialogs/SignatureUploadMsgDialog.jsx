@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { FaImage } from 'react-icons/fa';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -6,6 +7,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Slide from '@mui/material/Slide';
 import {Button} from '@mui/material';
+import { PILL } from '../common/pillButton';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -28,7 +30,7 @@ export default function SignatureUploadMsgDialog(props) {
         onClose={handleClose}
         aria-describedby="alert-dialog-slide-description"
       >
-        <DialogTitle className='text-center'><i className="fas fa-image text-center mb-4"  style={{fontSize:'40px',color:'#1C4690'}}></i></DialogTitle>
+        <DialogTitle className='text-center'><FaImage className="text-center mb-4" style={{ fontSize:'40px',color:'#1C4690', verticalAlign: '-0.125em' }} aria-hidden /></DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-slide-description" className='text-center'>
            
@@ -40,16 +42,8 @@ export default function SignatureUploadMsgDialog(props) {
         </DialogContent>
         <DialogActions>
           <Button variant='outlined' color='primary' onClick={handleClose}         sx={{
-                      textTransform: 'none',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      borderRadius: '999px',
-                      px: 1.8,
-                      py: 0.8,
-                      minHeight: 34,
-                      boxShadow: 'none',
-                    
-                    }}>Upload another image</Button>
+            ...PILL,
+          }}>Upload another image</Button>
           {/* <Button onClick={handleClose}>Agree</Button> */}
         </DialogActions>
       </Dialog>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import SmoothPage from './SmoothPage';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Draggable from 'react-draggable';
 import '../../styles/PDFViewerTechedge.css'
@@ -17,6 +18,7 @@ import {
 
 import { TfiLayoutSidebarLeft } from "react-icons/tfi";
 import { TfiLayoutSidebarNone } from "react-icons/tfi";
+import { PILL } from '../common/pillButton';
 // Configure PDF.js worker
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
@@ -427,20 +429,12 @@ const PDFViewerPreview3 = ({
                                 size="small"
                                 onClick={() => setSignatureBoxes([])}
                                 sx={{
-                                    textTransform: 'none',
-                                    fontSize: '12px',
-                                    fontWeight: 500,
-                                    borderRadius: '999px',
-                                    px: 1.8,
-                                    py: 0.8,
-                                    minHeight: 34,
-                                    boxShadow: 'none',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
+                                  ...PILL,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
                                 }}
-                            >
-                                <FaEraser style={{ fontSize: '13px', flexShrink: 0 }} />
+                            
+                                startIcon={<FaEraser />}>
                                 Erase All Signature Boxes
                             </Button>
                         </Tooltip>
@@ -529,7 +523,7 @@ const PDFViewerPreview3 = ({
                                 className="pdf-page-wrapper"
                                 onClick={(e) => handleAnnotation(e, pageIndex + 1)}
                             >
-                                <Page
+                                <SmoothPage
                                     pageNumber={pageIndex + 1}
                                     scale={getScaleForPage(pageIndex + 1, zoom)}
                                     renderTextLayer={false}

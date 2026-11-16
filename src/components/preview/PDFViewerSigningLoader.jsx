@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import ConfirmCompleteDialog from "../dialogs/ConfirmCompleteDialog";
 import SigningOptionDialog from "../dialogs/SigningOptionDialog";
 import OtpDialog from "../OtpDialog";
+import { PILL } from '../common/pillButton';
 import { TiArrowBack } from "react-icons/ti";
 
 
@@ -281,25 +282,16 @@ function PDFViewerSigningLoader(props) {
             <LoadingDialog opendialogloading={annotatingDocument} msg={`Signing Document...`} />
             {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
             <OtpDialog
-                time={props.time}
-                setTime={props.setTime}
-                setResetTimer={props.setResetTimer}
-                timerClock={props.timerClock}
+                signerguid={props.signerguid}
+                otpphone={props.currentsignerphone}
                 alertseverity={props.alertseverity}
                 alertmsg={props.alertmsg}
                 openalert={props.openalert}
-                maskedotpphone={props.maskedotpphone}
-                otpphone={props.currentsignerphone}
-                trialcount={props.trialcount}
-                setTrialCount={props.setTrialCount}
                 setAlertMsg={props.setAlertMsg}
                 setAlertSeverity={props.setAlertSeverity}
                 setOpenAlert={props.setOpenAlert}
-                setOTP={props.setOTP}
                 setOpenDialogOtp={props.setOpenDialogOtp}
                 opendialogotp={props.opendialogotp}
-                completeSigning={props.completeSigning}
-                user={props.user}
             />
 
             <ConfirmCompleteDialog
@@ -375,27 +367,15 @@ function PDFViewerSigningLoader(props) {
                 clickedSignatureBox={props.clickedSignatureBox}
             />
 
-            <div className="row bg-white shadow-lg p-2 align-items-center">
+            <div className="row bg-white shadow-lg p-2 align-items-center signing-toolbar">
                 {(() => {
                     const pillBtn = {
-                        textTransform: "none",
-                        borderRadius: "999px",          // rounded-pill
-                        px: { xs: 1.75, sm: 2.25 },     // balanced horizontal padding
-                        py: 0.55,
-                        minHeight: 32,
-                        fontSize: { xs: "11px", sm: "12px" },
-                        fontWeight: 500,
-                        lineHeight: 1.2,
-                        whiteSpace: "nowrap",
-                        gap: 0.6,
-                        boxShadow: "none",
-
-                        "& .MuiButton-startIcon": {
-                            marginRight: "4px",
-                            "& svg": {
-                                fontSize: 15,
-                            },
-                        },
+                        ...PILL,
+                        minHeight: { xs: 38, md: 34 },  // easier to tap on phones
+                        // Phones/tablets: a comfortable fixed width, centred,
+                        // rather than stretched across the whole row.
+                        flex: "0 0 auto",
+                        minWidth: { xs: 128, md: 0 },
 
                         "&:hover": {
                             boxShadow: "0 2px 8px rgba(0,0,0,.12)",
@@ -448,7 +428,7 @@ function PDFViewerSigningLoader(props) {
                                                         color="inherit"
                                                         onClick={placeSignatureAgain}
                                                         startIcon={<FaMapMarkerAlt style={{ color: '#1C4690' }} size={iconSize} />}
-                                                        sx={{ ...pillBtn }}
+                                                        sx={pillBtn}
                                                     >
                                                         <span style={{ color: '#1C4690' }}> Place {isStamp ? 'Stamp' : 'Signature'} Again</span>
 
@@ -484,7 +464,7 @@ function PDFViewerSigningLoader(props) {
                             </div>
 
                             {/* Complete (make it visually centered & dominant on mobile) */}
-                            <div className="col-12 col-md-2 d-flex justify-content-center mb-2 mb-md-0">
+                            <div className="col-12 col-md-2 d-flex justify-content-center mb-2 mb-md-0 empty-collapse">
                                 {hasSignature && !pendingMultipage && (
                                     <Tooltip title="Complete signing">
                                         <Button
@@ -496,7 +476,8 @@ function PDFViewerSigningLoader(props) {
                                             sx={{
                                                 ...pillBtn,
                                                 fontWeight: 700,
-                                                maxWidth: { xs: 150, md: 150 },
+                                                minWidth: { xs: 180, md: 0 },
+                                                maxWidth: { xs: 220, md: 150 },
                                             }}
                                         >
                                             Finish

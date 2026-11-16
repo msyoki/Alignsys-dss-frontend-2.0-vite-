@@ -3,14 +3,9 @@ import React, { useState, useEffect, useRef, useCallback, useContext } from 'rea
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as constants from "../../components/constants/constants"
-import { FaEdit, FaCircle, FaBan, FaSave, FaTrashAlt, FaUserShield, FaSignOutAlt, FaCaretLeft, FaCaretRight, FaBars, FaUser, FaPhone, FaIdBadge } from 'react-icons/fa';
-import Avatar from '@mui/material/Avatar'
-import { Tooltip } from '@mui/material'
-import Grid from '@mui/material/Grid'
+import { FaCircle, FaBan, FaSave, FaTrashAlt, FaUserShield, FaKey } from 'react-icons/fa';
+import AppShell from '../../components/layout/AppShell';
 import Button from '@mui/material/Button'
-import InputAdornment from '@mui/material/InputAdornment'
-import FormControl from '@mui/material/FormControl'
-import Input from '@mui/material/Input'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import Typography from '@mui/material/Typography'
@@ -18,10 +13,9 @@ import Box from '@mui/material/Box'
 import Trashed from '../../components/dashboard/Trashed.jsx';
 import LicenseStatus from '../../components/dialogs/LicenseStatusDialog.jsx';
 import TimedAlert from '../../components/TimedAlert.jsx';
-import UserAvatarMenu from '../../components/UserAvatr.jsx';
-import defaultAvatar from '../../images/default_avatar.png';
 import AddSignersDialogMerged from '../../components/dialogs/AddSignersDialogMerged';
 import CommentsDialog from '../../components/dialogs/CommentsDialog.jsx';
+import ProfileDialog from '../../components/dialogs/ProfileDialog.jsx';
 import PreviewerDialog from '../../components/dialogs/PreviewerDialog.jsx';
 import FileUpload from '../../components/FileUpload.jsx';
 import Complete from '../../components/dashboard/Complete'
@@ -29,8 +23,9 @@ import Inbox from '../../components/dashboard/Inbox'
 import Voided from '../../components/dashboard/Voided'
 import Outbox from '../../components/dashboard/Outbox'
 import MyUploads from '../../components/dashboard/MyUploads'
-import logo from '../../images/ZFWHITE.png'
 import logo2 from '../../images/ZFBLU.png'
+import BrandLogo from '../../components/common/BrandLogo'
+import { companyLogoUrl } from '../../utils/companyLogo'
 
 
 import AuthContext from '../../context/Authcontext.jsx';
@@ -42,16 +37,20 @@ function CustomTabPanel({ children, value, index, ...other }) {
             hidden={value !== index}
             id={`simple-tabpanel-${index}`}
             aria-labelledby={`simple-tab-${index}`}
+            style={value === index ? { height: '100%', minHeight: 0 } : undefined}
             {...other}
         >
             {value === index && (
-                <Box sx={{ mt: 1, backgroundColor: '#fff' }}>
-                    <Typography>{children}</Typography>
+                <Box sx={{ pt: 1, height: '100%', boxSizing: 'border-box', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                    <Typography component="div" sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>{children}</Typography>
                 </Box>
             )}
         </div>
     )
 }
+
+// Header caption for each document list (matches the tab index in `value`).
+const SECTION_CAPTIONS = ['Inbox', 'Outbox', 'Completed', 'Voided', 'Saved for later', 'Trashed']
 
 function a11yProps(index) {
     return {
@@ -78,6 +77,8 @@ function Dashboard() {
     const [avatarfile, setAvatarFile] = useState()
     const [loading, setLoading] = useState(false)
     const [loadingmini, setLoadingMini] = useState(false)
+    // What the upload-step loader says (depends on the action the user picked).
+    const [loadingMsg, setLoadingMsg] = useState('')
     const [openalert, setOpenAlert] = useState(false)
     const [alertseverity, setAlertSeverity] = useState('info')
     const [alertmsg, setAlertMsg] = useState('')
@@ -115,10 +116,14 @@ function Dashboard() {
     const navigate = useNavigate()
     const location = useLocation()
     const { authTokens, logoutUser, user } = useContext(AuthContext)
+    const fullName = user.first_name && user.last_name
+        ? `${user.first_name} ${user.last_name}`
+        : user.first_name || user.last_name || user.username
     const [files, setFiles] = useState([])
     const [title, setTitle] = useState('')
 
-    const [activeForm, setActiveForm] = useState('file-upload') // 'profile', 'file-upload', 'sign-type'
+    const [activeForm, setActiveForm] = useState('file-upload') // 'file-upload', 'sign-type'
+    const [openProfile, setOpenProfile] = useState(false)
 
     // --- Responsive Layout ---
     useEffect(() => {
@@ -147,7 +152,6 @@ function Dashboard() {
     }, [isDragging, isMobile])
 
     const handleMouseDown = () => { if (!isMobile) setIsDragging(true) }
-    const toggleSidebar = () => setSidebarOpen(prev => !prev)
     const changeSavedSwitch = (e) => setChecked(e.target.checked)
 
     // --- Utility Functions ---
@@ -191,7 +195,7 @@ function Dashboard() {
         axios.get(`${constants.devApiBaseUrl}/api/logo/`, {
             headers: { 'Authorization': `Bearer ${authTokens.access} ` }
         }).then(res => {
-            setCompanyLogo(`${constants.devApiBaseUrl}${res.data['logo_url']}`)
+            setCompanyLogo(companyLogoUrl(res.data))
         }).catch(error => {
             // Optionally log or handle the error
             // console.error("Error fetching company logo:", error);
@@ -271,7 +275,6 @@ function Dashboard() {
     // --- Profile & File Actions ---
     const updateUser = (e) => {
         e.preventDefault()
-        const FormData = require('form-data')
         const data = new FormData()
         if (avatarfile) {
             data.append('avatar', avatarfile)
@@ -289,9 +292,7 @@ function Dashboard() {
             setAlertMsg('Profile updated, effective on next login')
             setAlertSeverity('success')
             setTimeout(() => setOpenAlert(false), 2000)
-            // Correct logic for setting active form after profile update
-
-            setActiveForm('file-upload')
+            setOpenProfile(false)
 
         })
     }
@@ -383,6 +384,7 @@ function Dashboard() {
 
 
     const selfSign = async () => {
+        setLoadingMsg('Preparing your document for signing…');
         setLoadingMini(true);
 
         try {
@@ -452,6 +454,7 @@ function Dashboard() {
 
 
     const mailtoSigners = async () => {
+        setLoadingMsg('Preparing your document for signers…');
         setLoadingMini(true);
         getWorkflows();
 
@@ -535,6 +538,7 @@ function Dashboard() {
 
 
     const saveToMyFolder = async () => {
+        setLoadingMsg('Saving your document…');
         setLoadingMini(true);
         const uploadTitle = "Batched Upload";
 
@@ -592,7 +596,7 @@ function Dashboard() {
     }
 
     // --- Misc ---
-    const showProfile = () => { activeForm === 'file-upload' ? setActiveForm('profile') : setActiveForm('file-upload') }
+    const showProfile = () => setOpenProfile(true)
     const adminPage = () => navigate('/admin/dashboard')
     const changePassword = () => window.open(`/password-reset`, '_blank')
     const selfSignSaved = (saveddocguid, savedfilename) => {
@@ -694,6 +698,14 @@ function Dashboard() {
                         setActiveForm={setActiveForm}
                     />
 
+                    <ProfileDialog
+                        open={openProfile}
+                        onClose={() => setOpenProfile(false)}
+                        user={user}
+                        avatarSrc={avatar}
+                        onSubmit={updateUser}
+                        onAvatarChange={handleAvatarFileChange}
+                    />
                     <CommentsDialog opendialogcomments={opendialogcomments} setOpenDialogComments={setOpenDialogComments} comments={comments} ccdocguid={ccdocguid} ccdoctitle={ccdoctitle} />
                     <PreviewerDialog
                         signers={signers}
@@ -713,596 +725,48 @@ function Dashboard() {
                         signeruid={signeruid}
                         previewComplete={previewComplete}
                     />
-                    <div className="dashboard">
-                        <nav className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{ borderRight: "3px solid #ddd" }}>
-                            {sidebarOpen && (
-                                <div className="sidebar-content" style={{ marginTop: 0, width: '200px' }}>
-                                    {/* Logo */}
-                                    {/* <div
-                                        className="d-flex flex-column align-items-center bg-white shadow-lg p-2"
-                                        style={{ height: '61px', justifyContent: 'center' }}
-                                    >
-                                        <img
-                                            src={companylogo || logo}
-                                            alt="Organization logo"
-                                            style={{ maxHeight: '40px', objectFit: 'contain' }}
-                                        />
-                                    </div> */}
-                                    {/* Logo Section */}
-                                    <div
-                                        className="d-flex justify-content-center align-items-center shadow-lg"
-                                        style={{
-                                            height: "58px",
-                                            minHeight: "56px",
-                                            maxHeight: "56px",
-                                            overflow: "hidden",
-                                        }}
-                                    >
-                                        <img
-                                            src={logo}
-                                            alt="Organization logo"
-                                            className="logo"
-                                            style={{
-                                                width: "auto",
-                                                maxHeight: "33px",
-                                                objectFit: "contain",
-                                                marginRight: "20px",
-                                            }}
-                                        />
-                                    </div>
-
-
-                                    {/* User Profile */}
-
-
-
-                                    {/* Menu Items */}
-                                    <ul className="menu-items" style={{ padding: 0, margin: 0 }}>
-                                        <li
-                                            className="menu-item main-li shadow-lg"
-                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                                        >
-                                            <span
-                                                style={{
-                                                    fontSize: '12px',
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    maxWidth: '140px',
-                                                    fontWeight: 'bold',
-                                                }}
-                                                title={`${user.first_name} ${user.last_name}`}
-                                            >
-                                                {user.first_name} {user.last_name}
-                                            </span>
-                                            <FaEdit
-                                                className="mx-2"
-                                                onClick={showProfile}
-                                                style={{ color: '#ffda75', cursor: 'pointer', fontSize: '16px' }}
-                                            />
-                                        </li>
-                                        <li
-                                            className="menu-item main-li shadow-lg"
-                                            onClick={() => getInbox(filters.start_date, filters.end_date)}
-                                            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 10px', minHeight: '40px' }}
-                                        >
-                                            <FaCircle className="dot text-danger" style={{ fontSize: '16px', flexShrink: 0 }} />
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, overflow: 'hidden' }}>
-                                                <span style={{
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    fontSize: '13px',
-                                                    fontWeight: '500',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Inbox ({inbox.length})
-                                                </span>
-                                                <span style={{
-                                                    fontSize: '9px',
-                                                    color: 'rgba(255, 255, 255, 0.65)',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Waiting for me
-                                                </span>
-                                            </div>
-                                        </li>
-
-                                        <li
-                                            className="menu-item main-li shadow-lg"
-                                            onClick={() => getOutbox(filters.start_date, filters.end_date)}
-                                            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 10px', minHeight: '40px' }}
-                                        >
-                                            <FaCircle className="dot text-warning" style={{ fontSize: '16px', flexShrink: 0 }} />
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, overflow: 'hidden' }}>
-                                                <span style={{
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    fontSize: '13px',
-                                                    fontWeight: '500',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Outbox ({outbox.length})
-                                                </span>
-                                                <span style={{
-                                                    fontSize: '9px',
-                                                    color: 'rgba(255, 255, 255, 0.65)',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Waiting for Others
-                                                </span>
-                                            </div>
-                                        </li>
-
-                                        <li
-                                            className="menu-item main-li shadow-lg"
-                                            onClick={() => getComplete(filters.start_date, filters.end_date)}
-                                            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 10px', minHeight: '40px' }}
-                                        >
-                                            <FaCircle className="dot text-success" style={{ fontSize: '16px', flexShrink: 0 }} />
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, overflow: 'hidden' }}>
-                                                <span style={{
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    fontSize: '13px',
-                                                    fontWeight: '500',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Completed ({complete.length})
-                                                </span>
-                                                <span style={{
-                                                    fontSize: '9px',
-                                                    color: 'rgba(255, 255, 255, 0.65)',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Signed
-                                                </span>
-                                            </div>
-                                        </li>
-
-                                        <li
-                                            className="menu-item main-li shadow-lg"
-                                            onClick={getVoided}
-                                            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 10px', minHeight: '40px' }}
-                                        >
-                                            <FaBan style={{ fontSize: '16px', flexShrink: 0 }} />
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, overflow: 'hidden' }}>
-                                                <span style={{
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    fontSize: '13px',
-                                                    fontWeight: '500',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Voided ({voided.length})
-                                                </span>
-                                                <span style={{
-                                                    fontSize: '9px',
-                                                    color: 'rgba(255, 255, 255, 0.65)',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Voided
-                                                </span>
-                                            </div>
-                                        </li>
-
-                                        <li
-                                            className="menu-item main-li shadow-lg"
-                                            onClick={getMyUploads}
-                                            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 10px', minHeight: '40px' }}
-                                        >
-                                            <FaSave style={{ fontSize: '16px', flexShrink: 0 }} />
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
-                                                <span style={{
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    fontSize: '13px',
-                                                    fontWeight: '500',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Saved for Later ({myuploads.length})
-                                                </span>
-                                                <span style={{
-                                                    fontSize: '9px',
-                                                    color: 'rgba(255, 255, 255, 0.65)',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Unsigned
-                                                </span>
-                                            </div>
-                                        </li>
-
-                                        <li
-                                            className="menu-item main-li shadow-lg"
-                                            onClick={getTrashed}
-                                            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 10px', minHeight: '40px' }}
-                                        >
-                                            <FaTrashAlt style={{ fontSize: '16px', flexShrink: 0 }} />
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
-                                                <span style={{
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    fontSize: '13px',
-                                                    fontWeight: '500',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Trashed ({trashed.length})
-                                                </span>
-                                                <span style={{
-                                                    fontSize: '9px',
-                                                    color: 'rgba(255, 255, 255, 0.65)',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    lineHeight: '1.2'
-                                                }}>
-                                                    Deleted items
-                                                </span>
-                                            </div>
-                                        </li>
-
-
-                                    </ul>
-
-                                    {/* Bottom Logout */}
-                                    <div style={{ marginTop: 'auto' }}>
-                                        <ul className="bottom-buttons" style={{ padding: 0, margin: 0 }}>
-                                            {user.is_admin === "True" && (
-                                                <li
-                                                    onClick={adminPage}
-                                                    className="menu-item main-li shadow-lg"
-                                                    style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 10px', minHeight: '40px' }}
-                                                >
-                                                    <FaUserShield style={{ fontSize: '16px', flexShrink: 0 }} />
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
-                                                        <span style={{
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap',
-                                                            fontSize: '13px',
-                                                            fontWeight: '500',
-                                                            lineHeight: '1.2'
-                                                        }}>
-                                                            Administration
-                                                        </span>
-                                                        <span style={{
-                                                            fontSize: '9px',
-                                                            color: 'rgba(255, 255, 255, 0.65)',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap',
-                                                            lineHeight: '1.2'
-                                                        }}>
-                                                            Manage settings
-                                                        </span>
-                                                    </div>
-                                                </li>
-                                            )}
-                                            <li
-                                                onClick={logoutUser}
-                                                className="menu-item main-li shadow-lg"
-                                                title="Logout"
-                                                style={{ display: 'flex', alignItems: 'left', gap: 1, fontSize: 13 }}
-                                            >
-                                                <FaSignOutAlt style={{ fontSize: '16px' }} />
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
-                                                    Logout
-                                                </span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                            )}
-                        </nav>
-                        <main className={`content ${sidebarOpen ? 'shifted' : 'full-width'}`}>
-                            <Tooltip title={sidebarOpen ? 'Minimize sidebar' : 'Expand sidebar'}>
-                                <div
-                                    className={`bump-toggle ${sidebarOpen ? 'attached' : 'moved'}`}
-                                    onClick={toggleSidebar}
-                                >
-                                    {sidebarOpen ? (
-                                        <FaCaretLeft
-                                            style={{ fontSize: '30px', color: '#fff', margin: '0 4px' }}
-                                        />
-                                    ) : (
-                                        <FaCaretRight
-                                            style={{ fontSize: '30px', color: '#fff', margin: '0 4px' }}
-                                        />
-                                    )}
-                                </div>
-                            </Tooltip>
-                            <div id="container" ref={containerRef} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', backgroundColor: '#fff' }}>
+                        <AppShell
+                            caption={SECTION_CAPTIONS[value] ?? 'Dashboard'}
+                            orgName={user.company}
+                            sections={[
+                                { key: 0, label: 'Inbox', hint: 'Waiting for me', count: inbox.length, icon: <FaCircle className="text-danger" /> },
+                                { key: 1, label: 'Outbox', hint: 'Waiting for others', count: outbox.length, icon: <FaCircle className="text-warning" /> },
+                                { key: 2, label: 'Completed', hint: 'Signed', count: complete.length, icon: <FaCircle className="text-success" /> },
+                                { key: 3, label: 'Voided', count: voided.length, icon: <FaBan /> },
+                                { key: 4, label: 'Saved for later', hint: 'Unsigned', count: myuploads.length, icon: <FaSave /> },
+                                { key: 5, label: 'Trashed', hint: 'Deleted items', count: trashed.length, icon: <FaTrashAlt /> },
+                            ]}
+                            footerSections={user.is_admin === "True" ? [{ key: 'admin', label: 'Administration', hint: 'Manage settings', icon: <FaUserShield /> }] : []}
+                            activeKey={value}
+                            onSelect={(key) => {
+                                if (key === 0) getInbox(filters.start_date, filters.end_date)
+                                else if (key === 1) getOutbox(filters.start_date, filters.end_date)
+                                else if (key === 2) getComplete(filters.start_date, filters.end_date)
+                                else if (key === 3) getVoided()
+                                else if (key === 4) getMyUploads()
+                                else if (key === 5) getTrashed()
+                                else if (key === 'admin') adminPage()
+                            }}
+                            open={sidebarOpen}
+                            onOpenChange={setSidebarOpen}
+                            userName={fullName}
+                            avatarSrc={avatar}
+                            onOpenProfile={showProfile}
+                            onLogout={logoutUser}
+                            accountMenuItems={[{ key: 'reset', label: 'Reset password', icon: <FaKey size={14} />, onClick: () => { window.location.href = '/password-reset' } }]}
+                            headerExtra={
+                                <BrandLogo
+                                    src={companylogo}
+                                    fallback={logo2}
+                                    alt="Organization logo"
+                                    style={{ height: 40, maxWidth: 140, padding: 4, objectFit: 'contain' }}
+                                />
+                            }
+                        >
+                            <div id="container" ref={containerRef} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', backgroundColor: '#fff', minHeight: '100%' }}>
                                 {/* Object List */}
-                                <div id="col1" ref={col1Ref} style={{ width: isMobile ? '100%' : '35%', backgroundColor: '#fff', minWidth: '25%', minHeight: '100vh' }}>
-                                    <Box display="flex" alignItems="center" justifyContent="space-between" py={1} bgcolor="#fff" color="#1C4690"
-                                        sx={{ boxShadow: '0px 4px 4px -2px rgba(0, 0, 0, 0.1)', position: 'relative', zIndex: 10 }}>
-
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Box
-                                                onClick={toggleSidebar}
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: 40,
-                                                    height: 40,
-                                                    cursor: 'pointer',
-                                                    borderRadius: 1,
-                                                    transition: 'all 0.3s ease',
-                                                    '&:hover': {
-                                                        backgroundColor: '#fff',
-                                                        transform: 'scale(1.05)',
-                                                    },
-                                                }}
-                                            >
-                                                <FaBars style={{ fontSize: '25px', color: '#2757aa' }} />
-                                            </Box>
-                                            <img
-                                                src={companylogo || logo2}
-                                                alt="Logo"
-                                                className="shadow-sm"
-                                                style={{
-                                                    height: "40px",
-                                                    cursor: "pointer",
-                                                    padding: "5px",
-                                                    transition: "transform 0.2s ease-in-out",
-                                                }}
-                                            />
-
-                                        </Box>
-                                        <Box display="flex" px={1} alignItems="center">
-                                            <Tooltip title={`${user.first_name} ${user.last_name}`}>
-                                                {/* <Avatar
-                                                    onClick={showProfile}
-                                                    alt={`${user.first_name} ${user.last_name}`}
-                                                    className="card-avatar"
-                                                    src={avatar || defaultAvatar}
-                                                    sx={{
-                                                        width: 45,
-                                                        height: 45,
-                                                        backgroundColor: avatar ? 'transparent' : 'transparent',
-                                                        color: 'white',
-
-                                                    }}
-                                                /> */}
-                                                {/* <Avatar
-                                                    onClick={showProfile}
-                                                    alt={
-                                                        user.first_name && user.last_name
-                                                            ? `${user.first_name} ${user.last_name}`
-                                                            : user.first_name || user.last_name || user.username
-                                                    }
-                                                    src={avatar || defaultAvatar}
-                                                    {...stringAvatar(
-                                                        user.first_name && user.last_name
-                                                            ? `${user.first_name} ${user.last_name}`
-                                                            : user.first_name || user.last_name || user.username
-                                                    )}
-                                                    sx={{
-                                                        width: 36,
-                                                        height: 36,
-                                                        backgroundColor: '#2757aa',
-                                                        fontSize: '12.5px',
-                                                    }}
-                                                /> */}
-                                                <UserAvatarMenu
-                                                    user={user}
-                                                    stringAvatar={stringAvatar}
-                                                    onLogout={logoutUser}
-                                                    src={avatar || defaultAvatar}
-                                                    showprofile={showProfile}
-                                                />
-
-                                            </Tooltip>
-
-
-                                        </Box>
-                                    </Box>
-                                    <div className='container p-3' style={{ minHeight: '90vh', backgroundColor: '#f8f9fa' }}>
-                                        {activeForm === 'profile' && (
-                                            <div className="text-center p-2" style={{ maxWidth: '360px', margin: '0 auto' }}>
-                                                <div className="bg-white shadow-sm rounded px-3 py-3">
-
-                                                    {/* Title Row - Tight and compact */}
-                                                    <Typography
-                                                        variant="subtitle1"
-                                                        sx={{
-                                                            fontWeight: 600,
-                                                            color: '#2757aa',
-                                                            mb: 0.3,
-                                                            fontSize: '15px',
-                                                        }}
-                                                    >
-                                                        Profile
-                                                    </Typography>
-
-                                                    {/* Email on one line, tighter spacing */}
-                                                    <Typography
-                                                        variant="body2"
-                                                        sx={{
-                                                            fontSize: '12px',
-                                                            color: '#555',
-                                                            mb: 1.5,
-                                                        }}
-                                                    >
-                                                        Email: <strong>{user.email}</strong>
-                                                    </Typography>
-
-                                                    <form onSubmit={updateUser}>
-                                                        <Grid container spacing={1.5}>
-
-                                                            {/* First Name */}
-                                                            <Grid item xs={12} sm={6}>
-                                                                <FormControl fullWidth variant="standard">
-                                                                    <Input
-                                                                        id="first_name"
-                                                                        name="first_name"
-                                                                        placeholder={user.first_name}
-                                                                        startAdornment={
-                                                                            <InputAdornment position="start">
-                                                                                <FaUser style={{ fontSize: '13px', color: '#555' }} />
-                                                                            </InputAdornment>
-                                                                        }
-                                                                        sx={{
-                                                                            fontSize: '12px',
-                                                                            borderBottom: '1px solid #ddd',
-                                                                            py: 0.6,
-                                                                        }}
-                                                                    />
-                                                                </FormControl>
-                                                            </Grid>
-
-                                                            {/* Last Name */}
-                                                            <Grid item xs={12} sm={6}>
-                                                                <FormControl fullWidth variant="standard">
-                                                                    <Input
-                                                                        id="last_name"
-                                                                        name="last_name"
-                                                                        placeholder={user.last_name}
-                                                                        startAdornment={
-                                                                            <InputAdornment position="start">
-                                                                                <FaUser style={{ fontSize: '13px', color: '#555' }} />
-                                                                            </InputAdornment>
-                                                                        }
-                                                                        sx={{
-                                                                            fontSize: '12px',
-                                                                            borderBottom: '1px solid #ddd',
-                                                                            py: 0.6,
-                                                                        }}
-                                                                    />
-                                                                </FormControl>
-                                                            </Grid>
-
-                                                            {/* Phone */}
-                                                            <Grid item xs={12}>
-                                                                <FormControl fullWidth variant="standard">
-                                                                    <Input
-                                                                        id="phone"
-                                                                        name="phone"
-                                                                        placeholder={user.phone ?? 'Enter phone number'}
-                                                                        startAdornment={
-                                                                            <InputAdornment position="start">
-                                                                                <FaPhone style={{ fontSize: '13px', color: '#555' }} />
-                                                                            </InputAdornment>
-                                                                        }
-                                                                        sx={{
-                                                                            fontSize: '12px',
-                                                                            borderBottom: '1px solid #ddd',
-                                                                            py: 0.6,
-                                                                        }}
-                                                                    />
-                                                                </FormControl>
-                                                            </Grid>
-
-                                                            {/* Avatar */}
-                                                            <Grid item xs={12}>
-                                                                <Box display="flex" alignItems="center" gap={1}>
-                                                                    <Typography sx={{ fontSize: '12px', color: '#555', minWidth: '60px' }}>
-                                                                        <FaIdBadge className="me-1" /> Avatar
-                                                                    </Typography>
-
-                                                                    <Input
-                                                                        id="avatar"
-                                                                        name="avatar"
-                                                                        type="file"
-                                                                        onChange={handleAvatarFileChange}
-                                                                        inputProps={{ accept: 'image/png' }}
-                                                                        sx={{
-                                                                            fontSize: '12px',
-                                                                            border: '1px solid #ddd',
-                                                                            borderRadius: '6px',
-                                                                            py: 0.4,
-                                                                            px: 1,
-                                                                            flexGrow: 1,
-                                                                        }}
-                                                                    />
-                                                                </Box>
-                                                            </Grid>
-
-                                                            {/* Buttons - Very compact */}
-                                                            <Grid item xs={12}>
-                                                                <Box display="flex" justifyContent="space-between" mt={1}>
-
-                                                                    {/* <ButtonComponent
-                                                                        cssClass="e-custom-primary"
-                                                                        style={{ width: '32%', padding: '6px', textTransform: 'none' }}
-                                                                        onClick={changePassword}
-                                                                    >
-                                                                        Reset
-                                                                    </ButtonComponent> */}
-                                                                    {/* <Button
-                                                                                      type="submit"
-                                                                                      variant="contained"
-                                                                                      className="mb-3 rounded-pill"
-                                                                                      disabled={miniLoader}
-                                                                                      startIcon={miniLoader ? <CircularProgress size={14} color="inherit" /> : null}
-                                                                    
-                                                                                      style={{
-                                                                                        fontSize: '13px',
-                                                                                        textTransform: 'none',
-                                                                                        px: 2,
-                                                                                        py: 1,
-                                                                                        width: '100%',
-                                                                                        backgroundColor: miniLoader ? '#ccc' : '#2757aa',
-                                                                                        color: '#fff',
-                                                                                        '&:hover': {
-                                                                                          backgroundColor: miniLoader ? '#ccc' : '#1e4794',
-                                                                                        },
-                                                                                      }}
-                                                                                    >
-                                                                    
-                                                                                      {miniLoader ? 'Logging in ...' : 'LOGIN'}
-                                                                                    </Button> */}
-
-                                                                    <Button
-                                                                        variant="contained"
-                                                                        color="warning"
-                                                                        style={{ width: '32%', padding: '6px', textTransform: 'none' }}
-                                                                        onClick={backHome}
-                                                                    >
-                                                                        Cancel
-                                                                    </Button>
-
-                                                                    <Button
-                                                                        variant="contained"
-                                                                        color="success"
-                                                                        style={{ width: '32%', padding: '6px', textTransform: 'none' }}
-                                                                        type="submit"
-                                                                    >
-                                                                        Save
-                                                                    </Button>
-
-                                                                </Box>
-                                                            </Grid>
-
-                                                        </Grid>
-                                                    </form>
-                                                </div>
-                                            </div>
-
-
-                                        )}
+                                <div id="col1" ref={col1Ref} style={{ width: isMobile ? '100%' : '35%', backgroundColor: '#fff', minWidth: '25%', minHeight: isMobile ? 'auto' : 'calc(100dvh - 64px)', display: 'flex', flexDirection: 'column' }}>
+                                    <div className='container p-3' style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
                                         {activeForm === 'file-upload' && (
                                             <div className="text-center p-2  mx-2">
                                                 {/* <h6 className='my-3' style={{ color: '#495057' }}> Welcome Back </h6> */}
@@ -1313,6 +777,7 @@ function Dashboard() {
                                                     setTitle={setTitle}
                                                     files={files}
                                                     loading={loadingmini}
+                                                    loadingMessage={loadingMsg}
                                                     onFileSelected={() => setActiveForm('sign-type')}
                                                     selfSign={selfSign}
                                                     mailtoSigners={mailtoSigners}
@@ -1332,13 +797,14 @@ function Dashboard() {
                                         background: '#ddd',
                                         cursor: 'ew-resize',
                                         transition: 'width 0.2s ease',
-                                        height: '100vh'
                                     }}></div>
                                 )}
                                 {/* Object View List */}
-                                <div id="col2" ref={col2Ref} style={{ width: isMobile ? '100%' : '65%', backgroundColor: '#fff', minWidth: '35%', minHeight: '100vh' }}>
-                                    <Box sx={{ width: '100%' }}>
-                                        <Box sx={{ borderColor: 'divider', height: '40px' }}>
+                                <div id="col2" ref={col2Ref} style={{ width: isMobile ? '100%' : '65%', backgroundColor: '#fff', minWidth: '35%', display: 'flex', flexDirection: 'column', height: isMobile ? '85dvh' : 'calc(100dvh - 64px)' }}>
+                                    {/* Tab bar keeps its height; the active tab fills the rest so its table
+                                        fits the screen and the logo under it stays in view. */}
+                                    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                        <Box sx={{ borderColor: 'divider', flexShrink: 0 }}>
                                             <Tabs style={{ overflowX: 'scroll' }} value={value} onChange={(_, nv) => setValue(nv)} aria-label="basic tabs example">
                                                 <Tab sx={{ textTransform: 'none', fontSize: '13px', width: 'auto', height: '61px', minWidth: 'auto' }} label="Inbox" {...a11yProps(0)} />
                                                 <Tab sx={{ textTransform: 'none', fontSize: '13px', width: 'auto', height: '61px', minWidth: 'auto' }} label="Outbox" {...a11yProps(1)} />
@@ -1348,7 +814,7 @@ function Dashboard() {
                                                 <Tab sx={{ textTransform: 'none', fontSize: '13px', width: 'auto', height: '61px', minWidth: 'auto' }} label="Trashed" {...a11yProps(5)} />
                                             </Tabs>
                                         </Box>
-                                        <Box sx={{ borderColor: 'divider', marginTop: '25px' }}>
+                                        <Box sx={{ borderColor: 'divider', flex: 1, minHeight: 0, overflow: 'hidden' }}>
                                             <CustomTabPanel value={value} index={0}>
 
                                                 <Inbox
@@ -1444,8 +910,7 @@ function Dashboard() {
                                     </Box>
                                 </div>
                             </div>
-                        </main>
-                    </div>
+                        </AppShell>
                 </>
             }
         </>

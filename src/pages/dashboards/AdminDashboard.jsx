@@ -1,6 +1,7 @@
 import React, { useRef, useContext, useState, useEffect, useCallback } from 'react'
 import '../../styles/Dashboard.css'
-import { FaUserPlus, FaPlusCircle, FaUserCircle, FaMobile, FaUserShield, FaTrashAlt, FaArrowRight, FaBackward, FaSignOutAlt, FaUser, FaFolderOpen, FaList, FaProjectDiagram, FaCheckCircle, FaPencilAlt, FaImages, FaCog, FaCaretLeft, FaCaretRight } from 'react-icons/fa';
+import '../../styles/AdminDashboard.css'
+import { FaUserPlus, FaPlusCircle, FaUserCircle, FaMobile, FaUserShield, FaTrashAlt, FaArrowRight, FaHome, FaUser, FaFolderOpen, FaList, FaProjectDiagram, FaCheckCircle, FaPen, FaImages, FaCog } from 'react-icons/fa';
 import AuthContext from '../../context/Authcontext'
 import axios from 'axios'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -8,7 +9,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import NewUserDialog from '../../components/NewUserDialog'
 import UserUpdateDialog from '../../components/dialogs/UserUpdateDialog'
 import ActivityLogs from '../../components/ActivityLogs'
-import logo from '../../images/ZFBLU.webp'
+import { companyLogoUrl } from '../../utils/companyLogo'
+import AppShell from '../../components/layout/AppShell'
+import BrandLogo from '../../components/common/BrandLogo'
 import Users from '../../components/Users'
 import DocumentLogs from '../../components/DocumentLogs'
 import CompanyEdits from '../../components/CompanyEdits'
@@ -18,40 +21,47 @@ import Typography from '@mui/material/Typography';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
 import FormControl from '@mui/material/FormControl';
 import Input from '@mui/material/Input';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaExclamationTriangle } from 'react-icons/fa';
 import { List, ListItem, ListItemButton, Switch, Tooltip, InputLabel, Select, MenuItem, CircularProgress } from '@mui/material';
 import LoadingMini from '../../components/loaders/LoadingMini';
 import TimedAlert from '../../components/TimedAlert';
-import WarningIcon from '@mui/icons-material/Warning';
 import { jsonPhoneCodesData } from '../../data/country-phone-codes';
+import SmsProviderSettings from '../../components/admin/SmsProviderSettings';
+import useOtpAvailability from '../../hooks/useOtpAvailability';
+import { otpError } from '../../api/otp';
+import { PILL } from '../../components/common/pillButton';
+import { ConfirmDialog, PropertyRow, PropertyValue } from '../../components/common/dialogKit';
 
-function CustomTabPanel({ children, value, index, ...other }) {
+function CustomTabPanel({ children, value, index, fill = false, className = '', ...other }) {
     return (
         <div
             role="tabpanel"
             hidden={value !== index}
             id={`simple-tabpanel-${index}`}
             aria-labelledby={`simple-tab-${index}`}
+            className={`${className}${fill ? ' tabpanel-fill' : ''}`.trim() || undefined}
             {...other}
         >
             {value === index && (
-                <Box sx={{ p: 1, mt: 1, backgroundColor: '#fff' }}>
-                    <Typography component="div">{children}</Typography>
+                <Box className="tabpanel-body" sx={{ p: { xs: 1, sm: 1.5 }, backgroundColor: '#fff' }}>
+                    <Typography component="div" className="tabpanel-content">{children}</Typography>
                 </Box>
             )}
         </div>
     )
 }
+
+const PanelHeader = ({ title, subtitle }) => (
+    <div className="admin-panel-header">
+        <h2 className="admin-panel-title">{title}</h2>
+        {subtitle && <p className="admin-panel-subtitle">{subtitle}</p>}
+    </div>
+)
 
 function a11yProps(index) {
     return {
@@ -69,7 +79,8 @@ function a11yProps2(index) {
 
 // --- Extracted Components ---
 const AddSignerForm = ({
-    onSubmit, checked, setChecked, emailInputRef, phoneNumberRef, phoneCodeRef
+    onSubmit, checked, setChecked, emailInputRef, phoneNumberRef, phoneCodeRef,
+    otpAvailable = true, otpLoading = false, otpMessage = ''
 }) => (
     <form onSubmit={onSubmit}>
         <div className="rounded mb-2">
@@ -85,21 +96,31 @@ const AddSignerForm = ({
                     placeholder="Enter email e.g. example@gmail.com"
                     required
                     aria-label="Signer email"
-                    style={{ minWidth: 220, maxWidth: 260 }}
+                    style={{ flex: '1 1 220px', minWidth: 0, maxWidth: 360 }}
                 />
                 <label htmlFor="otpSwitch" className="text-dark mb-0" style={{ userSelect: 'none', whiteSpace: 'nowrap', fontSize: 13 }}>
                     Enable SMS OTP verification
                 </label>
-                <Switch
-                    id="otpSwitch"
-                    checked={checked}
-                    onChange={e => setChecked(e.target.checked)}
-                    inputProps={{ 'aria-label': 'Enable SMS OTP verification' }}
-                    className="ms-1"
-                    size="small"
-                />
+                <Tooltip title={!otpLoading && !otpAvailable ? otpMessage : ''} placement="top">
+                    <span>
+                        <Switch
+                            id="otpSwitch"
+                            checked={checked && otpAvailable}
+                            disabled={otpLoading || !otpAvailable}
+                            onChange={e => setChecked(e.target.checked)}
+                            inputProps={{ 'aria-label': 'Enable SMS OTP verification' }}
+                            className="ms-1"
+                            size="small"
+                        />
+                    </span>
+                </Tooltip>
             </div>
-            {checked && (
+            {!otpLoading && !otpAvailable && (
+                <div className="alert alert-warning py-1 px-2 mb-2" role="status" style={{ fontSize: 12 }}>
+                    {otpMessage}
+                </div>
+            )}
+            {checked && otpAvailable && (
                 <div className="d-flex gap-1 mb-2" style={{ maxWidth: 300 }}>
                     <select
                         ref={phoneCodeRef}
@@ -134,17 +155,9 @@ const AddSignerForm = ({
                     type="submit"
                     variant="contained"
                     color="primary"
-                    style={{
-                        textTransform: 'none',
-                        fontWeight: 300,
-                        padding: '0.625rem 1.25rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        whiteSpace: 'nowrap',
-                    }}
-                >
-                    <FaPlusCircle />
+                    sx={PILL}
+                
+                    startIcon={<FaPlusCircle />}>
                     Add Signer
                 </Button>
             </div>
@@ -173,12 +186,12 @@ const SignersList = ({ signers, removeSigner }) => (
                     <span className="me-2 text-dark">{item.email}</span>
                     {item.phone && (
                         <Tooltip title="OTP authentication enabled" placement="top">
-                            <FaMobile className="text-primary me-2" />
+                            <span style={{ display: 'inline-flex' }}><FaMobile className="text-primary me-2" /></span>
                         </Tooltip>
                     )}
                     {item.authenticate && (
                         <Tooltip title="Account verification enabled" placement="top">
-                            <FaUserShield className="text-primary me-2" />
+                            <span style={{ display: 'inline-flex' }}><FaUserShield className="text-primary me-2" /></span>
                         </Tooltip>
                     )}
                     <FaTrashAlt
@@ -213,6 +226,7 @@ function AdminDashboard() {
     const [opendialogcompanyedits, setOpenDialogCompanyEdits] = useState(false)
     const location = useLocation()
     const { authTokens, logoutUser, user } = useContext(AuthContext)
+    const otpAvailability = useOtpAvailability()
     const [avatar, setAvatar] = useState('')
     const [openalert, setOpenAlert] = useState(false)
     const [alertseverity, setAlertSeverity] = useState('')
@@ -221,7 +235,7 @@ function AdminDashboard() {
     const [companydocs, setCompanyDocs] = useState([])
     const [companylogo, setCompanyLogo] = useState('')
     const [smtpconfigs, setSMTPConfigs] = useState({})
-    const [sidebarOpen, setSidebarOpen] = useState(true)
+    const [sidebarOpen, setSidebarOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 992)
     const [filters, setFilters] = useState({ start_date: '', end_date: '' })
     const [loadingDocs, setLoadingDocs] = useState(false)
     const [loadingUsers, setLoadingUsers] = useState(false)
@@ -256,7 +270,6 @@ function AdminDashboard() {
     const handleChange = (_, newValue) => setValue(newValue)
     const handleChange2 = (_, newValue) => setValue2(newValue)
     const handleTogglePassword = () => setShowPassword(prev => !prev)
-    const toggleSidebar = () => setSidebarOpen(prev => !prev)
 
     // --- Signer logic ---
     const validateEmail = email =>
@@ -279,6 +292,13 @@ function AdminDashboard() {
     const addMailList = useCallback((e) => {
         e.preventDefault()
         const email = emailInputRef.current.value
+        if (checked && !otpAvailability.available) {
+            setOpenAlert(true)
+            setAlertMsg(otpAvailability.message)
+            setAlertSeverity('error')
+            setTimeout(() => setOpenAlert(false), 6000)
+            return
+        }
         if (checked && (!phoneNumberRef.current.value || !phoneCodeRef.current.value)) {
             setOpenAlert(true)
             setAlertMsg('phone number is required for otp')
@@ -319,7 +339,7 @@ function AdminDashboard() {
             if (value2 === 0) setUpdateWorkflow(true)
             return [...prev, signer]
         })
-    }, [checked, value2])
+    }, [checked, value2, otpAvailability.available, otpAvailability.message])
 
     // --- API Calls ---
     const navigate = useNavigate()
@@ -389,7 +409,7 @@ function AdminDashboard() {
         axios.get(`${constants.devApiBaseUrl}/api/logo/`, {
             headers: { 'Authorization': `Bearer ${authTokens.access} ` }
         }).then(res => {
-            setCompanyLogo(`${constants.devApiBaseUrl}${res.data['logo_url']}`)
+            setCompanyLogo(companyLogoUrl(res.data))
         })
     }, [authTokens])
 
@@ -518,8 +538,9 @@ function AdminDashboard() {
             setSelectedWorkflowTitle(workflowData.title)
             await getWorkflows()
         } catch (error) {
+            const e = otpError(error, "Update failed, please try again later")
             setOpenAlert(true)
-            setAlertMsg("Update failed, please try again later")
+            setAlertMsg(e.code ? e.message : "Update failed, please try again later")
             setAlertSeverity("error")
         }
         setWorkflowLoading(false)
@@ -608,170 +629,68 @@ function AdminDashboard() {
             />
 
             {/* Delete Workflow Confirmation Dialog */}
-            <Dialog
+            <ConfirmDialog
                 open={openDeleteDialog}
-                onClose={handleCloseDeleteDialog}
-                aria-labelledby="delete-workflow-dialog-title"
-                aria-describedby="delete-workflow-dialog-description"
-                maxWidth="xs"
-                fullWidth
-            >
-                <DialogTitle id="delete-workflow-dialog-title">
-                    <span style={{ color: '#2757aa' }}> Confirm Delete Workflow</span>
-                </DialogTitle>
-                <DialogContent>
-                    Are you sure you want to delete this workflow? This action cannot be undone.
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDeleteDialog} color="primary" variant="outlined" className='rounded-pill' style={{ textTransform: 'none' }}>
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={deleteOrganizationWorkflow}
-                        color="error"
-                        variant="contained"
-                        autoFocus
-                        className="rounded-pill"
-                        style={{ textTransform: 'none' }}
-                    >
-                        Delete
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                icon={<FaTrashAlt />}
+                title="Delete workflow"
+                tone="danger"
+                message="Delete this workflow? This can't be undone."
+                confirmLabel="Delete workflow"
+                onConfirm={deleteOrganizationWorkflow}
+                onCancel={handleCloseDeleteDialog}
+            />
 
             {/* SMTP Confirmation Dialog */}
-            <Dialog
+            <ConfirmDialog
                 open={openConfirmDialog}
-                onClose={handleCancelSubmit}
-                aria-labelledby="smtp-confirm-dialog-title"
-                aria-describedby="smtp-confirm-dialog-description"
+                icon={<FaExclamationTriangle />}
+                title="Update mail (SMTP) settings"
                 maxWidth="sm"
-                fullWidth
+                message={
+                    <>
+                        This changes how the system sends email. Confirm the new settings:
+                    </>
+                }
+                confirmLabel="Update settings"
+                onConfirm={handleConfirmedSubmit}
+                onCancel={handleCancelSubmit}
             >
-                <DialogTitle
-                    id="smtp-confirm-dialog-title"
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        backgroundColor: '#fff3cd',
-                        color: '#856404'
+                {pendingFormData && (
+                    <>
+                        {pendingFormData.smtpHost && <PropertyRow label="SMTP host"><PropertyValue mono>{pendingFormData.smtpHost}</PropertyValue></PropertyRow>}
+                        {pendingFormData.smtpPort && <PropertyRow label="SMTP port"><PropertyValue mono>{pendingFormData.smtpPort}</PropertyValue></PropertyRow>}
+                        {pendingFormData.smtpUsername && <PropertyRow label="Username"><PropertyValue>{pendingFormData.smtpUsername}</PropertyValue></PropertyRow>}
+                        {pendingFormData.smtpDisplayName && <PropertyRow label="Display name"><PropertyValue>{pendingFormData.smtpDisplayName}</PropertyValue></PropertyRow>}
+                        {pendingFormData.smtpPassword && <PropertyRow label="Password"><PropertyValue>••••••••</PropertyValue></PropertyRow>}
+                    </>
+                )}
+            </ConfirmDialog>
+            <div className="admin-dashboard">
+                <AppShell
+                    caption="Admin Dashboard"
+                    orgName={user.company}
+                    // Top: Home, then actions on this page. Bottom (just above "Signed in as"): the other dashboard.
+                    sections={[
+                        { key: 'home', label: 'Home', icon: <FaHome /> },
+                        { key: 'new-user', label: 'Add new user', icon: <FaUserPlus /> },
+                        { key: 'logo', label: 'Change organization logo', icon: <FaImages /> },
+                    ]}
+                    footerSections={user.is_superuser === 'True' ? [{ key: 'sadmin', label: 'Super Admin Dashboard', icon: <FaUserShield /> }] : []}
+                    onSelect={(key) => {
+                        if (key === 'home') navigate('/')
+                        else if (key === 'new-user') setOpenDialogNewUser(true)
+                        else if (key === 'logo') setOpenDialogCompanyEdits(true)
+                        else if (key === 'sadmin') navigate('/super/admin/dashboard')
                     }}
+                    open={sidebarOpen}
+                    onOpenChange={setSidebarOpen}
+                    userName={[user.first_name, user.last_name].filter(Boolean).join(' ') || user.username}
+                    avatarSrc={avatar}
+                    onLogout={logoutUser}
+                    headerExtra={<BrandLogo src={companylogo} alt="Organization logo" className="admin-topbar-logo" />}
+                    mainSx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
                 >
-                    <WarningIcon color="warning" />
-                    Confirm SMTP Settings Update
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText id="smtp-confirm-dialog-description" sx={{ mt: 2, fontSize: '13px !important' }}>
-                        <strong>Warning:</strong> You are about to update the SMTP configuration settings.
-                        This will affect how emails are sent from the system.
-                        <br /><br />
-                        Please confirm that you want to proceed with updating the following settings:
-                        <br /><br />
-                        {pendingFormData && (
-                            <Box component="ul" sx={{ mt: 1, mb: 1 }}>
-                                {pendingFormData.smtpPort && <li><strong>SMTP Port:</strong> {pendingFormData.smtpPort}</li>}
-                                {pendingFormData.smtpHost && <li><strong>SMTP Host:</strong> {pendingFormData.smtpHost}</li>}
-                                {pendingFormData.smtpUsername && <li><strong>SMTP Username:</strong> {pendingFormData.smtpUsername}</li>}
-                                {pendingFormData.smtpDisplayName && <li><strong>Display Name:</strong> {pendingFormData.smtpDisplayName}</li>}
-                                {pendingFormData.smtpPassword && <li><strong>Password:</strong> ••••••••</li>}
-                            </Box>
-                        )}
-                        <br />
-                        Are you sure you want to continue?
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button
-                        onClick={handleCancelSubmit}
-                        variant="outlined"
-                        color="warning"
-                        size="small"
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleConfirmedSubmit}
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        autoFocus
-                    >
-                        Yes, Update Settings
-                    </Button>
-                </DialogActions>
-            </Dialog>
-            <div className="dashboard">
-                <nav className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-                    {sidebarOpen && (
-                        <div className="sidebar-content" style={{ marginTop: 0 }}>
-                            <div className="d-flex flex-column justify-content-center align-items-center bg-white shadow-lg"
-                                style={{
-                                    height: 60,
-                                    minHeight: 61,
-                                    maxHeight: 61,
-                                    overflow: "hidden",
-                                }}>
-                                <img
-                                    src={companylogo || logo}
-                                    alt="Organization logo"
-                                    className="logo"
-                                    style={{
-                                        width: "auto",
-                                        maxWidth: "80%",
-                                        maxHeight: 48,
-                                        objectFit: "contain",
-                                    }}
-                                />
-                            </div>
-                            <div className='text-center mt-0 mb-0 p-1 shadow-lg'>
-                                <span className='mr-2' style={{ fontSize: 12 }}>{user.first_name} {user.last_name}</span>
-                            </div>
-                            <div className='text-center mt-0 mb-0 p-1 shadow-lg' style={{ textTransform: 'uppercase' }}>
-                                <span className='mr-2' style={{ fontSize: 12 }}>
-                                    {user.company}
-                                </span>
-                            </div>
-                            <ul className="menu-items">
-                                <li onClick={() => navigate('/')} className="menu-item main-li shadow-lg">
-                                    <FaBackward style={{ fontSize: 18, marginRight: 10 }} />
-                                    <span style={{ fontSize: 12 }}>Return Home</span>
-                                </li>
-                                <li className="menu-item main-li shadow-lg" onClick={() => setOpenDialogNewUser(true)}>
-                                    <FaUserPlus style={{ fontSize: 18, marginRight: 10, verticalAlign: 'middle' }} />
-                                    <span style={{ fontSize: 12, verticalAlign: 'middle' }}>Add New User </span>
-                                </li>
-                                <li className="menu-item main-li shadow-lg" onClick={() => setOpenDialogCompanyEdits(true)} >
-                                    <FaImages style={{ fontSize: 18, marginRight: 10, verticalAlign: 'middle' }} />
-                                    <span style={{ fontSize: 12, verticalAlign: 'middle' }}>Change Organization Logo</span>
-                                </li>
-
-                            </ul>
-                            <div>
-                                <ul className="bottom-buttons">
-
-                                    {user.is_superuser === 'True' && (
-                                        <li onClick={() => navigate('/super/admin/dashboard')} className="menu-item main-li shadow-lg">
-                                            <FaUserShield style={{ fontSize: 18, marginRight: 10, verticalAlign: 'middle' }} />
-                                            <span style={{ fontSize: 12, verticalAlign: 'middle' }}>SAdmin Dashboard</span>
-                                        </li>
-                                    )}
-                                    <li onClick={logoutUser} className="menu-item main-li shadow-lg">
-                                        <FaSignOutAlt style={{ fontSize: 18, marginRight: 10, verticalAlign: 'middle' }} />
-                                        <span style={{ fontSize: 12, verticalAlign: 'middle' }}>Logout</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    )}
-                </nav>
-                <main className={`content ${sidebarOpen ? 'shifted' : 'full-width'}`}>
-                    <Tooltip title={sidebarOpen ? 'Minimize sidebar' : 'Expand sidebar'}>
-                        <div className={`bump-toggle ${sidebarOpen ? 'attached' : 'moved'}`} onClick={toggleSidebar}>
-                            {sidebarOpen ? <FaCaretLeft style={{ fontSize: 18 }} /> : <FaCaretRight style={{ fontSize: 18 }} />}
-                        </div>
-                    </Tooltip>
-                    <div className='container-fluid' style={{ backgroundColor: '#e5e5e5', height: '100vh' }}>
+                    <div className='admin-main'>
                         <TimedAlert
                             open={openalert}
                             onClose={() => setOpenAlert(false)}
@@ -780,19 +699,20 @@ function AdminDashboard() {
                             setSeverity={setAlertSeverity}
                             setMessage={setAlertMsg}
                         />
-                        <Box sx={{ width: '100%' }}>
-                            <Box sx={{ borderColor: 'divider', backgroundColor: '#ffff' }}>
-                                <Tabs value={value} onChange={handleChange} aria-label="basic tabs example">
-                                    <Tab style={{ textTransform: 'none', fontSize: 13 }} icon={<FaUser style={{ fontSize: 15, marginRight: 8, verticalAlign: 'middle' }} />} onClick={getusers} label="Login Accounts" {...a11yProps(0)} />
-                                    <Tab style={{ textTransform: 'none', fontSize: 13 }} icon={<FaFolderOpen style={{ fontSize: 15, marginRight: 8, verticalAlign: 'middle' }} />} onClick={getDocLogs} label="Documents" {...a11yProps(1)} />
-                                    <Tab style={{ textTransform: 'none', fontSize: 13 }} icon={<FaList style={{ fontSize: 15, marginRight: 8, verticalAlign: 'middle' }} />} onClick={getlogs} label="Account Logs" {...a11yProps(2)} />
-                                    <Tab style={{ textTransform: 'none', fontSize: 13 }} icon={<FaCog style={{ fontSize: 15, marginRight: 8, verticalAlign: 'middle' }} />} label='Mailer SMTP Settings' {...a11yProps(3)} />
-                                    <Tab style={{ textTransform: 'none', fontSize: 13 }} icon={<FaProjectDiagram style={{ fontSize: 15, marginRight: 8, verticalAlign: 'middle' }} />} label='Manage Workflows' {...a11yProps(4)} />
+                        <Box className='admin-tabs-shell'>
+                            <Box className='admin-tabs-bar'>
+                                <Tabs value={value} onChange={handleChange} aria-label="admin dashboard tabs" variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
+                                    <Tab iconPosition='start' icon={<FaUser style={{ fontSize: 15 }} />} onClick={getusers} label="Login Accounts" {...a11yProps(0)} />
+                                    <Tab iconPosition='start' icon={<FaFolderOpen style={{ fontSize: 15 }} />} onClick={getDocLogs} label="Documents" {...a11yProps(1)} />
+                                    <Tab iconPosition='start' icon={<FaList style={{ fontSize: 15 }} />} onClick={getlogs} label="Account Logs" {...a11yProps(2)} />
+                                    <Tab iconPosition='start' icon={<FaCog style={{ fontSize: 15 }} />} label='Mailer SMTP Settings' {...a11yProps(3)} />
+                                    <Tab iconPosition='start' icon={<FaProjectDiagram style={{ fontSize: 15 }} />} label='Manage Workflows' {...a11yProps(4)} />
+                                    <Tab iconPosition='start' icon={<FaMobile style={{ fontSize: 15 }} />} label='SMS / OTP Provider' {...a11yProps(5)} />
                                 </Tabs>
                             </Box>
-                            <CustomTabPanel value={value} index={0} style={{ height: '85vh', backgroundColor: '#fff' }}>
-                                <h6 className='text-center  p-3  card-header text-muted' style={{ fontSize: 14, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}>Organization Users</h6>
-                                <div id='companyUsers' className='bg-white' style={{ height: 'calc(85vh - 60px)', minHeight: 200, maxHeight: 'calc(85vh - 60px)', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            <CustomTabPanel value={value} index={0} className='admin-tabpanel' fill>
+                                <PanelHeader title="Organization users" subtitle="People in your organisation who can sign in." />
+                                <div id='companyUsers' className='admin-grid'>
                                     <Users
                                         newUser={() => setOpenDialogNewUser(true)}
                                         setOpenDialogUpdateUser={setOpenDialogUpdateUser}
@@ -804,9 +724,9 @@ function AdminDashboard() {
                                     />
                                 </div>
                             </CustomTabPanel>
-                            <CustomTabPanel value={value} index={1} style={{ height: '85vh', backgroundColor: '#fff' }}>
-                                <h6 className='text-center  p-3  card-header text-muted' style={{ fontSize: 14, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}>Organization Documents</h6>
-                                <div id='companyDocuments' className='bg-white' style={{ height: 'calc(85vh - 60px)', minHeight: 200, maxHeight: 'calc(85vh - 60px)', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            <CustomTabPanel value={value} index={1} className='admin-tabpanel' fill>
+                                <PanelHeader title="Organization documents" subtitle="Documents sent from your organisation and their signing status." />
+                                <div id='companyDocuments' className='admin-grid'>
                                     <DocumentLogs
                                         companydocs={companydocs}
                                         filters={filters}
@@ -817,9 +737,9 @@ function AdminDashboard() {
                                     />
                                 </div>
                             </CustomTabPanel>
-                            <CustomTabPanel value={value} index={2} style={{ height: '85vh', backgroundColor: '#fff' }}>
-                                <h6 className='text-center  p-3  card-header text-muted' style={{ fontSize: 14, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}>User Logs</h6>
-                                <div id='userLogs' className='bg-white' style={{ height: 'calc(85vh - 60px)', minHeight: 200, maxHeight: 'calc(85vh - 60px)', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            <CustomTabPanel value={value} index={2} className='admin-tabpanel' fill>
+                                <PanelHeader title="Account logs" subtitle="Sign-in and activity history for your users." />
+                                <div id='userLogs' className='admin-grid'>
                                     <ActivityLogs
                                         logs={companylogs}
                                         filters={filters}
@@ -830,27 +750,25 @@ function AdminDashboard() {
                                     />
                                 </div>
                             </CustomTabPanel>
-                            <CustomTabPanel value={value} index={3} style={{ height: '85vh', width: "100%", backgroundColor: '#fff' }}>
-                                <h6 className='text-center  p-3  card-header text-muted' style={{ fontSize: 14, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}>SMTP Settings</h6>
-                                <div id='SMT Settings' className='bg-white'>
-                                    {/* <h6 className='text-center p-3 card-header text-muted' style={{ fontSize: 15, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}> SMTP Settings </h6> */}
-                                    <div className='bg-light'>
+                            <CustomTabPanel value={value} index={3} className='admin-tabpanel'>
+                                <PanelHeader title="Mailer SMTP settings" subtitle="The mail server used to send signing emails from your organisation." />
+                                <div id='SMT Settings'>
+                                    <div>
                                         <form onSubmit={saveSettings} autoComplete="off">
-                                            <div className='row'>
+                                            <div className='row g-3'>
 
-                                                <div className='col-lg-6 col-md-6 col-sm-12'>
-                                                    <div className="form-group card p-4">
+                                                <div className='col-12 col-lg-6'>
+                                                    <div className="admin-card h-100">
                                                         {loading ? <LoadingMini /> :
                                                             <>
-                                                                <h6 className='p-3 card-header text-dark text-center' style={{ backgroundColor: '#ffff', fontSize: 13, borderRadius: 0, borderTop: 'none', boxShadow: 'none', borderColor: '#e5e5e5' }}>Current Configurations </h6>
-                                                                <label htmlFor="smtpPort"><small style={{ fontSize: 13 }}>SMTP Port  <span className='text-muted'>: {smtpconfigs.port} </span></small></label>
-                                                                <label htmlFor="smtpHost"><small style={{ fontSize: 13 }}>SMTP Host <span className='text-muted'>: {smtpconfigs.url} </span></small></label>
-                                                                <label htmlFor="smtpUsername"><small style={{ fontSize: 13 }}>SMTP Username <span className='text-muted'>: {smtpconfigs.username} </span></small></label>
-                                                                <label htmlFor="smtpDisplayName"><small style={{ fontSize: 13 }}>SMTP Mail From <span className='text-muted'>: {smtpconfigs.display_name} </span></small></label>
-                                                                <div className='input-group mt-2'>
-                                                                    <label htmlFor="smtpPassword">
-                                                                        <small style={{ fontSize: 13 }}>SMTP Password
-                                                                            <span className='text-muted'>:
+                                                                <h3 className='admin-card-title'>Current configuration</h3>
+                                                                <dl className='admin-kv'>
+                                                                    <dt>SMTP port</dt><dd>{smtpconfigs.port || '—'}</dd>
+                                                                    <dt>SMTP host</dt><dd>{smtpconfigs.url || '—'}</dd>
+                                                                    <dt>SMTP username</dt><dd>{smtpconfigs.username || '—'}</dd>
+                                                                    <dt>Mail from</dt><dd>{smtpconfigs.display_name || '—'}</dd>
+                                                                    <dt>SMTP password</dt>
+                                                                    <dd>
                                                                                 <TextField
                                                                                     disabled
                                                                                     fullWidth
@@ -870,17 +788,16 @@ function AdminDashboard() {
                                                                                     autoComplete="off"
                                                                                     onChange={() => { }}
                                                                                 />
-                                                                            </span>
-                                                                        </small>
-                                                                    </label>
-                                                                </div>
+                                                                    </dd>
+                                                                </dl>
                                                             </>
                                                         }
                                                     </div>
                                                 </div>
-                                                <div className='col-lg-6 col-md-6 col-sm-12'>
-                                                    <h6 className='bg-light card-header text-dark text-center mb-2' style={{ backgroundColor: '#ffff', fontSize: 12, borderRadius: 0, borderTop: 'none', boxShadow: 'none', borderColor: '#e5e5e5' }}>Update Form </h6>
-                                                    <div className="form-group">
+                                                <div className='col-12 col-lg-6'>
+                                                    <div className='admin-card h-100'>
+                                                    <h3 className='admin-card-title'>Update configuration</h3>
+                                                    <div className="form-group admin-form-grid">
                                                         <label htmlFor="smtpPort"><small style={{ fontSize: 12 }}>SMTP Port </small></label>
                                                         <div className="input-group mt-2">
                                                             <FormControl variant="standard" fullWidth>
@@ -970,6 +887,7 @@ function AdminDashboard() {
                                                             > <span className='mx-2'> {loading ? 'Updating...' : 'Update Settings'}</span> </Button>
                                                         </div>
                                                     </div>
+                                                    </div>
                                                 </div>
 
                                             </div>
@@ -977,15 +895,23 @@ function AdminDashboard() {
                                     </div>
                                 </div>
                             </CustomTabPanel>
+                            {/* --- SMS / OTP Provider Tab --- */}
+                            <CustomTabPanel value={value} index={5} className='admin-tabpanel'>
+                                <PanelHeader title="SMS / OTP provider" subtitle="The SMS provider used to send one-time codes to signers." />
+                                <div className='admin-card'>
+                                    {value === 5 && <SmsProviderSettings onSaved={otpAvailability.refresh} />}
+                                </div>
+                            </CustomTabPanel>
                             {/* --- Organization Workflows Tab --- */}
-                            <CustomTabPanel value={value} index={4} style={{ height: '85vh', backgroundColor: '#fff' }}>
-                                <div className='container row '>
-                                    <div className='col-lg-5 col-md-5 col-sm-12'>
-                                        <div id='Organization Workflows' className='bg-white' style={{ fontFamily: 'Segoe UI, Arial, sans-serif' }}>
+                            <CustomTabPanel value={value} index={4} className='admin-tabpanel'>
+                                <PanelHeader title="Organization workflows" subtitle="Reusable signer lists that anyone in your organisation can send documents to." />
+                                <div className='row g-3'>
+                                    <div className='col-12 col-lg-5'>
+                                        <div id='Organization Workflows' className='admin-card h-100' style={{ fontFamily: 'Segoe UI, Arial, sans-serif' }}>
 
-                                            <Box sx={{ width: '100%', height: '75vh', p: 2 }}>
+                                            <Box sx={{ width: '100%' }}>
                                                 <Box sx={{ borderColor: 'divider', backgroundColor: '#fff' }}>
-                                                    <Tabs value={value2} onChange={handleChange2} aria-label="workflow tabs">
+                                                    <Tabs value={value2} onChange={handleChange2} aria-label="workflow tabs" variant="fullWidth">
                                                         <Tab
                                                             style={{ textTransform: 'none', fontSize: 14, fontFamily: 'inherit' }}
                                                             onClick={() => { setSigners([]); setWorkflow(''); setChecked(false); }}
@@ -1097,6 +1023,9 @@ function AdminDashboard() {
                                                                 emailInputRef={emailInputRef}
                                                                 phoneNumberRef={phoneNumberRef}
                                                                 phoneCodeRef={phoneCodeRef}
+                                                                otpAvailable={otpAvailability.available}
+                                                                otpLoading={otpAvailability.loading}
+                                                                otpMessage={otpAvailability.message}
                                                             />
                                                         </div>
 
@@ -1109,7 +1038,8 @@ function AdminDashboard() {
                                         </div>
 
                                     </div>
-                                    <div className='col-lg-7 col-md-7 col-sm-12 shadow-lg'>
+                                    <div className='col-12 col-lg-7'>
+                                        <div className='admin-card h-100'>
                                         <CustomTabPanel value={value2} index={0}>
                                             {workflow && (
                                                 <>
@@ -1142,14 +1072,7 @@ function AdminDashboard() {
                                                                 type="button"
                                                                 variant="contained"
                                                                 color="success"
-                                                                style={{
-                                                                    textTransform: 'none',
-                                                                    fontWeight: 'lighter',
-                                                                    padding: '4px 16px',
-                                                                    fontSize: 14,
-                                                                    borderRadius: 8,
-                                                                    fontFamily: 'inherit'
-                                                                }}
+                                                                sx={PILL}
                                                                 onClick={() => {
                                                                     if (editingTitleValue.trim() && editingTitleValue !== selectedworkflowtitle) {
                                                                         setSelectedWorkflowTitle(editingTitleValue.trim());
@@ -1165,10 +1088,10 @@ function AdminDashboard() {
                                                             </Button>
                                                         </div>
                                                     ) : (
-                                                        <div className="d-flex justify-content-between align-items-center mb-2" style={{ color: '#2757aa' }}>
+                                                        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2" style={{ color: '#2757aa' }}>
                                                             <h6 style={{ color: '#2757aa', fontSize: 15, fontFamily: 'inherit' }} className="d-flex align-items-center mb-0">
                                                                 <span className="me-2">{selectedworkflowtitle}</span>
-                                                                <FaPencilAlt
+                                                                <FaPen
                                                                     className="mx-1"
                                                                     style={{ cursor: 'pointer', color: '#555', fontSize: 16 }}
                                                                     title="Edit title"
@@ -1191,8 +1114,9 @@ function AdminDashboard() {
                                                                     fontFamily: 'inherit'
                                                                 }}
                                                                 onClick={handleOpenDeleteDialog}
-                                                            >
-                                                                <FaTrashAlt className="me-2" style={{ cursor: 'pointer' }} /> Delete Selected Workflow
+                                                            
+                                                                startIcon={<FaTrashAlt />}>
+                                                                Delete Selected Workflow
                                                             </Button>
                                                         </div>
                                                     )}
@@ -1215,6 +1139,9 @@ function AdminDashboard() {
                                                         emailInputRef={emailInputRef}
                                                         phoneNumberRef={phoneNumberRef}
                                                         phoneCodeRef={phoneCodeRef}
+                                                        otpAvailable={otpAvailability.available}
+                                                        otpLoading={otpAvailability.loading}
+                                                        otpMessage={otpAvailability.message}
                                                     />
                                                 </div>
                                             )}
@@ -1231,8 +1158,7 @@ function AdminDashboard() {
                                                             style={{
                                                                 textTransform: 'none',
                                                                 fontWeight: 'lighter',
-                                                                width: '30%',
-                                                                padding: '10px',
+                                                                padding: '10px 24px',
                                                                 minWidth: '160px',
                                                                 position: 'relative',
                                                                 fontSize: 15,
@@ -1323,14 +1249,13 @@ function AdminDashboard() {
 
 
                                         </CustomTabPanel>
+                                        </div>
                                     </div>
                                 </div>
-
-
                             </CustomTabPanel>
                         </Box>
                     </div>
-                </main>
+                </AppShell>
             </div>
         </>
     )

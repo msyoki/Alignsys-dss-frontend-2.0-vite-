@@ -1,52 +1,46 @@
 import * as React from 'react';
 import { useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
-import Switch from '@mui/material/Switch';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
-import Alerts from '../Alert.jsx';
+import { FaBuilding } from 'react-icons/fa';
+import { Box, Dialog, DialogContent, Switch } from '@mui/material';
 import axios from 'axios';
+import Alerts from '../Alert.jsx';
 import AuthContext from '../../context/Authcontext.jsx';
 import * as constants from '../constants/constants.js';
+import { DialogFooter, DialogHeader, PrimaryButton, PropertyRow, PropertyValue, SecondaryButton, StatusChip } from '../common/dialogKit';
+
+const isTrue = (v) => v === 'True' || v === true || v === 'true';
 
 const CompanyUpdateDialog = (props) => {
-  let { authTokens } = useContext(AuthContext);
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const { authTokens } = useContext(AuthContext);
+  const [isActive, setIsActive] = React.useState(isTrue(props.companyactive));
+  const [busy, setBusy] = React.useState(false);
 
-  let navigate = useNavigate();
-
-  const [isActive, setIsActive] = React.useState(
-    props.companyactive === 'True' || props.companyactive === true
-  );
+  // The dialog stays mounted between uses: show the selected company's status each time it opens.
+  React.useEffect(() => {
+    if (props.opendialogupdatecompany) setIsActive(isTrue(props.companyactive));
+  }, [props.opendialogupdatecompany, props.companyactive]);
 
   const handleToggle = (event) => {
     setIsActive(event.target.checked);
   };
 
-  let updateCompany = (e) => {
+  const updateCompany = (e) => {
     e.preventDefault();
 
-    var FormData = require('form-data');
-    var data = new FormData();
+    // Browser FormData (require('form-data') is not available in the Vite build).
+    const data = new FormData();
     data.append('active', isActive);
 
-    var config = {
+    const config = {
       method: 'patch',
       url: `${constants.devApiBaseUrl}/api/company/${props.companyid}`,
       headers: { Authorization: `Bearer ${authTokens.access}` },
-      data: data,
+      data,
     };
 
+    setBusy(true);
     axios(config)
-      .then(function (response) {
+      .then(function () {
         props.setOpenAlert(true);
         props.setAlertMsg('Updated successfully !!!');
         props.setAlertSeverity('success');
@@ -56,12 +50,12 @@ const CompanyUpdateDialog = (props) => {
           props.getCompanies();
           props.getNewCompanies();
           props.setOpenDialogUpdateCompany(false);
-          document.getElementById('company-update-form').reset();
+          document.getElementById('company-update-form')?.reset();
         }, 2000);
       })
       .catch(function (error) {
         props.setOpenAlert(true);
-        props.setAlertMsg(`${error.response.data['message']}`);
+        props.setAlertMsg(`${error.response?.data?.['message'] || 'Update failed.'}`);
         props.setAlertSeverity('error');
         setTimeout(function () {
           props.setOpenAlert(false);
@@ -69,7 +63,8 @@ const CompanyUpdateDialog = (props) => {
           props.getNewCompanies();
           props.setOpenDialogUpdateCompany(false);
         }, 4000);
-      });
+      })
+      .finally(() => setBusy(false));
   };
 
   const handleClose = () => {
@@ -77,52 +72,31 @@ const CompanyUpdateDialog = (props) => {
   };
 
   return (
-    <Dialog
-      open={props.opendialogupdatecompany}
-      keepMounted
-      onClose={handleClose}
-      aria-labelledby="responsive-dialog-title"
-    >
-      <DialogTitle
-        style={{ backgroundColor: '#1C4690', fontSize: '16px' }}
-        className="shadow-lg text-white text-center"
-      >
-        <i className="fas fa-building m-1"></i> Edit Company :
-        <small> {props.companyname}</small>
-      </DialogTitle>
-      <br />
-      <DialogContent>
-        <DialogContentText id="alert-dialog-slide-description">
+    <Dialog open={props.opendialogupdatecompany} keepMounted onClose={busy ? undefined : handleClose} fullWidth maxWidth="sm" aria-labelledby="company-update-title">
+      <DialogHeader id="company-update-title" icon={<FaBuilding />} title="Edit company" subtitle={props.companyname} onClose={handleClose} />
+      <form onSubmit={updateCompany} id="company-update-form">
+        <DialogContent dividers sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
           <Alerts
             alertseverity={props.alertseverity}
             alertmsg={props.alertmsg}
             openalert={props.openalert}
             setOpenAlert={props.setOpenAlert}
           />
-          <form onSubmit={updateCompany} id="company-update-form">
-            <div className="form-group">
-              <div className="form-group mb-2">
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={isActive}
-                      onChange={handleToggle}
-                      color="primary"
-                      name="is_active"
-                    />
-                  }
-                  label={isActive ? 'Active' : 'Inactive'}
-                />
-              </div>
-
-              <DialogActions>
-                <Button onClick={handleClose}>CANCEL</Button>
-                <Button type="submit">SUBMIT</Button>
-              </DialogActions>
-            </div>
-          </form>
-        </DialogContentText>
-      </DialogContent>
+          <PropertyRow label="Company">
+            <PropertyValue>{props.companyname}</PropertyValue>
+          </PropertyRow>
+          <PropertyRow label="Account status" htmlFor="company-active">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Switch id="company-active" checked={isActive} onChange={handleToggle} color="primary" name="is_active" size="small" />
+              <StatusChip tone={isActive ? 'success' : 'neutral'}>{isActive ? 'Active' : 'Inactive'}</StatusChip>
+            </Box>
+          </PropertyRow>
+        </DialogContent>
+        <DialogFooter>
+          <SecondaryButton onClick={handleClose} disabled={busy}>Cancel</SecondaryButton>
+          <PrimaryButton type="submit" loading={busy}>{busy ? 'Saving…' : 'Save changes'}</PrimaryButton>
+        </DialogFooter>
+      </form>
     </Dialog>
   );
 };

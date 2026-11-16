@@ -14,6 +14,7 @@
 /* Sidebar / Thumbnail Panel */
 .sa-thumbnail-panel {
   position: relative;
+  overflow-x: hidden; /* thumbnails are drawn at the panel width */
   height: 100%;
   width: 20%;
   background-color: #666666;

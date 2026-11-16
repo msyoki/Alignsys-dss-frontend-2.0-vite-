@@ -17,3 +17,15 @@ code {
     monospace;
 }
 
+
+/* Spinning icon for react-icons <FaSpinner className="fa-spin" />.
+   This used to come from the Font Awesome kit script, which the app no
+   longer loads (icons come from react-icons). */
+@keyframes fa-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.fa-spin {
+  animation: fa-spin 2s linear infinite;
+}

@@ -1,0 +1,248 @@
+/* Data tables: the Alignsys EDMS table look applied to MUI X DataGrid.
+   Add className "app-table" to a <DataGrid>. Only the look changes: sorting,
+   column menus, quick search, filters, export and paging keep working as-is.
+   Colors match components/layout/shellTheme.js (NEUTRAL_COLORS).
+   Several grids pass inline font styles (12px / "lighter"); the !important
+   font rules below override those so every table reads the same. */
+
+.app-table.MuiDataGrid-root {
+  --app-table-muted: #6b7280;
+  --app-table-strong: #111827;
+  --app-table-body: #4b5563;
+  --app-table-border: #e5e7eb;
+  --app-table-row-divider: #f3f4f6;
+  --app-table-row-hover: #f9fafb;
+  --app-table-fill: #fafafa;
+  --app-table-primary: #2757aa;
+  --app-table-primary-tint: #ecf4fc;
+
+  background-color: #fff !important;
+  border: 1px solid var(--app-table-border);
+  border-radius: 4px;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: var(--app-table-body);
+}
+
+/* --- Header row: small uppercase muted labels on a subtle fill --- */
+.app-table .MuiDataGrid-columnHeaders {
+  background-color: var(--app-table-fill);
+  border-bottom: 1px solid var(--app-table-border);
+  border-radius: 0;
+}
+
+.app-table .MuiDataGrid-columnHeader {
+  padding: 0 16px;
+}
+
+.app-table .MuiDataGrid-columnHeaderTitle {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--app-table-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.app-table .MuiDataGrid-columnSeparator {
+  color: var(--app-table-border);
+}
+
+.app-table .MuiDataGrid-sortIcon,
+.app-table .MuiDataGrid-menuIconButton,
+.app-table .MuiDataGrid-filterIcon {
+  color: var(--app-table-muted);
+}
+
+.app-table .MuiDataGrid-columnHeader:focus,
+.app-table .MuiDataGrid-columnHeader:focus-within,
+.app-table .MuiDataGrid-cell:focus,
+.app-table .MuiDataGrid-cell:focus-within {
+  outline: none;
+}
+
+.app-table .MuiDataGrid-columnHeader:focus-visible,
+.app-table .MuiDataGrid-cell:focus-visible {
+  outline: 2px solid var(--app-table-primary);
+  outline-offset: -2px;
+}
+
+/* --- Body rows --- */
+.app-table .MuiDataGrid-cell {
+  padding: 0 16px;
+  border-bottom: 1px solid var(--app-table-row-divider);
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: var(--app-table-body);
+}
+
+.app-table .MuiDataGrid-row:hover {
+  background-color: var(--app-table-row-hover);
+}
+
+.app-table .MuiDataGrid-row.Mui-selected,
+.app-table .MuiDataGrid-row.Mui-selected:hover {
+  background-color: var(--app-table-primary-tint);
+}
+
+/* Row action icons (sign, preview, details, trash…) rendered straight in a
+   cell: give them a pointer, a hover state and a bigger hit area. */
+.app-table .MuiDataGrid-cell > svg,
+.app-table .MuiDataGrid-cell > span > svg:only-child {
+  box-sizing: content-box;
+  padding: 6px;
+  margin: -6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.app-table .MuiDataGrid-cell > svg:hover,
+.app-table .MuiDataGrid-cell > span > svg:only-child:hover {
+  background-color: var(--app-table-primary-tint);
+}
+
+.app-table .MuiDataGrid-cell .MuiIconButton-root {
+  border-radius: 6px;
+}
+
+.app-table .MuiDataGrid-cell .MuiIconButton-root:hover {
+  background-color: var(--app-table-primary-tint);
+}
+
+/* --- Toolbar: quick search on the left, filter / export as outlined buttons --- */
+.app-table .MuiDataGrid-toolbarContainer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-table-border);
+}
+
+.app-table .MuiDataGrid-toolbarContainer > .MuiTextField-root {
+  flex: 1 1 220px;
+  max-width: 360px;
+  padding: 0;
+}
+
+.app-table .MuiDataGrid-toolbarContainer > .MuiTextField-root .MuiInputBase-root {
+  font-size: 13px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--app-table-border);
+  border-radius: 4px;
+  background: #fff;
+  transition: border-color 0.15s ease;
+}
+
+.app-table .MuiDataGrid-toolbarContainer > .MuiTextField-root .MuiInputBase-root:hover,
+.app-table .MuiDataGrid-toolbarContainer > .MuiTextField-root .MuiInputBase-root.Mui-focused {
+  border-color: var(--app-table-primary);
+}
+
+/* Drop the underline of the standard variant; the box border replaces it. */
+.app-table .MuiDataGrid-toolbarContainer > .MuiTextField-root .MuiInputBase-root::before,
+.app-table .MuiDataGrid-toolbarContainer > .MuiTextField-root .MuiInputBase-root::after {
+  display: none;
+}
+
+.app-table .MuiDataGrid-toolbarContainer > .MuiTextField-root .MuiSvgIcon-root {
+  font-size: 18px;
+  color: var(--app-table-muted);
+}
+
+.app-table .MuiDataGrid-toolbarContainer > .MuiButton-root {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  color: var(--app-table-body);
+  border: 1px solid var(--app-table-border);
+  border-radius: 4px;
+  background: #fff;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.app-table .MuiDataGrid-toolbarContainer > .MuiButton-root:hover {
+  color: var(--app-table-primary);
+  border-color: var(--app-table-primary);
+  background: #fff;
+}
+
+.app-table .MuiDataGrid-toolbarContainer > .MuiButton-root .MuiButton-startIcon > *:nth-of-type(1) {
+  font-size: 16px;
+}
+
+/* --- Footer / pagination --- */
+.app-table .MuiDataGrid-footerContainer {
+  border-top: 1px solid var(--app-table-border);
+  min-height: 44px;
+}
+
+.app-table .MuiTablePagination-root {
+  color: var(--app-table-muted);
+}
+
+.app-table .MuiTablePagination-toolbar,
+.app-table .MuiTablePagination-toolbar p,
+.app-table .MuiTablePagination-select {
+  font-size: 12px !important;
+}
+
+/* --- Empty state / loading overlay --- */
+.app-table .MuiDataGrid-overlay {
+  font-size: 13px;
+  color: var(--app-table-muted);
+  background: transparent;
+}
+
+/* Phones: let the search take the full row and keep buttons compact. */
+@media (max-width: 575.98px) {
+  .app-table .MuiDataGrid-toolbarContainer {
+    padding: 8px;
+  }
+
+  .app-table .MuiDataGrid-toolbarContainer > .MuiTextField-root {
+    flex-basis: 100%;
+    max-width: none;
+  }
+}
+
+/* --- Dashboard tabs (Inbox, Outbox, Complete, Voided, Saved, Trashed) ---
+   The tab content fills the space under the tab bar: header, date filters and
+   the Alignsys logo keep their natural height and the table takes the rest
+   (scrolling inside itself), so the logo always stays in view under it. */
+.tab-fill {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-table-fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-table-fill > * {
+  flex-shrink: 0;
+}
+
+/* The grid takes the remaining height. Overrides the old .App-header5
+   min-height: 100vh, which pushed the logo below the screen. */
+.tab-table-fill > .MuiDataGrid-root {
+  flex: 1 1 auto;
+  min-height: 220px !important;
+  height: auto !important;
+}
+
+/* Alignsys logo row under the table: breathing room above and below it. */
+.tab-table-fill > .card-footer {
+  padding-top: 10px !important;
+  padding-bottom: 14px !important;
+  margin-bottom: 6px !important;
+  align-items: center;
+}

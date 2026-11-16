@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { FaHome, FaUserShield, FaSignOutAlt, FaCaretLeft, FaCaretRight, FaBuilding, FaUsers, FaInbox } from 'react-icons/fa';
+import { FaHome, FaUserShield, FaBuilding, FaUsers, FaInbox } from 'react-icons/fa';
 import { FaCircleUser, FaChartSimple } from 'react-icons/fa6';
 import AuthContext from '../../context/Authcontext';
 import axios from 'axios';
@@ -9,7 +9,10 @@ import NewUserDialog from '../../components/NewUserDialog';
 import UserUpdateDialog from '../../components/dialogs/UserUpdateDialog';
 import CompanyUpdateDialog from '../../components/dialogs/CompanyUpdateDialog';
 import ApproveCompanyDialog from '../../components/dialogs/ApproveCompanyDialog';
-import logo from '../../images/ZFWHITE.webp';
+import { companyLogoUrl } from '../../utils/companyLogo'
+import AppShell from '../../components/layout/AppShell'
+import BrandLogo from '../../components/common/BrandLogo';
+import '../../styles/AdminDashboard.css';
 import * as constants from '../../components/constants/constants';
 import IndividualAccounts from '../../components/IndividualAccounts';
 import Users2 from '../../components/Users';
@@ -19,28 +22,36 @@ import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import { Tooltip } from '@mui/material';
 import TimedAlert from '../../components/TimedAlert';
 import OrganizationDocChart from '../../components/DocumentStats';
 
-function CustomTabPanel(props) {
-  const { children, value, index, ...other } = props;
+function CustomTabPanel({ children, value, index, fill = false, className = '', ...other }) {
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
+      className={`${className}${fill ? ' tabpanel-fill' : ''}`.trim() || undefined}
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
-          <Typography>{children}</Typography>
+        <Box className="tabpanel-body" sx={{ p: { xs: 1, sm: 1.5 } }}>
+          <Typography component="div" className="tabpanel-content">{children}</Typography>
         </Box>
       )}
     </div>
   );
 }
+
+const PanelHeader = ({ title, subtitle }) => (
+  <div className="admin-panel-header">
+    <h2 className="admin-panel-title">{title}</h2>
+    {subtitle && <p className="admin-panel-subtitle">{subtitle}</p>}
+  </div>
+);
+
+const isSmallScreen = () => typeof window !== 'undefined' && window.innerWidth < 992;
 
 function a11yProps(index) {
   return {
@@ -60,7 +71,7 @@ function SuperAdminDashboard() {
   const [openalert, setOpenAlert] = useState(false);
   const [alertseverity, setAlertSeverity] = useState('');
   const [alertmsg, setAlertMsg] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => !isSmallScreen());
 
   // Dialog states
   const [opendialognewuser, setOpenDialogNewUser] = useState(false);
@@ -89,8 +100,6 @@ function SuperAdminDashboard() {
   const { authTokens, logoutUser, user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Sidebar toggle
-  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
   // API Calls
   const getUser = () => {
@@ -166,8 +175,7 @@ function SuperAdminDashboard() {
       headers: { 'Authorization': `Bearer ${authTokens.access}` }
     })
       .then((response) => {
-        let url = `${constants.devApiBaseUrl}${response.data['logo_url']}`;
-        setCompanyLogo(url);
+        setCompanyLogo(companyLogoUrl(response.data));
       })
       .catch(() => { });
   };
@@ -259,55 +267,30 @@ function SuperAdminDashboard() {
         setAlertSeverity={setAlertSeverity}
       />
 
-      <div className="dashboard">
-        <nav className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-          {sidebarOpen && (
-            <div className="sidebar-content" style={{ marginTop: '0%' }}>
-              {/* Logo Section */}
-              <div className="d-flex flex-column justify-content-center align-items-center bg-white shadow-lg"
-                style={{ height: "60px", minHeight: "61px", maxHeight: "61px", overflow: "hidden" }}>
-                <img
-                  src={companylogo || logo}
-                  alt="Organization logo"
-                  className="logo"
-                  style={{ width: "auto", maxWidth: "80%", maxHeight: "48px", objectFit: "contain" }}
-                />
-              </div>
-              <div className='text-center mt-0 mb-0 p-1 shadow-lg'>
-                <span className='mr-2' style={{ fontSize: '12px' }}>{user.first_name} {user.last_name}</span>
-              </div>
-              <div className='text-center mt-0 mb-0 p-1 shadow-lg' style={{ textTransform: 'uppercase' }}>
-                <span className='mr-2' style={{ fontSize: '12px' }}>{user.company}</span>
-              </div>
-              <ul className="menu-items"></ul>
-              {/* Bottom Buttons */}
-              <div>
-                <ul className="bottom-buttons">
-                  <li onClick={homePage} className="menu-item main-li shadow-lg">
-                    <FaHome style={{ fontSize: "18px" }} />
-                    <span style={{ fontSize: "12px" }}>Home</span>
-                  </li>
-                  <li onClick={adminPage} className="menu-item main-li shadow-lg">
-                    <FaUserShield style={{ fontSize: "18px" }} />
-                    <span style={{ fontSize: "12px" }}>Admin Dashboard</span>
-                  </li>
-                  <li onClick={logoutUser} className="menu-item main-li shadow-lg">
-                    <FaSignOutAlt style={{ fontSize: "18px" }} />
-                    <span style={{ fontSize: "12px" }}>Logout</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          )}
-        </nav>
-
-        <main className={`content ${sidebarOpen ? 'shifted' : 'full-width'}`}>
-          <Tooltip title={sidebarOpen ? 'Minimize sidebar' : 'Expand sidebar'}>
-            <div className={`bump-toggle ${sidebarOpen ? 'attached' : 'moved'}`} onClick={toggleSidebar}>
-              {sidebarOpen ? <FaCaretLeft style={{ fontSize: '18px' }} /> : <FaCaretRight style={{ fontSize: '18px' }} />}
-            </div>
-          </Tooltip>
-          <div className='container-fluid' style={{ backgroundColor: '#e5e5e5', height: '100vh' }}>
+      <div className="admin-dashboard">
+          <AppShell
+              caption="Super Admin Dashboard"
+              orgName={user.company}
+              // Top: Home. Bottom (just above "Signed in as"): the other dashboard (same as the Admin page).
+              sections={[
+                  { key: 'home', label: 'Home', icon: <FaHome /> },
+              ]}
+              footerSections={[
+                  { key: 'admin', label: 'Admin Dashboard', icon: <FaUserShield /> },
+              ]}
+              onSelect={(key) => {
+                  if (key === 'home') homePage()
+                  else if (key === 'admin') adminPage()
+              }}
+              open={sidebarOpen}
+              onOpenChange={setSidebarOpen}
+              userName={[user.first_name, user.last_name].filter(Boolean).join(' ') || user.username}
+              avatarSrc={avatar}
+              onLogout={logoutUser}
+              headerExtra={<BrandLogo src={companylogo} alt="Organization logo" className="admin-topbar-logo" />}
+              mainSx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          >
+          <div className='admin-main'>
             <TimedAlert
               open={openalert}
               onClose={() => setOpenAlert(false)}
@@ -316,37 +299,31 @@ function SuperAdminDashboard() {
               setSeverity={setAlertSeverity}
               setMessage={setAlertMsg}
             />
-            <Box sx={{ width: '100%' }}>
-              <Box sx={{ borderColor: 'divider' }} className='bg-white'>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)} aria-label="basic tabs example">
-                  <Tab style={{ textTransform: 'none', fontSize: '13px' }} className='shadow-lg'
-                    icon={<FaBuilding style={{ fontSize: '15px' }} />}
-                    onClick={getCompanies}
-                    label=" Company Accounts " {...a11yProps(0)} />
-                  <Tab style={{ textTransform: 'none', fontSize: '13px' }}
-                    icon={<FaUsers style={{ fontSize: '15px' }} />}
-                    onClick={getUsers}
-                    label=" Admin Accounts" {...a11yProps(1)} />
-                  <Tab style={{ textTransform: 'none', fontSize: '13px' }}
-                    icon={<FaCircleUser style={{ fontSize: '15px' }} />}
-                    onClick={getIndividualUsers}
-                    label=" Individual Accounts" {...a11yProps(2)} />
-                  <Tab style={{ textTransform: 'none', fontSize: '13px' }}
-                    icon={<FaInbox style={{ fontSize: '15px' }} />}
-                    onClick={getNewCompanies}
-                    label=" Pending Approval" {...a11yProps(3)} />
-                    <Tab style={{ textTransform: 'none', fontSize: '13px' }}
-                    icon={<FaChartSimple style={{ fontSize: '15px' }} />}
-             
-                    label="  Document Stats" {...a11yProps(4)} />
+            <Box className='admin-tabs-shell'>
+              <Box className='admin-tabs-bar'>
+                <Tabs value={tab} onChange={(_, v) => setTab(v)} aria-label="super admin tabs"
+                  variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
+                  <Tab iconPosition='start' icon={<FaBuilding style={{ fontSize: 15 }} />}
+                    onClick={getCompanies} label="Company Accounts" {...a11yProps(0)} />
+                  <Tab iconPosition='start' icon={<FaUsers style={{ fontSize: 15 }} />}
+                    onClick={getUsers} label="Admin Accounts" {...a11yProps(1)} />
+                  <Tab iconPosition='start' icon={<FaCircleUser style={{ fontSize: 15 }} />}
+                    onClick={getIndividualUsers} label="Individual Accounts" {...a11yProps(2)} />
+                  <Tab iconPosition='start' icon={<FaInbox style={{ fontSize: 15 }} />}
+                    onClick={getNewCompanies} label="Pending Approval" {...a11yProps(3)} />
+                  <Tab iconPosition='start' icon={<FaChartSimple style={{ fontSize: 15 }} />}
+                    label="Document Stats" {...a11yProps(4)} />
                 </Tabs>
               </Box>
-              <CustomTabPanel value={tab} index={0}>
-                <div id='Company Accounts'className='bg-white'>
-
-                  <h6 className='text-center p-3 card-header text-muted' style={{ fontSize: 15, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}> Company Accounts</h6>
+              <CustomTabPanel value={tab} index={0} className='admin-tabpanel'>
+                <PanelHeader title="Company accounts" subtitle="Approved organisations using Alignsys DSS." />
+                <div id='Company Accounts'>
                   <Companies2
                     getCompanies={getCompanies}
+                    getNewCompanies={getNewCompanies}
+                    setOpenAlert={setOpenAlert}
+                    setAlertMsg={setAlertMsg}
+                    setAlertSeverity={setAlertSeverity}
                     setCurrentEditCompany={setCurrentEditCompany}
                     setCompanies={setCompanies}
                     setOpenDialogUpdateCompany={setOpenDialogUpdateCompany}
@@ -359,10 +336,9 @@ function SuperAdminDashboard() {
                   />
                 </div>
               </CustomTabPanel>
-              <CustomTabPanel value={tab} index={1}>
-                <div id='Admin Users' className='bg-white'>
-
-                   <h6 className='text-center p-3 card-header text-muted' style={{ fontSize: 15, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}> Admin Accounts</h6>
+              <CustomTabPanel value={tab} index={1} className='admin-tabpanel' fill>
+                <PanelHeader title="Admin accounts" subtitle="Organisation administrators across all companies." />
+                <div id='Admin Users' className='admin-grid'>
                   <Users2
                     getUser={getUser}
                     setCurrentEditUserAdmin={setCurrentEditUserAdmin}
@@ -380,20 +356,18 @@ function SuperAdminDashboard() {
                   />
                 </div>
               </CustomTabPanel>
-              <CustomTabPanel value={tab} index={2}>
-                <div id='Individual Accounts' className='bg-white'>
- 
-                    <h6 className='text-center p-3 card-header text-muted' style={{ fontSize: 15, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}> Individual Accounts</h6>
+              <CustomTabPanel value={tab} index={2} className='admin-tabpanel'>
+                <PanelHeader title="Individual accounts" subtitle="People using Alignsys DSS without an organisation." />
+                <div id='Individual Accounts'>
                   <IndividualAccounts
                     getIndividualUsers={getIndividualUsers}
                     individualusers={individualusers}
                   />
                 </div>
               </CustomTabPanel>
-              <CustomTabPanel value={tab} index={3}>
-                <div id='Accounts Pending Approval' className='bg-white'>
-
-                   <h6 className='text-center p-3 card-header text-muted' style={{ fontSize: 15, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}> Accounts Pending Approval </h6>
+              <CustomTabPanel value={tab} index={3} className='admin-tabpanel'>
+                <PanelHeader title="Pending approval" subtitle="Organisations that registered and are waiting to be approved." />
+                <div id='Accounts Pending Approval'>
                   <NewCompanies2
                     newcompanies={newcompanies}
                     company4approval={company4approval}
@@ -404,16 +378,15 @@ function SuperAdminDashboard() {
                   />
                 </div>
               </CustomTabPanel>
-
-              <CustomTabPanel value={tab} index={4}>
-                <div id='Chart' className='bg-white container-fluid' style={{height: '450px'}}>
-                  <h6 className='text-center  p-3  card-header text-muted' style={{ fontSize: 14, borderRadius: 0, borderTop: 'none', boxShadow: 'none' }}> Document Distribution Across Organizations</h6>
-                  <OrganizationDocChart/>
+              <CustomTabPanel value={tab} index={4} className='admin-tabpanel'>
+                <PanelHeader title="Document stats" subtitle="Document distribution across organisations." />
+                <div id='Chart' className='admin-card' style={{ minHeight: 450 }}>
+                  <OrganizationDocChart />
                 </div>
               </CustomTabPanel>
             </Box>
           </div>
-        </main>
+          </AppShell>
       </div>
     </>
   );

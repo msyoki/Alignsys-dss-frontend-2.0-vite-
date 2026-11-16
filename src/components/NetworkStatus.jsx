@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import SignalWifi1BarIcon from '@mui/icons-material/SignalWifi1Bar';
-import SignalWifi2BarIcon from '@mui/icons-material/SignalWifi2Bar';
-import SignalWifi3BarIcon from '@mui/icons-material/SignalWifi3Bar';
-import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
-import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
+import { SignalWifi1Bar as SignalWifi1BarIcon } from '@mui/icons-material';
+import { SignalWifi2Bar as SignalWifi2BarIcon } from '@mui/icons-material';
+import { SignalWifi3Bar as SignalWifi3BarIcon } from '@mui/icons-material';
+import { SignalWifi4Bar as SignalWifi4BarIcon } from '@mui/icons-material';
+import { SignalWifiOff as SignalWifiOffIcon } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 
 function getNetworkStatus() {

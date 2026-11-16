@@ -1,6 +1,6 @@
 import React , {useState} from 'react';
+import autoSizeColumns from './common/autoSizeColumns';
 import Box from '@mui/material/Box';
-import { ButtonComponent  } from '@syncfusion/ej2-react-buttons';
 
 import { 
   DataGrid, 
@@ -51,10 +51,10 @@ const getRowId = (row) => row.id;
   return (
   <>
 
-        <Box sx={{height:400, width: '100%' ,fontSize:'12px'}}>
+        <Box sx={{ height: 'max(400px, calc(100dvh - 230px))', width: '100%' ,fontSize:'12px'}}>
             <DataGrid
                 rows={props.individualusers}
-                columns={columns}
+                columns={autoSizeColumns(columns, props.individualusers)}
                 density='compact'
                 components={{
                     Toolbar: CustomToolbar,
@@ -71,7 +71,7 @@ const getRowId = (row) => row.id;
                 disableRowSelectionOnClick
                 style={{ fontSize: '12px',fontWeight:"lighter"}}
                 getRowId={getRowId} 
-                className='bg-light '
+                className='app-table'
        
             />
         </Box>

@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import SmoothPage from './SmoothPage';
+import useFitWidthZoom from './useFitWidthZoom';
+import usePanelWidth from './usePanelWidth';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Draggable from 'react-draggable';
 import '../../styles/Pdfviewersigningareas.css'
@@ -17,6 +20,7 @@ import {
 
 import { TfiLayoutSidebarLeft } from "react-icons/tfi";
 import { TfiLayoutSidebarNone } from "react-icons/tfi";
+import { PILL } from '../common/pillButton';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
@@ -46,6 +50,10 @@ const PDFViewerSetSIgningAreas = ({
     const zoomIn = () => setZoom(prev => Math.min(prev + 0.01, 2));
     const zoomOut = () => setZoom(prev => Math.max(prev - 0.01, 0.25));
     const resetZoom = () => setZoom(1);
+    // Start every page fitted to the viewer's width (phones, tablets, desktop).
+    useFitWidthZoom(mainContainerRef, setZoom);
+    // Thumbnails are drawn at the side panel's width, so the panel never scrolls sideways.
+    const thumbWidth = usePanelWidth(containerRef, isAsideOpen);
 
     useEffect(() => {
         const handleWheel = (e) => {
@@ -290,7 +298,10 @@ const PDFViewerSetSIgningAreas = ({
 
                     return (
                         <Draggable
-                            key={`${annotation.id}_${pageScale.toFixed(3)}`}
+                            // Keyed by id only: `position` is controlled, so the box just moves
+                            // when zoom changes instead of being torn down and re-created (which
+                            // made every box blink on each zoom step).
+                            key={annotation.id}
                             position={{ x: renderX, y: renderY }}
                             onStop={(e, data) => handleDragStop(annotation, data)}
                             bounds={{
@@ -518,20 +529,12 @@ const PDFViewerSetSIgningAreas = ({
                                 size="small"
                                 onClick={() => setSignatureBoxes([])}
                                 sx={{
-                                    textTransform: 'none',
-                                    fontSize: '12px',
-                                    fontWeight: 500,
-                                    borderRadius: '999px',
-                                    px: 1.8,
-                                    py: 0.8,
-                                    minHeight: 34,
-                                    boxShadow: 'none',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
+                                  ...PILL,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
                                 }}
-                            >
-                                <FaEraser style={{ fontSize: '13px', flexShrink: 0 }} />
+                            
+                                startIcon={<FaEraser />}>
                                 Erase All Signature Boxes
                             </Button>
                         </Tooltip>
@@ -587,7 +590,7 @@ const PDFViewerSetSIgningAreas = ({
                                     >
                                         <Page
                                             pageNumber={pageIndex + 1}
-                                            scale={getScaleForPageThumbnail(pageIndex + 1)}
+                                            {...(thumbWidth ? { width: thumbWidth } : { scale: getScaleForPageThumbnail(pageIndex + 1) })}
                                             renderTextLayer={false}
                                             renderAnnotationLayer={false}
                                             className="page-container"
@@ -643,7 +646,7 @@ const PDFViewerSetSIgningAreas = ({
                                                 : undefined
                                         }
                                     >
-                                        <Page
+                                        <SmoothPage
                                             pageNumber={pageIndex + 1}
                                             scale={pageScale}
                                             renderTextLayer={false}

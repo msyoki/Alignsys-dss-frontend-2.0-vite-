@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FaTimesCircle } from 'react-icons/fa';
 import { Tooltip } from '@mui/material';
 import helplogo from '../images/help2.png';
 import '../styles/HelpBubble.css'; // Import the CSS file for styling
@@ -23,7 +24,7 @@ const HelpBubble = ({ content }) => {
         <div>
           <div className="help-bubble-modal" onClick={handleCloseModal}></div>
           <div className="help-bubble-tooltip bg-white p-3">
-            <i className="fas fa-times-circle close-button p-2" style={{ color: "#e76f51", fontSize: '25px' }} onClick={handleCloseModal}></i>
+            <FaTimesCircle className="close-button p-2" style={{ color: "#e76f51", fontSize: '25px', verticalAlign: '-0.125em' }} onClick={handleCloseModal} />
             <p className="help-bubble-text" style={{ fontSize: '16px', color: '#1C4690' }}>To sign the document</p>
             <div style={{ fontSize: '12px' }}>
               <ol>

@@ -9,21 +9,16 @@ import Slide from '@mui/material/Slide';
 
 import { FaStamp, FaSignature, FaCopy } from 'react-icons/fa';
 import { IoClose } from 'react-icons/io5';
+import { PILL } from '../common/pillButton';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
 const pillBtn = {
-  textTransform: 'none',
-  borderRadius: '999px',
-  px: 2,
-  py: 1,
-  fontSize: { xs: '12px', sm: '13px' },
-  minHeight: 'auto',
+  ...PILL,
   display: 'flex',
   alignItems: 'center',
-  gap: 1.5,
 };
 
 function SigningOptionDialog(props) {
@@ -114,13 +109,10 @@ function SigningOptionDialog(props) {
               }
               sx={{
                 ...pillBtn,
-                px: { xs: 1.5, sm: 2 },
-                py: 0.8,
                 display: 'inline-flex',
                 alignItems: 'center',
                 width: 'auto',
                 minWidth: 'unset',
-                fontWeight: 500,
               }}
             >
               {props.isStamp ? 'Stamp' : 'Sign'} current page
@@ -132,13 +124,10 @@ function SigningOptionDialog(props) {
               startIcon={<FaCopy size={13}  />}
               sx={{
                 ...pillBtn,
-                px: { xs: 1.5, sm: 2 },
-                py: 0.8,
                 display: 'inline-flex',
                 alignItems: 'center',
                 width: 'auto',
                 minWidth: 'unset',
-                fontWeight: 500,
               }}
             >
               {props.isStamp ? 'Stamp' : 'Sign'} all pages

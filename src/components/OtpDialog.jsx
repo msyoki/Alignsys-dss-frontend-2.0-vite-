@@ -75,6 +75,18 @@ const formatTime = (secs) => {
   return `${m}:${s < 10 ? `0${s}` : s}`;
 };
 
+const CODE_LENGTH = 6;
+const EMPTY_CODE = Array(CODE_LENGTH).fill('');
+
+// Long waits (send limit reached) read better as "22 h 31 min" than a clock.
+const formatWait = (secs) => {
+  if (secs < 60) return `${secs} s`;
+  const h = Math.floor(secs / 3600);
+  const m = Math.ceil((secs % 3600) / 60);
+  if (h === 0) return `${m} min`;
+  return m === 60 ? `${h + 1} h` : `${h} h${m ? ` ${m} min` : ''}`;
+};
+
 // The server decides everything (expiry, cooldowns, limits); this dialog only
 // displays its answers, so refreshing the page never sends another SMS.
 //
@@ -83,18 +95,27 @@ const formatTime = (secs) => {
 const OtpDialog = (props) => {
   const { opendialogotp, setOpenDialogOtp, signerguid } = props;
 
-  const [otp, setOtp] = useState('');
+  // One entry per box, so a digit always stays in the box it was typed into.
+  const [digits, setDigits] = useState(EMPTY_CODE);
+  const otp = digits.join('');
+  const codeComplete = digits.every((d) => d !== '');
+  const resetCode = () => setDigits(EMPTY_CODE);
   const [phase, setPhase] = useState('loading'); // loading | ready | verifying | verified | unavailable | error
   const [codeSent, setCodeSent] = useState(false);
   const [expiresIn, setExpiresIn] = useState(0);
   const [resendIn, setResendIn] = useState(0);
   const [sendsRemaining, setSendsRemaining] = useState(null);
+  const [limitRetryIn, setLimitRetryIn] = useState(0); // seconds until the send limit allows another code
   const [attemptsRemaining, setAttemptsRemaining] = useState(null);
   const [maskedPhone, setMaskedPhone] = useState('');
   const [notice, setNotice] = useState('');
   const [sending, setSending] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
   const inputsRef = useRef([]);
+  // Guards against a second verify request (Enter + click, double click). The
+  // first one consumes the code, so a second would fail with "no active code"
+  // and show an error even though verification succeeded.
+  const verifyInFlight = useRef(false);
+  const verifiedRef = useRef(false);
 
   const showAlert = useCallback((msg, severity) => {
     if (!props.setAlertMsg) return;
@@ -108,26 +129,41 @@ const OtpDialog = (props) => {
     if (typeof data.code_active === 'boolean') setCodeSent(data.code_active);
     if (typeof data.expires_in === 'number') setExpiresIn(data.expires_in);
     if (typeof data.resend_in === 'number') setResendIn(data.resend_in);
-    if (typeof data.retry_in === 'number') setResendIn(data.retry_in);
     if (typeof data.sends_remaining === 'number') setSendsRemaining(data.sends_remaining);
+    if (typeof data.limit_retry_in === 'number') setLimitRetryIn(data.limit_retry_in);
+    // retry_in comes with 429 errors: a long wait for the send limit, a short one for the cooldown.
+    if (typeof data.retry_in === 'number') {
+      if (data.code === 'send_limit_reached') {
+        setSendsRemaining(0);
+        setLimitRetryIn(data.retry_in);
+      } else {
+        setResendIn(data.retry_in);
+      }
+    }
     if (typeof data.attempts_remaining === 'number') setAttemptsRemaining(data.attempts_remaining);
     if (data.phone_masked || data.recepient) setMaskedPhone(data.phone_masked || data.recepient);
   };
 
+  const { onVerified } = props;
   const unlock = useCallback(() => {
     setPhase('verified');
+    if (onVerified) onVerified(new Date().toISOString());
     setTimeout(() => setOpenDialogOtp(false), 1500);
-  }, [setOpenDialogOtp]);
+  }, [setOpenDialogOtp, onVerified]);
 
   // Ask the server what to show whenever the dialog opens. Sends nothing.
   useEffect(() => {
     if (!opendialogotp || !signerguid) return;
     let cancelled = false;
+    verifiedRef.current = false;
+    verifyInFlight.current = false;
     setPhase('loading');
     getOtpStatus(signerguid, getVerifiedToken(signerguid))
       .then((data) => {
         if (cancelled) return;
         if (!data.otp_required || data.verified) {
+          // Already verified earlier in this tab: tell the page so Document Details shows it.
+          if (data.verified && onVerified) onVerified(data.verified_at || new Date().toISOString());
           setOpenDialogOtp(false);
           return;
         }
@@ -149,18 +185,31 @@ const OtpDialog = (props) => {
 
   // One ticking clock for the expiry and resend countdowns.
   useEffect(() => {
-    if (!opendialogotp || (expiresIn <= 0 && resendIn <= 0)) return undefined;
+    if (!opendialogotp || (expiresIn <= 0 && resendIn <= 0 && limitRetryIn <= 0)) return undefined;
     const timer = setInterval(() => {
       setExpiresIn((v) => Math.max(0, v - 1));
       setResendIn((v) => Math.max(0, v - 1));
+      setLimitRetryIn((v) => Math.max(0, v - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [opendialogotp, expiresIn > 0, resendIn > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [opendialogotp, expiresIn > 0, resendIn > 0, limitRetryIn > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When the send-limit wait runs out, let the signer request a code again
+  // (the server still enforces the limit, so this can't be abused).
+  const limitWasActive = useRef(false);
+  useEffect(() => {
+    if (limitRetryIn > 0) limitWasActive.current = true;
+    else if (limitWasActive.current) {
+      limitWasActive.current = false;
+      setSendsRemaining(null);
+      setNotice('');
+    }
+  }, [limitRetryIn]);
 
   useEffect(() => {
     if (codeSent && expiresIn === 0 && phase === 'ready') {
       setCodeSent(false);
-      setOtp('');
+      resetCode();
       setNotice('Your code has expired. Request a new one.');
     }
   }, [codeSent, expiresIn, phase]);
@@ -173,13 +222,13 @@ const OtpDialog = (props) => {
       const data = await sendOtp(signerguid, { resend });
       applyState(data);
       setCodeSent(true);
-      setOtp('');
-      setActiveIndex(0);
+      resetCode();
       showAlert(data.already_sent ? 'A code was already sent. Enter it below.' : 'OTP sent successfully!', 'success');
     } catch (err) {
       const e = otpError(err, 'Failed to send OTP. Please try again.');
       applyState(e.data);
-      setNotice(e.message);
+      // The limit message is shown with a live countdown below instead.
+      setNotice(e.code === 'send_limit_reached' ? '' : e.message);
       showAlert(e.message, 'error');
     } finally {
       setSending(false);
@@ -187,20 +236,23 @@ const OtpDialog = (props) => {
   };
 
   const validateOTP = async () => {
-    if (otp.length !== 6) {
+    if (verifyInFlight.current || verifiedRef.current) return;
+    if (!codeComplete) {
       showAlert('Please enter the complete 6-digit OTP', 'error');
       return;
     }
+    verifyInFlight.current = true;
     setPhase('verifying');
     try {
       const data = await verifyOtp(signerguid, otp);
+      verifiedRef.current = true;
       saveVerifiedToken(signerguid, data.token);
       unlock();
     } catch (err) {
-      const e = otpError(err, 'Invalid OTP code!');
+      if (verifiedRef.current) return; // a late duplicate response; already unlocked
+      const e = otpError(err, 'Could not verify the code. Please try again.');
       applyState(e.data);
-      setOtp('');
-      setActiveIndex(0);
+      resetCode();
       if (['code_expired', 'too_many_attempts', 'no_active_code'].includes(e.code)) {
         setCodeSent(false);
         setExpiresIn(0);
@@ -208,56 +260,102 @@ const OtpDialog = (props) => {
       setNotice(e.message);
       showAlert(e.message, 'error');
       setPhase('ready');
+    } finally {
+      verifyInFlight.current = false;
     }
   };
 
   // --- Code input -----------------------------------------------------------
+  const focusBox = (i) => {
+    const el = inputsRef.current[Math.max(0, Math.min(CODE_LENGTH - 1, i))];
+    if (el) { el.focus(); el.select(); }
+  };
+  const firstEmpty = (arr) => {
+    const i = arr.findIndex((d) => d === '');
+    return i === -1 ? CODE_LENGTH - 1 : i;
+  };
+
+  // Put a run of digits into the boxes starting at `start` (typing, paste, SMS autofill).
+  const fillFrom = (start, text) => {
+    const incoming = text.replace(/\D/g, '').split('');
+    if (!incoming.length) return;
+    // A full code arriving anywhere (autofill / paste) always fills from the first box.
+    const from = incoming.length >= CODE_LENGTH ? 0 : start;
+    setDigits((prev) => {
+      const next = [...prev];
+      incoming.slice(0, CODE_LENGTH - from).forEach((d, k) => { next[from + k] = d; });
+      // Move to the box after the last one filled.
+      setTimeout(() => focusBox(Math.min(from + incoming.length, CODE_LENGTH - 1)), 0);
+      return next;
+    });
+  };
+
   const handleChange = (e, i) => {
-    const digits = otp.split('');
-    const val = e.target.value.replace(/\D/g, '').slice(-1);
-    digits[i] = val;
-    setOtp(digits.join('').slice(0, 6));
-    if (val && i < 5) inputsRef.current[i + 1]?.focus();
+    const raw = e.target.value;
+    // With the box's content selected on focus, typing replaces it; if not, the
+    // new character is the last one. Multi-digit values come from autofill.
+    const typed = raw.replace(/\D/g, '');
+    if (typed.length > 1) fillFrom(i, typed.length > 2 ? typed : typed.slice(-1));
+    else if (typed.length === 1) fillFrom(i, typed);
+    else setDigits((prev) => { const next = [...prev]; next[i] = ''; return next; });
   };
 
   const handleKeyDown = (e, i) => {
-    if (e.key === 'Backspace' && !otp[i] && i > 0) inputsRef.current[i - 1]?.focus();
-    else if (e.key === 'ArrowLeft' && i > 0) inputsRef.current[i - 1]?.focus();
-    else if (e.key === 'ArrowRight' && i < 5) inputsRef.current[i + 1]?.focus();
-    else if (e.key === 'Enter' && otp.length === 6) validateOTP();
-  };
-
-  const handlePaste = (e) => {
-    const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
-    if (pasted) {
+    if (e.key === 'Backspace') {
       e.preventDefault();
-      setOtp(pasted);
-      inputsRef.current[Math.min(pasted.length, 5)]?.focus();
+      setDigits((prev) => {
+        const next = [...prev];
+        if (next[i]) next[i] = '';
+        else if (i > 0) { next[i - 1] = ''; setTimeout(() => focusBox(i - 1), 0); }
+        return next;
+      });
+    } else if (e.key === 'Delete') {
+      e.preventDefault();
+      setDigits((prev) => { const next = [...prev]; next[i] = ''; return next; });
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault(); focusBox(i - 1);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault(); focusBox(i + 1);
+    } else if (e.key === 'Enter' && codeComplete) {
+      e.preventDefault(); validateOTP();
+    } else if (/^\d$/.test(e.key) && digits[i]) {
+      // Box already filled: replace its digit and move on (no need to clear it first).
+      e.preventDefault();
+      fillFrom(i, e.key);
     }
   };
 
-  // Typing anywhere while the dialog is open fills the boxes (kept from the previous version).
+  const handlePaste = (e, i) => {
+    const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '');
+    if (pasted) {
+      e.preventDefault();
+      fillFrom(i, pasted);
+    }
+  };
+
+  // Focus the first empty box as soon as the code boxes appear (after sending,
+  // after a wrong code), so the signer can just start typing.
+  useEffect(() => {
+    if (opendialogotp && codeSent && phase === 'ready') {
+      const t = setTimeout(() => focusBox(firstEmpty(digits)), 50);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [opendialogotp, codeSent, phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Typing while focus is elsewhere in the dialog goes to the first empty box.
   useEffect(() => {
     if (!opendialogotp || !codeSent || phase !== 'ready') return undefined;
     const handleGlobalKeyDown = (e) => {
-      if (document.activeElement && inputsRef.current.includes(document.activeElement)) return;
-      if (/^\d$/.test(e.key) && activeIndex < 6) {
-        const digits = otp.split('');
-        digits[activeIndex] = e.key;
-        setOtp(digits.join(''));
-        inputsRef.current[activeIndex]?.focus();
-        setActiveIndex((prev) => Math.min(prev + 1, 5));
-      } else if (e.key === 'Backspace' && activeIndex > 0) {
-        const digits = otp.split('');
-        digits[activeIndex - 1] = '';
-        setOtp(digits.join(''));
-        setActiveIndex((prev) => Math.max(prev - 1, 0));
-        inputsRef.current[activeIndex - 1]?.focus();
+      if (inputsRef.current.includes(document.activeElement)) return;
+      if (/^\d$/.test(e.key)) {
+        e.preventDefault();
+        fillFrom(firstEmpty(digits), e.key);
       }
     };
     document.addEventListener('keydown', handleGlobalKeyDown);
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [otp, activeIndex, opendialogotp, codeSent, phase]);
+  }, [digits, opendialogotp, codeSent, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fallbackMask = props.otpphone ? `***** *** ${props.otpphone.slice(-3)}` : '*** *** ***';
   const phoneLabel = maskedPhone || fallbackMask;
@@ -265,8 +363,12 @@ const OtpDialog = (props) => {
   const canResend = !sending && resendIn === 0 && !noSendsLeft;
   const verifying = phase === 'verifying';
 
+  const limitMessage = limitRetryIn > 0
+    ? `You've requested the maximum number of codes. You can request a new one in ${formatWait(limitRetryIn)}.`
+    : 'You\'ve requested the maximum number of codes. Please try again later.';
+
   const resendLabel = noSendsLeft
-    ? 'No more codes available, try later'
+    ? (limitRetryIn > 0 ? `New code available in ${formatWait(limitRetryIn)}` : 'No more codes available, try later')
     : resendIn > 0
       ? `Resend code in ${formatTime(resendIn)}`
       : `Resend code${sendsRemaining !== null ? ` · ${sendsRemaining} left` : ''}`;
@@ -320,23 +422,28 @@ const OtpDialog = (props) => {
 
         {codeSent && (
           <Box
-            onPaste={handlePaste}
             role="group"
             aria-label="6-digit code"
             sx={{ display: 'flex', justifyContent: 'center', gap: { xs: '6px', sm: '8px' }, mt: 2.5, mb: 1.5 }}
           >
-            {[...Array(6)].map((_, i) => (
+            {digits.map((digit, i) => (
               <InputField
                 key={i}
-                maxLength={1}
+                // Room for a whole code so SMS autofill / paste into one box works.
+                maxLength={CODE_LENGTH}
+                type="text"
                 inputMode="numeric"
+                pattern="[0-9]*"
                 autoComplete={i === 0 ? 'one-time-code' : 'off'}
                 aria-label={`Digit ${i + 1}`}
-                value={otp[i] || ''}
-                data-filled={otp[i] ? 'true' : 'false'}
+                value={digit}
+                data-filled={digit ? 'true' : 'false'}
                 disabled={verifying}
                 onChange={(e) => handleChange(e, i)}
                 onKeyDown={(e) => handleKeyDown(e, i)}
+                onPaste={(e) => handlePaste(e, i)}
+                onFocus={(e) => e.target.select()}
+                onClick={(e) => e.target.select()}
                 ref={(el) => (inputsRef.current[i] = el)}
               />
             ))}
@@ -351,6 +458,9 @@ const OtpDialog = (props) => {
             <Note>{attemptsRemaining} attempt{attemptsRemaining === 1 ? '' : 's'} left</Note>
           )}
           {notice && <Note tone="warning" icon={<FaExclamationTriangle size={12} />}>{notice}</Note>}
+          {noSendsLeft && !notice && (
+            <Note tone="warning" icon={<FaClock size={12} />}>{limitMessage}</Note>
+          )}
         </Box>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 1, width: '100%', maxWidth: 320, mt: 2.5 }}>
@@ -358,7 +468,7 @@ const OtpDialog = (props) => {
             <>
               <PrimaryButton
                 onClick={validateOTP}
-                disabled={otp.length !== 6}
+                disabled={!codeComplete}
                 loading={verifying}
                 startIcon={<FaUnlockAlt size={13} />}
                 sx={{ py: 1 }}
@@ -383,7 +493,9 @@ const OtpDialog = (props) => {
               startIcon={<FaPaperPlane size={12} />}
               sx={{ py: 1 }}
             >
-              {sending ? 'Sending…' : resendIn > 0 ? `Send code (${formatTime(resendIn)})` : 'Send code'}
+              {sending ? 'Sending…'
+                : noSendsLeft && limitRetryIn > 0 ? `Send code (in ${formatWait(limitRetryIn)})`
+                  : resendIn > 0 ? `Send code (${formatTime(resendIn)})` : 'Send code'}
             </PrimaryButton>
           )}
         </Box>

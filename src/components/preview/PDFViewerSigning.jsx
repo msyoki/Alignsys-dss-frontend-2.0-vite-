@@ -781,7 +781,9 @@ const PDFViewerSigning = (props) => {
     if (!pageDim) return 1;
     const { width, height } = pageDim;
     const isLandscape = width > height;
-    props.setLandscape(isLandscape);
+    // Pure calculation: this runs during render, so it must not set parent state
+    // (props.setLandscape here caused "Cannot update a component while rendering
+    // a different component"; the parent's `landscape` value was never read).
 
     if (isLandscape) {
       const container = mainContainerRef.current;

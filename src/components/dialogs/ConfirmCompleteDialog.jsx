@@ -7,11 +7,51 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Slide from '@mui/material/Slide';
-import { FaTimes, FaCheck, FaSignature } from 'react-icons/fa';
+import { FaTimes, FaCheck, FaSignature, FaExclamationTriangle, FaRedoAlt } from 'react-icons/fa';
+import { Box, Typography } from '@mui/material';
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import Authcontext from '../../context/Authcontext';
 import * as constants from "../constants/constants";
+import { ConfirmDialog } from '../common/dialogKit';
+
+// Turn an axios error from the signing service into a plain-language message
+// plus the technical detail (kept for support, shown on demand).
+function describeSigningError(error) {
+  const res = error?.response;
+  const data = res?.data;
+  const serverMsg = typeof data === 'string'
+    ? data.slice(0, 300)
+    : data?.message || data?.error || data?.detail || data?.title || '';
+
+  let message;
+  if (!res) {
+    message = error?.code === 'ECONNABORTED'
+      ? 'The signing service took too long to respond. Your signature has not been applied. Please try again.'
+      : 'We couldn\'t reach the signing service. Check your internet connection and try again.';
+  } else if (res.status === 400) {
+    message = 'The document couldn\'t be signed because some of the signing details were not accepted.';
+  } else if (res.status === 401 || res.status === 403) {
+    message = 'You are not allowed to sign this document, or your signing link has expired.';
+  } else if (res.status === 404) {
+    message = 'This document could not be found. It may have been removed, voided or already completed.';
+  } else if (res.status === 409) {
+    message = 'This document has already been signed or was changed by someone else.';
+  } else if (res.status === 413) {
+    message = 'The signature or stamp image is too large. Try a smaller image.';
+  } else if (res.status >= 500) {
+    message = 'The signing service ran into a problem and your signature has not been applied. Please try again in a moment.';
+  } else {
+    message = 'The document could not be signed. Please try again.';
+  }
+
+  const detail = [
+    res ? `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}` : (error?.code || 'Network error'),
+    serverMsg,
+  ].filter(Boolean).join(' — ');
+
+  return { message, detail };
+}
 
 // Transition for dialog slide
 const Transition = React.forwardRef(function Transition(props, ref) {
@@ -23,6 +63,9 @@ function ConfirmCompleteDialog(props) {
   const [fullWidth, setFullWidth] = React.useState(true);
   const [maxWidth, setMaxWidth] = React.useState('sm');
   let navigate = useNavigate();
+  const [signError, setSignError] = React.useState(null); // { message, detail }
+  const [showDetail, setShowDetail] = React.useState(false);
+  const [retrying, setRetrying] = React.useState(false);
 
   // Close the dialog
   const handleClose = () => {
@@ -84,19 +127,23 @@ function ConfirmCompleteDialog(props) {
         }
       })
       .catch((error) => {
-        // console.log(payload);
         props.setAnnotatingDocument(false);
-        
-        // Create a detailed error message
-        const errorMessage = error.response
-            ? `Error: ${error.response.data.message || error.message}`
-            : "Something went wrong, please contact admin or try later";
-        
-        alert(errorMessage); // Display the error message in an alert
-        // console.log(error);  Log the error details for further debugging
+        console.error('Complete signing failed:', error);
+        setShowDetail(false);
+        setSignError(describeSigningError(error));
       });
-    
+
   }
+
+  const retrySigning = async () => {
+    setRetrying(true);
+    setSignError(null);
+    try {
+      await appendAnnotations();
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   // Confirm and proceed
   const handleCloseAgree = () => {
@@ -154,6 +201,47 @@ function ConfirmCompleteDialog(props) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!signError}
+        title="Signing could not be completed"
+        icon={<FaExclamationTriangle />}
+        tone="primary"
+        busy={retrying}
+        confirmLabel={<><FaRedoAlt size={11} style={{ marginRight: 6 }} />Try again</>}
+        cancelLabel="Close"
+        onConfirm={retrySigning}
+        onCancel={() => setSignError(null)}
+        message={
+          <>
+            <Typography sx={{ fontSize: 13.5, color: '#1f2937', mb: 1 }}>{signError?.message}</Typography>
+            <Typography sx={{ fontSize: 12.5, color: '#6b7280' }}>
+              Your placed signatures are still on the document. If this keeps happening, contact the person who sent you the document.
+            </Typography>
+          </>
+        }
+      >
+        {signError?.detail && (
+          <Box sx={{ px: 1 }}>
+            <Typography
+              component="button"
+              type="button"
+              onClick={() => setShowDetail((v) => !v)}
+              sx={{ fontSize: 12, color: '#1C4690', background: 'none', border: 0, p: 0, cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              {showDetail ? 'Hide details' : 'Show details'}
+            </Typography>
+            {showDetail && (
+              <Box component="pre" sx={{
+                mt: 1, mb: 0, p: 1.25, fontSize: 11.5, bgcolor: '#f3f4f6', border: '1px solid #e5e7eb',
+                borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#374151',
+              }}>
+                {signError.detail}
+              </Box>
+            )}
+          </Box>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

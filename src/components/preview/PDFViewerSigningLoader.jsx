@@ -279,7 +279,11 @@ function PDFViewerSigningLoader(props) {
 
     return (
         <>
-            <LoadingDialog opendialogloading={annotatingDocument} msg={`Signing Document...`} />
+            <LoadingDialog
+                opendialogloading={annotatingDocument}
+                msg="Signing document"
+                detail="Applying your signature and securing the document. This usually takes a few seconds."
+            />
             {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
             <OtpDialog
                 signerguid={props.signerguid}
@@ -292,6 +296,7 @@ function PDFViewerSigningLoader(props) {
                 setOpenAlert={props.setOpenAlert}
                 setOpenDialogOtp={props.setOpenDialogOtp}
                 opendialogotp={props.opendialogotp}
+                onVerified={props.onOtpVerified}
             />
 
             <ConfirmCompleteDialog

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaComment } from 'react-icons/fa';
+import { FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaComment, FaShieldAlt, FaMobileAlt } from 'react-icons/fa';
 import '../styles/App.css';
 import { useParams, useNavigate } from "react-router-dom";
 import axios from 'axios';
@@ -431,6 +431,9 @@ function Signing_Page_Redirect() {
             <div className="col-lg-9 col-md-12 col-sm-12 order-lg-1 order-sm-1 bg-white">
               {sampleURL ? (
                 <PDFViewerSigningLoader
+                  onOtpVerified={(at) => setSigners((prev) => prev.map((s) => (
+                    s.uid === signerguid ? { ...s, otp_verified: true, otp_verified_at: at } : s
+                  )))}
                   getSavedSignatures={getSavedSignatures}
                   getSavedStamps={getSavedStamps}
                   document={sampleURL}
@@ -561,7 +564,32 @@ function Signing_Page_Redirect() {
                           className={`d-flex justify-content-between align-items-center ${signers.length > 1 && index !== signers.length - 1 ? "border-bottom" : ""}`}
                           style={{ fontSize: "12px", padding: "5px 0" }}
                         >
-                          <span>{s.email}</span>
+                          <span style={{ minWidth: 0 }}>
+                            {s.email}
+                            {/* Only when the server reports it (older backends don't send otp_verified). */}
+                            {s.otp && typeof s.otp_verified === 'boolean' && (
+                              <span
+                                className="d-flex align-items-center"
+                                style={{ fontSize: '10.5px', marginTop: 2, color: s.otp_verified ? '#2e7d32' : '#8a6100' }}
+                                title={s.otp_verified && s.otp_verified_at
+                                  ? `Phone verified by SMS code on ${new Date(s.otp_verified_at).toLocaleString()}`
+                                  : 'This signer must verify their phone with an SMS code before signing'}
+                              >
+                                {s.otp_verified ? (
+                                  <>
+                                    <FaShieldAlt className="me-1" aria-hidden />
+                                    Verified by SMS
+                                    {s.otp_verified_at && <>&nbsp;·&nbsp;<HumanizedDate dateStr={s.otp_verified_at} /></>}
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaMobileAlt className="me-1" aria-hidden />
+                                    SMS verification required
+                                  </>
+                                )}
+                              </span>
+                            )}
+                          </span>
                           <span className="text-muted">
                             {s.signed === "True" ? (
                               <>

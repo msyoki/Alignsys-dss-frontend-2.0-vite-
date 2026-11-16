@@ -48,6 +48,31 @@ const signaturePadStyle = {
     backgroundRepeat: 'no-repeat',
 };
 
+// Preview an image in the signature pad at its current size, centred.
+// The pad's load() always draws from the top-left corner, so the image is first
+// placed in the middle of a transparent, pad-sized canvas. It is only scaled
+// down if it is larger than the pad (e.g. narrow phones); never enlarged.
+// Preview only: the value placed/saved is still the original image.
+const loadCentered = (signature, sigElem, dataUri) => new Promise((resolve) => {
+    const padW = sigElem?.clientWidth || 0;
+    const padH = sigElem?.clientHeight || 0;
+    if (!padW || !padH) { signature.load(dataUri); resolve(); return; }
+    const img = new Image();
+    img.onload = () => {
+        const scale = Math.min(1, padW / img.width, padH / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const canvas = document.createElement('canvas');
+        canvas.width = padW;
+        canvas.height = padH;
+        canvas.getContext('2d').drawImage(img, (padW - w) / 2, (padH - h) / 2, w, h);
+        signature.load(canvas.toDataURL('image/png'), padW, padH);
+        resolve();
+    };
+    img.onerror = () => { signature.load(dataUri); resolve(); };
+    img.src = dataUri;
+});
+
 const SignaturePad = () => (
     <SignatureComponent
         strokeColor="#03045e"
@@ -212,7 +237,7 @@ const SignatureDialog = (props) => {
 
             try {
                 const resizedBase64 = await resizeImage(dataUri);
-                signature.load(resizedBase64);
+                await loadCentered(signature, sigElem, resizedBase64);
             } catch (err) {
                 // Pad preview failed but state is already set — Place button still works
                 console.error('Signature preview resize failed:', err);
@@ -335,7 +360,7 @@ const SignatureDialog = (props) => {
         const compressedFile = await compressImage(file);
         const base64 = await convertBase64(compressedFile);
         const resizedBase64 = await resizeImage(base64);
-        signature.load(resizedBase64);
+        await loadCentered(signature, sigElem, resizedBase64);
         setSignatureForSaving(base64)
         props.setTempSignature(base64)
         setSignatureLoaded(true) // ✅ local flag — triggers button visibility immediately

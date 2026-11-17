@@ -93,24 +93,70 @@ export const hasSession = () => {
   return Boolean(t?.access && (!expired(t.access) || (t.refresh && !expired(t.refresh))));
 };
 
-async function refresh() {
-  const t = readTokens();
-  if (!t?.refresh || expired(t.refresh, 0)) return null;
-  try {
-    const res = await fetch(`${AUTH_URL}/api/token/refresh/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify({ refresh: t.refresh }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data?.access) return null;
-    const next = { ...t, ...data };
-    saveTokens(next);
-    return next;
-  } catch {
-    return null;
-  }
+// POST {VITE_AUTH_URL}/api/token/refresh/ {refresh} -> {access, refresh}. The server rotates the
+// refresh token (each call returns a new one valid for another 2 hours), so both are saved.
+// Calls made at the same time share one request: a second request with the same (now rotated)
+// refresh token could be refused and end the session.
+let refreshing = null;
+function refresh() {
+  if (refreshing) return refreshing;
+  refreshing = (async () => {
+    const t = readTokens();
+    if (!t?.refresh || expired(t.refresh, 0)) return null;
+    try {
+      const res = await fetch(`${AUTH_URL}/api/token/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ refresh: t.refresh }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data?.access) return null;
+      const next = { ...t, ...data };
+      saveTokens(next);
+      return next;
+    } catch {
+      return null;
+    }
+  })().finally(() => { refreshing = null; });
+  return refreshing;
+}
+
+// Keeps the session alive while the page is open: refreshes a minute before the access token
+// expires, so the refresh token keeps rotating and doesn't run out while the sender is still
+// placing boxes. Timers can be paused while the tab is hidden or the computer sleeps, so it
+// also checks when the tab becomes visible again. Returns a stop function.
+export function startSessionKeepAlive() {
+  let timer = null;
+  let stopped = false;
+  const schedule = () => {
+    clearTimeout(timer);
+    if (stopped) return;
+    const t = readTokens();
+    if (!t?.refresh) return; // nothing to refresh with
+    const exp = decodeToken(t.access)?.exp;
+    const delay = exp ? Math.max(exp * 1000 - Date.now() - 60000, 5000) : 5000;
+    timer = setTimeout(tick, Math.min(delay, 2147483647));
+  };
+  const tick = async () => {
+    if (stopped) return;
+    const t = readTokens();
+    if (t?.access && expired(t.access, 90)) {
+      const next = await refresh();
+      // Refresh failed (refresh token expired or revoked): stop; the next request shows the expiry message.
+      if (!next && (!t.refresh || expired(t.refresh, 0))) return;
+      if (!next) { timer = setTimeout(tick, 30000); return; } // network blip: try again shortly
+    }
+    schedule();
+  };
+  const onVisible = () => { if (document.visibilityState === 'visible') tick(); };
+  document.addEventListener('visibilitychange', onVisible);
+  tick();
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+    document.removeEventListener('visibilitychange', onVisible);
+  };
 }
 
 // fetch with the Bearer token; refreshes once when the token has expired or the server says 401.

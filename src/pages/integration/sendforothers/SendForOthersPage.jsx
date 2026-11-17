@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getDocument, getOtpAvailability } from './api';
-import { adoptTokensFromUrl, hasSession, readTokens } from './auth';
+import { adoptTokensFromUrl, hasSession, readTokens, startSessionKeepAlive } from './auth';
 import { LoadingScreen, ErrorScreen } from './components/StatusScreens';
 import SentScreen from './components/SentScreen';
 import Editor from './components/Editor';
@@ -113,6 +113,10 @@ export default function SendForOthersPage() {
   const [suggestedPhones] = useState(() => readPhones(signers.emails));
   // available: true | false | null (couldn't tell: SMS codes stay allowed, the server checks on send)
   const [otp, setOtp] = useState({ loading: true, available: null, code: null });
+
+  // Keep the DSS session from the link alive until the document is sent (or the page fails).
+  const keepAlive = state.status === 'loading' || state.status === 'ready';
+  useEffect(() => (keepAlive ? startSessionKeepAlive() : undefined), [keepAlive]);
 
   // Can this organisation use SMS verification? (Checked once the session is known to be valid.)
   useEffect(() => {

@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import SmoothPage from './SmoothPage';
 import useFitWidthZoom from './useFitWidthZoom';
 import usePanelWidth from './usePanelWidth';
+import ThumbnailOverlay from '../../../../components/preview/ThumbnailOverlay';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Draggable from 'react-draggable';
 import './SfoViewer.css';
@@ -155,6 +156,18 @@ const PDFViewerSetSIgningAreas = ({
     const getScaleForPageThumbnail = (pageNumber) => {
         const pageDim = pageDimensions.find(d => d.pageNumber === pageNumber);
         return pageDim && pageDim.width > pageDim.height ? 0.18 : 0.28;
+    };
+
+    // View-only copy of the page's signature boxes (in each signer's colour) on its thumbnail.
+    const renderThumbnailOverlay = (pageNumber) => {
+        const pageDim = pageDimensions.find(d => d.pageNumber === pageNumber);
+        if (!pageDim) return null;
+        const scale = thumbWidth ? thumbWidth / pageDim.width : getScaleForPageThumbnail(pageNumber);
+        const items = (signatureBoxes || [])
+            .flatMap(box => box.annotations)
+            .filter(a => a.pageNumber === pageNumber)
+            .map(a => ({ id: a.id, kind: 'box', x: a.x, y: a.y, width: a.width, height: a.height, color: a.color }));
+        return <ThumbnailOverlay items={items} scale={scale} pageWidth={pageDim.width} pageHeight={pageDim.height} />;
     };
 
     const getPageSize = (pageNumber) => {
@@ -607,13 +620,16 @@ const PDFViewerSetSIgningAreas = ({
                                         aria-current={pageNumber === pageIndex + 1 ? 'page' : undefined}
                                         onClick={() => thumbnailNavigation(pageIndex)}
                                     >
-                                        <Page
-                                            pageNumber={pageIndex + 1}
-                                            {...(thumbWidth ? { width: thumbWidth } : { scale: getScaleForPageThumbnail(pageIndex + 1) })}
-                                            renderTextLayer={false}
-                                            renderAnnotationLayer={false}
-                                            className="page-container"
-                                        />
+                                        <div style={{ position: 'relative', width: 'fit-content', margin: '0 auto' }}>
+                                            <Page
+                                                pageNumber={pageIndex + 1}
+                                                {...(thumbWidth ? { width: thumbWidth } : { scale: getScaleForPageThumbnail(pageIndex + 1) })}
+                                                renderTextLayer={false}
+                                                renderAnnotationLayer={false}
+                                                className="page-container"
+                                            />
+                                            {renderThumbnailOverlay(pageIndex + 1)}
+                                        </div>
                                         <span className="sfov-thumbnail-page-number">{pageIndex + 1}</span>
                                     </div>
                                 ))}

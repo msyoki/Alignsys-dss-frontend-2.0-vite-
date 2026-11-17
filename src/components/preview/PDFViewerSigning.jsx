@@ -34,6 +34,7 @@ import { GoSidebarCollapse } from "react-icons/go";
 import { GoSidebarExpand } from "react-icons/go";
 import { TfiLayoutSidebarLeft } from "react-icons/tfi";
 import { TfiLayoutSidebarNone } from "react-icons/tfi";
+import ThumbnailOverlay from "./ThumbnailOverlay";
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
@@ -800,6 +801,37 @@ const PDFViewerSigning = (props) => {
     return pageDim && pageDim.width > pageDim.height ? 0.18 : 0.28;
   };
 
+  // View-only copy of the page's placed signatures, stamps, text and unsigned signature
+  // boxes on its thumbnail (same positions as the main page, scaled down).
+  const renderThumbnailOverlay = (pageNumber) => {
+    const pageDim = pageDimensions.find(dim => dim.pageNumber === pageNumber);
+    if (!pageDim) return null;
+    const { width: pageWidth, height: pageHeight } = pageDim;
+    const scale = thumbWidth ? thumbWidth / pageWidth : getScaleForPageThumbnail(pageNumber);
+    const rotation = props.pageRotations?.[pageNumber] || 0;
+
+    const placed = (props.annotations || [])
+      .filter(a => a.pageNumber === pageNumber)
+      .map(a => {
+        let { x, y } = a;
+        // Same rotation mapping as renderAnnotations.
+        if (rotation === 90) [x, y] = [y, pageWidth - x];
+        else if (rotation === 180) { x = pageWidth - x; y = pageHeight - y; }
+        else if (rotation === 270) [x, y] = [pageHeight - y, x];
+        return {
+          id: `a_${a.id}`, kind: a.type === 'text' ? 'text' : 'image',
+          x, y, width: a.width, height: a.height, src: a.src, content: a.content, color: a.color, size: a.size,
+        };
+      });
+    const boxes = showSignatureBoxes
+      ? (props.signerAnnotations || [])
+        .filter(b => b && b.page_number === pageNumber)
+        .map(b => ({ id: `b_${b.annotation_id}`, kind: 'box', x: b.x, y: b.y, width: b.width, height: b.height, color: b.color }))
+      : [];
+
+    return <ThumbnailOverlay items={[...boxes, ...placed]} scale={scale} pageWidth={pageWidth} pageHeight={pageHeight} />;
+  };
+
   const handlePageInputChange = (e) => {
     const value = parseInt(e.target.value, 10);
     if (value >= 1 && value <= numPages) {
@@ -1346,13 +1378,16 @@ const PDFViewerSigning = (props) => {
                     className={`thumbnail-item ${pageNumber === pageIndex + 1 ? 'active' : ''}`}
                     onClick={() => thumbnailNavigation(pageIndex)}
                   >
-                    <Page
-                      pageNumber={pageIndex + 1}
-                      {...(thumbWidth ? { width: thumbWidth } : { scale: getScaleForPageThumbnail(pageIndex + 1) })}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                      className="page-container"
-                    />
+                    <div style={{ position: 'relative', width: 'fit-content', margin: '0 auto' }}>
+                      <Page
+                        pageNumber={pageIndex + 1}
+                        {...(thumbWidth ? { width: thumbWidth } : { scale: getScaleForPageThumbnail(pageIndex + 1) })}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        className="page-container"
+                      />
+                      {renderThumbnailOverlay(pageIndex + 1)}
+                    </div>
                     <span className="thumbnail-page-number">{pageIndex + 1}</span>
 
                   </div>

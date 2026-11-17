@@ -13,7 +13,7 @@ import { downloadCsv, getReportsOverview, reportError } from '../../api/reports'
 // categorical palette (distinct for colour-blind viewers in every pairing);
 // every chart has a legend, tooltips and a single y-axis, and the numbers are
 // also available as a table / CSV.
-const SERIES = { blue: '#2a78d6', orange: '#eb6834', aqua: '#1baf7a' };
+const SERIES = { blue: '#2a78d6', orange: '#eb6834', green: '#16a34a', red: '#dc2626' };
 const INK = { primary: '#1f2937', secondary: '#52514e', muted: '#6b7280', grid: '#eceae6' };
 const axisProps = { tick: { fontSize: 11, fill: INK.muted }, tickLine: false, axisLine: { stroke: INK.grid } };
 
@@ -195,8 +195,8 @@ export default function ReportsOverview() {
               <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: INK.muted, strokeDasharray: '3 3' }} />
               <Legend wrapperStyle={{ fontSize: 12, color: INK.secondary }} iconType="plainline" />
               <Line type="monotone" dataKey="created" name="Sent" stroke={SERIES.blue} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="completed" name="Completed" stroke={SERIES.orange} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="declined" name="Declined / voided" stroke={SERIES.aqua} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="completed" name="Completed" stroke={SERIES.green} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="declined" name="Declined / voided" stroke={SERIES.red} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         </Box>

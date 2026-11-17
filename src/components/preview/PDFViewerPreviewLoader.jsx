@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { Tooltip } from '@mui/material';
-import { ButtonComponent } from '@syncfusion/ej2-react-buttons';
 import { useNavigate } from "react-router-dom";
 import * as constants from '../constants/constants';
 import axios from 'axios';
@@ -9,7 +8,7 @@ import axios from 'axios';
 import LoadingMini from "../loaders/LoadingMini2";
 import PDFViewerPreview from "./PDFViewerPreview";
 
-function PDFViewerPreviewLoader({ document: docId, title, complete, height ,handleClose}) {
+function PDFViewerPreviewLoader({ document: docId, title, complete, height ,handleClose, fill = false}) {
   const [documentBase64, setDocumentBase64] = useState('');
   const [loadingPercentage, setLoadingPercentage] = useState(0);
 
@@ -43,6 +42,7 @@ function PDFViewerPreviewLoader({ document: docId, title, complete, height ,hand
           document={documentBase64}
           height={height}
           handleClose={handleClose}
+          fill={fill}
         />
       ) : (
         <LoadingMini percent={loadingPercentage} />

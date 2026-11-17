@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import AuthContext from '../../context/Authcontext';
+import mergeActionColumns from '../common/mergeActionColumns';
+import autoSizeColumns from '../common/autoSizeColumns';
 const ICON_COLOR = '#2757aa';
 import { FaEye, FaInfoCircle, FaTrashRestore, FaTrash } from 'react-icons/fa';
 import Box from '@mui/material/Box';
@@ -18,6 +21,7 @@ import {
 import HumanizedDate from '../HumanizeDate';
 
 function Trashed(props) {
+  const { authTokens } = useContext(AuthContext);
   const [opendialogdocdetails, setOpenDialogDocDetails] = useState(false);
   const [document, setDocument] = useState({});
   const [documentsigners, setDocumentSigners] = useState([]);
@@ -36,7 +40,8 @@ function Trashed(props) {
       maxBodyLength: Infinity,
       url: `${constants.devApiBaseUrl}/api/untrash/document/`,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authTokens?.access}`
       },
       data: data
     };
@@ -158,7 +163,7 @@ function Trashed(props) {
   const getRowId = (row) => row.guid;
 
   return (
-    <div>
+    <div className="tab-fill">
       <DocDetailsDialog2
         setOpenDialogDocDetails={setOpenDialogDocDetails}
         opendialogdocdetails={opendialogdocdetails}
@@ -169,7 +174,7 @@ function Trashed(props) {
       />
 
 
-      <Box sx={{ height: '72vh', width: '100%', fontSize: '12px' }}>
+      <Box className="tab-table-fill" sx={{ width: '100%', fontSize: '12px' }}>
         {/*
         <h6  className='text-dark p-1 mx-3' style={{ fontSize: '12.5px', backgroundColor:'#ecf4fc' }}>
           <FaTrash className='dot text-secondary shadow-lg mx-2' aria-hidden='true' size={13} color='#2757aa' /> Trashed
@@ -186,9 +191,9 @@ function Trashed(props) {
         </div>
         <DataGrid
           rows={sortedTrashed}
-          columns={columns}
+          columns={autoSizeColumns(mergeActionColumns(columns), sortedTrashed)}
           density='compact'
-          className="App-header5"
+          className="App-header5 app-table"
           components={{
             Toolbar: CustomToolbar,
           }}
@@ -211,7 +216,7 @@ function Trashed(props) {
         />
         <div className="d-flex justify-content-end card-footer  mx-3 mt-2 bg-white mb-0">
           <a href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
-            <img src={logo} width="auto" height='30' alt="TechEdge Logo" />
+            <img src={logo} alt="Alignsys" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }} />
           </a>
         </div>
       </Box>

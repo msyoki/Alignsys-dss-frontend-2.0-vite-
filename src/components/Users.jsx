@@ -1,6 +1,9 @@
+import TableIconButton from './common/TableIconButton';
+import mergeActionColumns from './common/mergeActionColumns';
+import autoSizeColumns from './common/autoSizeColumns';
 import React, { useState } from 'react';
 import { Box, CircularProgress } from '@mui/material';
-import { FaUserEdit } from 'react-icons/fa';
+import { FaPen } from 'react-icons/fa';
 
 import {
   DataGrid,
@@ -49,25 +52,7 @@ function Users(props) {
         };
 
         return (
-          <span
-            onClick={handleClick}
-            style={{
-              fontSize: '16px',
-              color: '#403d39',
-              borderRadius: '50%',
-              cursor: 'pointer',
-              padding: '8px',
-              backgroundColor: '#f0f0f0',
-              transition: 'background-color 0.3s ease',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            onMouseOver={e => (e.currentTarget.style.backgroundColor = '#ffff')}
-            onMouseOut={e => (e.currentTarget.style.backgroundColor = '#f0f0f0')}
-          >
-            <FaUserEdit className="mx-1" />
-          </span>
+          <TableIconButton title="Edit user" onClick={handleClick}><FaPen /></TableIconButton>
         );
       },
       filterable: false
@@ -133,7 +118,7 @@ function Users(props) {
     
             <DataGrid
               rows={props.users}
-              columns={columns}
+              columns={autoSizeColumns(mergeActionColumns(columns), props.users)}
               density='compact'
               components={{
                 Toolbar: CustomToolbar,
@@ -150,7 +135,7 @@ function Users(props) {
               disableRowSelectionOnClick
               style={{ fontSize: '13px', fontWeight: "lighter", flex: 1, minHeight: 0, height: '100%' }}
               getRowId={getRowId}
-              className='bg-light '
+              className='app-table'
             />
           </>
         )}

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import mergeActionColumns from '../common/mergeActionColumns';
+import autoSizeColumns from '../common/autoSizeColumns';
 const ICON_COLOR = '#2757aa';
-import { FaPenNib, FaUserPlus, FaEye, FaInfoCircle, FaSave } from 'react-icons/fa';
+import { FaEye, FaInfoCircle, FaPenNib, FaSave, FaUserPlus } from 'react-icons/fa';
 import Box from '@mui/material/Box';
 import DocDetailsDialog2 from '../dialogs/DocDetailsDialog2';
-import { ButtonComponent } from '@syncfusion/ej2-react-buttons';
 import logo from '../../images/ZFBLU.webp';
 import { DataGrid, GridToolbarFilterButton, GridToolbarExport, GridToolbarQuickFilter, GridToolbarContainer } from '@mui/x-data-grid';
 import HumanizedDate from '../HumanizeDate';
@@ -130,7 +131,7 @@ function MyUploads(props) {
     const getRowId = (row) => row.guid;
 
     return (
-        <div>
+        <div className="tab-fill">
             <DocDetailsDialog2
                 setOpenDialogDocDetails={setOpenDialogDocDetails}
                 opendialogdocdetails={opendialogdocdetails}
@@ -140,9 +141,9 @@ function MyUploads(props) {
                 type={'upload'}
             />
 
-            <Box sx={{ height: '72vh', width: '100%', fontSize: '12px' }}>
+            <Box className="tab-table-fill" sx={{ width: '100%', fontSize: '12px' }}>
                 {/* <h6  className='text-dark p-1 mx-3' style={{ fontSize: '12.5px', backgroundColor:'#ecf4fc' }}>
-                <i className='fas dot fa-save text-secondary shadow-lg mx-2' aria-hidden="true" style={{ fontSize: '11px' }}></i>
+                <FaSave className="dot text-secondary shadow-lg mx-2" style={{ fontSize: '11px', verticalAlign: '-0.125em' }} aria-hidden="true" />
                 Saved for later <span style={{ fontSize: '13.5px' }}> ( {props.myuploads.length} )</span>
             </h6> */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ecf4fc', padding: '5px 5px' }}>
@@ -155,9 +156,9 @@ function MyUploads(props) {
                 </div>
                 <DataGrid
                     rows={sortedMyuploads}
-                    columns={columns}
+                    columns={autoSizeColumns(mergeActionColumns(columns), sortedMyuploads)}
                     density='compact'
-                    className="App-header5"
+                    className="App-header5 app-table"
                     components={{
                         Toolbar: CustomToolbar,
                     }}
@@ -180,7 +181,7 @@ function MyUploads(props) {
                 />
                 <div className="d-flex justify-content-end card-footer  mx-3 mt-2 bg-white mb-0">
                     <a href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
-                        <img src={logo} width="auto" height='30' alt="TechEdge Logo" />
+                        <img src={logo} alt="Alignsys" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }} />
                     </a>
                 </div>
             </Box>

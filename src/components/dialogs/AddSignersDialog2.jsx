@@ -437,7 +437,7 @@ const AddSignersDialog2 = (props) => {
             <span className="me-2 text-dark">{item.email}</span>
             {item.phone && (
               <Tooltip title="OTP authentication enabled" placement="top">
-                <FaMobileAlt className="text-primary me-2" />
+                <span style={{ display: 'inline-flex' }}><FaMobileAlt className="text-primary me-2" /></span>
               </Tooltip>
             )}
             <FaTimes

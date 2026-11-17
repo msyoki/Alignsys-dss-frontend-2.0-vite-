@@ -1,6 +1,9 @@
+import TableIconButton from './common/TableIconButton';
+import mergeActionColumns from './common/mergeActionColumns';
+import autoSizeColumns from './common/autoSizeColumns';
+import { FaCheckToSlot } from 'react-icons/fa6';
 import React , {useState} from 'react';
 import Box from '@mui/material/Box';
-import { ButtonComponent  } from '@syncfusion/ej2-react-buttons';
 
 import { 
   DataGrid, 
@@ -45,22 +48,7 @@ const columns= [
           };
     
           return (
-         <>
-          <i  onClick={handleClick} 
-            style={{
-              fontSize: '13.5px',
-              color:'#403d39',
-              borderRadius: '50%', // Making the button rounded
-              cursor: 'pointer', // Adding pointer cursor for better UX
-              padding: '8px', // Adding padding for better touch target
-              backgroundColor: '#f0f0f0', // You can customize the background color
-              transition: 'background-color 0.3s ease', // Adding transition for smooth hover effect
-            }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = '#ffff')} // Change background on hover
-            onMouseOut={(e) => (e.target.style.backgroundColor = '#f0f0f0')} // Reset background on mouse out
-            className="fa-solid fa-check-to-slot mx-1 text-success"></i> 
-           
-         </>
+         <TableIconButton title="Approve company" onClick={handleClick} color="#2e7d32"><FaCheckToSlot /></TableIconButton>
             );
         },
         filterable: false
@@ -97,10 +85,10 @@ const getRowId = (row) => row.id;
   <>
   
 
-  <Box sx={{ height: 400, width: '100%' ,fontSize:'10px'}}>
+  <Box sx={{ height: 'max(400px, calc(100dvh - 230px))', width: '100%' ,fontSize:'10px'}}>
           <DataGrid
               rows={props.newcompanies}
-              columns={columns}
+              columns={autoSizeColumns(mergeActionColumns(columns), props.newcompanies)}
               density='compact'
               components={{
                   Toolbar: CustomToolbar,
@@ -118,7 +106,7 @@ const getRowId = (row) => row.id;
             
               getRowId={getRowId} 
               style={{ fontSize: '12px' }}
-              className='bg-light '
+              className='app-table'
      
       
           />

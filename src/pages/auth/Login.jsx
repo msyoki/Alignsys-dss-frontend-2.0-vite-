@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { PILL_LARGE } from '../../components/common/pillButton';
 console.log("Login component rendered");
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -205,15 +206,12 @@ const Login = () => {
                 <Button
                   type="submit"
                   variant="contained"
-                  className="mb-3 rounded-pill"
+                  className="mb-3"
                   disabled={miniLoader}
                   startIcon={miniLoader ? <CircularProgress size={14} color="inherit" /> : null}
                   sx={{
-                    fontSize: '13px',
-                    textTransform: 'none',
+                    ...PILL_LARGE,
                     width: '100%',
-                    px: 2,
-                    py: 1,
                     backgroundColor: miniLoader ? '#ccc' : '#2757aa',
                     color: '#fff',
                     '&:hover': {

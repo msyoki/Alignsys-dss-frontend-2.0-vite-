@@ -28,21 +28,13 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import * as constants from '../constants/constants.js'
 import SignatureUploadMsgDialog from './SignatureUploadMsgDialog.jsx';
+import { PILL } from '../common/pillButton';
 
 
 const pillBtn = {
-    textTransform: 'none',
-    fontSize: '12px',
-    fontWeight: 500,
-    borderRadius: '999px',
-    px: 1.8,
-    py: 0.8,
-    minHeight: 34,
-    boxShadow: 'none',
-    whiteSpace: 'nowrap',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
+  ...PILL,
+  display: 'inline-flex',
+  alignItems: 'center',
 };
 
 const iconStyle = { fontSize: '13px', flexShrink: 0 };
@@ -55,6 +47,31 @@ const signaturePadStyle = {
     backgroundSize: 'contain',
     backgroundRepeat: 'no-repeat',
 };
+
+// Preview an image in the signature pad at its current size, centred.
+// The pad's load() always draws from the top-left corner, so the image is first
+// placed in the middle of a transparent, pad-sized canvas. It is only scaled
+// down if it is larger than the pad (e.g. narrow phones); never enlarged.
+// Preview only: the value placed/saved is still the original image.
+const loadCentered = (signature, sigElem, dataUri) => new Promise((resolve) => {
+    const padW = sigElem?.clientWidth || 0;
+    const padH = sigElem?.clientHeight || 0;
+    if (!padW || !padH) { signature.load(dataUri); resolve(); return; }
+    const img = new Image();
+    img.onload = () => {
+        const scale = Math.min(1, padW / img.width, padH / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const canvas = document.createElement('canvas');
+        canvas.width = padW;
+        canvas.height = padH;
+        canvas.getContext('2d').drawImage(img, (padW - w) / 2, (padH - h) / 2, w, h);
+        signature.load(canvas.toDataURL('image/png'), padW, padH);
+        resolve();
+    };
+    img.onerror = () => { signature.load(dataUri); resolve(); };
+    img.src = dataUri;
+});
 
 const SignaturePad = () => (
     <SignatureComponent
@@ -220,7 +237,7 @@ const SignatureDialog = (props) => {
 
             try {
                 const resizedBase64 = await resizeImage(dataUri);
-                signature.load(resizedBase64);
+                await loadCentered(signature, sigElem, resizedBase64);
             } catch (err) {
                 // Pad preview failed but state is already set — Place button still works
                 console.error('Signature preview resize failed:', err);
@@ -343,7 +360,7 @@ const SignatureDialog = (props) => {
         const compressedFile = await compressImage(file);
         const base64 = await convertBase64(compressedFile);
         const resizedBase64 = await resizeImage(base64);
-        signature.load(resizedBase64);
+        await loadCentered(signature, sigElem, resizedBase64);
         setSignatureForSaving(base64)
         props.setTempSignature(base64)
         setSignatureLoaded(true) // ✅ local flag — triggers button visibility immediately
@@ -529,29 +546,29 @@ const SignatureDialog = (props) => {
     );
 
     const BtnCancel = () => (
-        <Button variant="outlined" sx={pillBtn} onClick={handleClose}>
-            <FaTimes style={iconStyle} />
+        <Button variant="outlined" sx={pillBtn} onClick={handleClose}
+            startIcon={<FaTimes />}>
             Cancel
         </Button>
     );
 
     const BtnClearPad = () => (
-        <Button variant="outlined" color="warning" sx={pillBtn} onClick={clrBtnClick}>
-            <FaEraser style={iconStyle} />
+        <Button variant="outlined" color="warning" sx={pillBtn} onClick={clrBtnClick}
+            startIcon={<FaEraser />}>
             Clear Pad
         </Button>
     );
 
     const BtnPlaceDrawn = () => (
-        <Button variant="contained" color="primary" id="placeDrawn" sx={pillBtn} onClick={onSelect}>
-            {loading ? <CircularProgress size={13} sx={{ color: '#fff', flexShrink: 0 }} /> : <FaMapMarkerAlt style={iconStyle} />}
+        <Button variant="contained" color="primary" id="placeDrawn" sx={pillBtn} onClick={onSelect}
+            startIcon={loading ? <CircularProgress size={14} color="inherit" /> : <FaMapMarkerAlt />}>
             Place Drawn Signature
         </Button>
     );
 
     const BtnPlaceUploaded = ({ label = 'Place Uploaded Signature' }) => (
-        <Button variant="contained" color="primary" sx={pillBtn} onClick={onSelect1}>
-            {loading ? <CircularProgress size={13} sx={{ color: '#fff', flexShrink: 0 }} /> : <FaMapMarkerAlt style={iconStyle} />}
+        <Button variant="contained" color="primary" sx={pillBtn} onClick={onSelect1}
+            startIcon={loading ? <CircularProgress size={14} color="inherit" /> : <FaMapMarkerAlt />}>
             {label}
         </Button>
     );
@@ -566,8 +583,8 @@ const SignatureDialog = (props) => {
                 '&:hover': { backgroundColor: '#ff5a5a' },
             }}
             onClick={() => handleDeleteClick(selectedsignature)}
-        >
-            <FaTrashAlt style={iconStyle} />
+        
+            startIcon={<FaTrashAlt />}>
             Delete Signature
         </Button>
     ) : null;
@@ -841,7 +858,7 @@ const SignatureDialog = (props) => {
                     <Button
                         onClick={handleCancelDelete}
                         variant="outlined"
-                        sx={{ ...pillBtn, fontSize: '14px' }}
+                        sx={{ ...pillBtn }}
                     >
                         Cancel
                     </Button>

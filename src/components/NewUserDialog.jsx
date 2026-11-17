@@ -1,21 +1,13 @@
 import * as React from 'react';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
-import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { ButtonComponent } from '@syncfusion/ej2-react-buttons';
+import { FaEnvelope, FaPhone, FaUser, FaUserPlus } from 'react-icons/fa';
+import { Dialog, DialogContent, TextField, Typography } from '@mui/material';
 import * as constants from './constants/constants.js';
 import Alerts from './Alert.jsx';
+import { DialogFooter, DialogHeader, PrimaryButton, PropertyRow, SecondaryButton, fieldIcon, fieldSx } from './common/dialogKit';
 import '../styles/App.css';
 
 const NewUserDialog = (props) => {
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
-
-  const primaryColor = { color: '#2757aa' };
+  const [busy, setBusy] = React.useState(false);
 
   const registerUser = async (e) => {
     e.preventDefault();
@@ -43,6 +35,7 @@ const NewUserDialog = (props) => {
       phone: e.target.phone.value,
     });
 
+    setBusy(true);
     try {
       const response = await fetch(`${constants.devApiBaseUrl}/api/new/user/${props.user.id}/`, {
         method: 'POST',
@@ -71,6 +64,8 @@ const NewUserDialog = (props) => {
       props.setAlertSeverity('error');
       props.setOpenAlert(true);
       setTimeout(() => props.setOpenAlert(false), 5000);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -78,95 +73,52 @@ const NewUserDialog = (props) => {
     props.setOpenDialogNewUser(false);
   };
 
-  return (
-    <Dialog
-      open={props.opendialognewuser}
-      onClose={handleClose}
-      fullWidth
-      PaperProps={{
-        style: {
-          width: '90vw',
-          maxWidth: '400px',
-        },
-      }}
-    >
-      <DialogTitle className="shadow-lg text-white text-center" style={{ backgroundColor: '#2757aa', fontSize: '14px' }}>
-        <i className="fas fa-user-plus m-1"></i> Add New Account
-      </DialogTitle>
+  const domain = props.user?.email?.split('@')[1];
 
-      <DialogContent>
-        <DialogContentText>
+  return (
+    <Dialog open={props.opendialognewuser} onClose={busy ? undefined : handleClose} fullWidth maxWidth="sm" aria-labelledby="new-user-title">
+      <DialogHeader id="new-user-title" icon={<FaUserPlus />} title="Add new user" subtitle={props.user?.company} onClose={handleClose} />
+      <form onSubmit={registerUser} id="new-user-form">
+        <DialogContent dividers sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
           <Alerts
             alertseverity={props.alertseverity}
             alertmsg={props.alertmsg}
             openalert={props.openalert}
             setOpenAlert={props.setOpenAlert}
           />
+          <Typography sx={{ fontSize: 12.5, color: '#6b7280', mb: 1, px: 1 }}>
+            The new user signs in with their email{domain ? <> (must end in <strong>@{domain}</strong>)</> : ''}.
+          </Typography>
 
-          <form onSubmit={registerUser} id="new-user-form">
-            <div className="form-group">
-
-              {/* Email */}
-              <div className="form-group mb-2 mt-2">
-                <label><small>Email Address</small></label>
-                <div className="input-group mt-1">
-                  <span className="input-group-text"><i className="fas fa-envelope" style={primaryColor}></i></span>
-                  <input type="email" name="email" className="form-control form-control-sm" required placeholder="Email" />
-                </div>
-              </div>
-
-              {/* First Name */}
-              <div className="form-group mb-2">
-                <label><small>First Name</small></label>
-                <div className="input-group mt-1">
-                  <span className="input-group-text"><i className="fas fa-user-edit" style={primaryColor}></i></span>
-                  <input type="text" name="fname" className="form-control form-control-sm" required placeholder="First Name" />
-                </div>
-              </div>
-
-              {/* Last Name */}
-              <div className="form-group mb-2">
-                <label><small>Last Name</small></label>
-                <div className="input-group mt-1">
-                  <span className="input-group-text"><i className="fas fa-user-edit" style={primaryColor}></i></span>
-                  <input type="text" name="lname" className="form-control form-control-sm" required placeholder="Last Name" />
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div className="form-group mb-2">
-                <label><small>Mobile Number</small></label>
-                <div className="input-group mt-1">
-                  <span className="input-group-text"><i className="fas fa-phone" style={primaryColor}></i></span>
-                  <input type="text" name="phone" id="phone" pattern="[0]{1}[1-7]{1}[0-9]{2}[0-9]{3}[0-9]{3}" className="form-control form-control-sm" required placeholder="07xx xxx xxx" />
-                </div>
-              </div>
-
-              {/* Buttons */}
-              <br />
-              <DialogActions>
-                <ButtonComponent
-                  cssClass='e-custom-warning'
-                  className='m-2 p-2'
-                  style={{ textTransform: 'none', fontWeight: 'lighter', fontSize: '12px' }}
-                  onClick={handleClose}
-                >
-                  <span className='mx-2'>Cancel</span>
-                </ButtonComponent>
-
-                <ButtonComponent
-                  cssClass='e-custom-primary'
-                  type='submit'
-                  className='m-2 p-2'
-                  style={{ textTransform: 'none', fontWeight: 'lighter', fontSize: '12px' }}
-                >
-                  <span className='mx-2'>Register New User</span>
-                </ButtonComponent>
-              </DialogActions>
-            </div>
-          </form>
-        </DialogContentText>
-      </DialogContent>
+          <PropertyRow label="Email address" required htmlFor="nu-email">
+            <TextField id="nu-email" name="email" type="email" required fullWidth size="small" placeholder={domain ? `name@${domain}` : 'name@company.com'} InputProps={fieldIcon(<FaEnvelope />)} sx={fieldSx()} />
+          </PropertyRow>
+          <PropertyRow label="First name" required htmlFor="nu-fname">
+            <TextField id="nu-fname" name="fname" required fullWidth size="small" placeholder="First name" InputProps={fieldIcon(<FaUser />)} sx={fieldSx()} />
+          </PropertyRow>
+          <PropertyRow label="Last name" required htmlFor="nu-lname">
+            <TextField id="nu-lname" name="lname" required fullWidth size="small" placeholder="Last name" InputProps={fieldIcon(<FaUser />)} sx={fieldSx()} />
+          </PropertyRow>
+          <PropertyRow label="Mobile number" required htmlFor="phone" alignTop>
+            <TextField
+              id="phone"
+              name="phone"
+              required
+              fullWidth
+              size="small"
+              placeholder="07xx xxx xxx"
+              helperText="10 digits, starting with 0"
+              inputProps={{ pattern: '[0]{1}[1-7]{1}[0-9]{2}[0-9]{3}[0-9]{3}', inputMode: 'tel' }}
+              InputProps={fieldIcon(<FaPhone />)}
+              sx={fieldSx()}
+            />
+          </PropertyRow>
+        </DialogContent>
+        <DialogFooter>
+          <SecondaryButton onClick={handleClose} disabled={busy}>Cancel</SecondaryButton>
+          <PrimaryButton type="submit" loading={busy} startIcon={<FaUserPlus />}>{busy ? 'Creating…' : 'Create user'}</PrimaryButton>
+        </DialogFooter>
+      </form>
     </Dialog>
   );
 };

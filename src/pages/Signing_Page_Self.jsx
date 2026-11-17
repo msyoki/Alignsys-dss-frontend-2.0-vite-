@@ -9,8 +9,10 @@ import ConfirmVoid from '../components/ConfirmVoid';
 import OtpDialog from '../components/OtpDialog';
 import { getComponent } from '@syncfusion/ej2-base';
 import logo from '../images/ZFBLU.webp';
+import BrandLogo from '../components/common/BrandLogo';
 import Button from '@mui/material/Button';
 import HelpBubble from '../components/HelpBubble';
+import '../styles/SigningLayout.css';
 import LoadingDialog from '../components/loaders/LoadingDialog';
 import CommentsDialog from '../components/dialogs/CommentsDialog';
 import * as constants from '../components/constants/constants';
@@ -18,6 +20,7 @@ import LoadingMini from '../components/loaders/LoadingMini2';
 import AuthGuestDialog from '../components/AuthenticateGuest';
 import PDFViewerSigningLoader from '../components/preview/PDFViewerSigningLoader';
 import HumanizedDate from '../components/HumanizeDate';
+import { PILL } from '../components/common/pillButton';
 
 function Signing_Page_Self() {
   const location = useLocation();
@@ -260,23 +263,16 @@ function Signing_Page_Self() {
             user={user}
           />
           <OtpDialog
+            signerguid={signeruid}
+            otpphone={otpphone}
             alertseverity={alertseverity}
             alertmsg={alertmsg}
             openalert={openalert}
-            maskedotpphone={maskedotpphone}
-            otpphone={otpphone}
-            newotp={newotp}
-            setOtpPhone={setOtpPhone}
-            setMaskedOtpPhone={setMaskedOtpPhone}
-            trialcount={trialcount}
-            setTrialCount={setTrialCount}
             setAlertMsg={setAlertMsg}
             setAlertSeverity={setAlertSeverity}
             setOpenAlert={setOpenAlert}
-            setOTP={setOTP}
             setOpenDialogOtp={setOpenDialogOtp}
             opendialogotp={opendialogotp}
-            user={user}
           />
           <CommentsDialog
             setText={setText}
@@ -289,7 +285,7 @@ function Signing_Page_Self() {
           />
           <LoadingDialog opendialogloading={opendialogloading} />
           <HelpBubble content='' base64={sampleURL} filename={docname} />
-          <div className="row bg-white" >
+          <div className="row bg-white signing-layout">
             {/* Main Document Viewer */}
             <div className="col-lg-9 col-md-12 col-sm-12 order-lg-1 order-sm-1 bg-white">
               <div>
@@ -361,11 +357,12 @@ function Signing_Page_Self() {
               </div>
             </div>
             {/* Sidebar (Right on Large Screens, Top on Small Screens) */}
-            <div className="bg-white col-lg-3 col-md-12 col-sm-12 text-center shadow-lg order-lg-2 order-sm-2 d-flex flex-column" style={{ height: '100vh' }}>
+            <div className="bg-white col-lg-3 col-md-12 col-sm-12 text-center shadow-lg order-lg-2 order-sm-2 d-flex flex-column signing-details">
               {/* Logo Section */}
               <div className="d-flex flex-column justify-content-center align-items-center" style={{ height: "60px", minHeight: "60px", overflow: "hidden" }}>
-                <img
-                  src={companylogo || logo}
+                <BrandLogo
+                  src={companylogo}
+                  fallback={logo}
                   alt="Organization logo"
                   className="logo"
                   style={{ maxWidth: "80%", maxHeight: "48px", objectFit: "contain" }}
@@ -377,7 +374,7 @@ function Signing_Page_Self() {
 
               {/* Document Information - This will grow to fill available space */}
               <div className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
-                <ul className="list-unstyled m-0 p-0 flex-grow-1" style={{ overflowY: 'auto' }}>
+                <ul className="list-unstyled m-0 p-0 flex-grow-1 signing-details-list" style={{ overflowY: 'auto' }}>
                   <li className="mb-2" style={{ fontSize: "12px", fontWeight: 450, color: "#1C4690" }}>Title</li>
                   <li className="mt-2 mb-2" style={{ fontSize: "12px", fontWeight: 440 }}>{docname}</li>
                   <li className="mt-2 mb-2" style={{ fontSize: "12px", color: "#1C4690" }}>
@@ -436,15 +433,7 @@ function Signing_Page_Self() {
                     disabled={false}
                     startIcon={<FaComment size={13} />}
                     sx={{
-                      textTransform: 'none',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      borderRadius: '999px',
-                      px: 1.8,
-                      py: 0.8,
-                      minHeight: 34,
-                      boxShadow: 'none',
-                    
+                      ...PILL,
                     }}
                   >
                     Comments ({comments.length})
@@ -452,7 +441,7 @@ function Signing_Page_Self() {
                 </div>
                 <div className="mt-3 p-1 bg-white">
                   <a className="my-4" href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
-                    <img src={logo} style={{ width: '40%' }} alt="Footer Logo" />
+                    <img src={logo} alt="Alignsys" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }} />
                   </a>
                 </div>
               </div>

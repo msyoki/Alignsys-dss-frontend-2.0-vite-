@@ -9,10 +9,31 @@ const Authcontext= createContext()
 
 export default Authcontext;
 
+// --- Token helpers ---------------------------------------------------------
+// The backend rotates refresh tokens and blacklists the old one on use, so a
+// refresh token works exactly once. Two refreshes with the same token (React
+// StrictMode running effects twice, the timer firing during a refresh, ...)
+// make one of them fail; that failure used to log the user out at random.
+const readTokens = () => {
+    try { return JSON.parse(sessionStorage.getItem('authTokens')) || null } catch { return null }
+}
+const decodeAccess = (tokens) => {
+    try { return tokens?.access ? jwt_decode(tokens.access) : null } catch { return null }
+}
+const secondsLeft = (tokens) => {
+    const claims = decodeAccess(tokens)
+    return claims?.exp ? claims.exp - Date.now() / 1000 : 0
+}
+// Only one refresh at a time, shared by every caller (module level, so it
+// survives StrictMode's double mount).
+let refreshInFlight = null
+
 export const AuthProvider = ({children}) => {
     
-    let[authTokens, setAuthtokens]= useState(()=>sessionStorage.getItem('authTokens')? JSON.parse(sessionStorage.getItem('authTokens')): null)
-    let[user, setUser]= useState(()=>sessionStorage.getItem('authTokens')? jwt_decode(sessionStorage.getItem('authTokens')): null)
+    let[authTokens, setAuthtokens]= useState(()=>readTokens())
+    // Decode the access token (previously the whole JSON string was decoded,
+    // which only worked by accident).
+    let[user, setUser]= useState(()=>decodeAccess(readTokens()))
     let[loading,setLoading]= useState(true)
     let navigate = useNavigate()
     let [miniLoader, setMiniLoader] = useState(false);
@@ -127,6 +148,7 @@ export const AuthProvider = ({children}) => {
         // console.log(response.data['IPv4'])
         var userip=''
         userip = response.data.ip
+        if (!user?.email) return
         let data = JSON.stringify({
             "activity": "logout",
             "description": "successful logout",
@@ -162,27 +184,42 @@ export const AuthProvider = ({children}) => {
 
     // Update token
 
+    // Refresh the access token. Safe to call from anywhere, any number of times:
+    // concurrent calls share one request, and it always uses the newest refresh
+    // token (from storage, not a possibly stale copy in this closure).
+    // Logs out only when the server rejects the refresh token (expired /
+    // already used); a network error or server restart just retries later.
     let updateToken = async ()=>{
-
-
-        try {
-            const response = await axios.post(`${constants.devApiBaseUrl}/api/token/refresh/`,{
-                refresh:authTokens?.refresh
-            })
-            const data= response.data
-            if(response.status === 200){
-                setAuthtokens(data)
-                setUser(jwt_decode(data.access))
-                // console.log(jwt_decode(data.access))
-                sessionStorage.setItem('authTokens',JSON.stringify(data))
-            }else{
-            
+        const tokens = readTokens()
+        if (!tokens?.refresh) {
+            if (loading) setLoading(false)
+            return
+        }
+        if (!refreshInFlight) {
+            refreshInFlight = axios.post(`${constants.devApiBaseUrl}/api/token/refresh/`, { refresh: tokens.refresh })
+                .then((response) => {
+                    sessionStorage.setItem('authTokens', JSON.stringify(response.data))
+                    return { ok: true, data: response.data }
+                })
+                .catch((error) => ({ ok: false, status: error?.response?.status }))
+                .finally(() => { refreshInFlight = null })
+        }
+        const result = await refreshInFlight
+        if (result.ok) {
+            setAuthtokens(result.data)
+            setUser(decodeAccess(result.data))
+        } else if (result.status === 401 || result.status === 400) {
+            // Another tab may have refreshed with the same token a moment ago;
+            // if storage already holds a newer, still-valid token, keep it.
+            const latest = readTokens()
+            if (latest?.refresh && latest.refresh !== tokens.refresh && secondsLeft(latest) > 0) {
+                setAuthtokens(latest)
+                setUser(decodeAccess(latest))
+            } else {
                 logoutUser()
             }
         }
-        catch(error){
-            logoutUser()
-        }
+        // Other errors (offline, 5xx, server restarting): stay signed in and retry on the next tick.
         if(loading){
             setLoading(false)
         }
@@ -273,20 +310,28 @@ export const AuthProvider = ({children}) => {
     }
 
 
-    // Update token
+    // Keep the session alive. Instead of a blind 3-minute timer, refresh when the
+    // access token is about to expire: checked every 30 s and whenever the tab
+    // becomes visible again (browsers slow timers in background tabs and stop
+    // them while a laptop sleeps).
     useEffect(()=>{
-        
         if(loading){
             updateToken()
         }
-        let threeMinutes= 1000*60*3
-        let interval= setInterval(()=>{
-            if(authTokens){
-                updateToken()
-            }
-        },threeMinutes)
-        return ()=>clearInterval(interval)
-    }, [authTokens, loading])
+        const refreshIfDue = () => {
+            const tokens = readTokens()
+            if (tokens?.refresh && secondsLeft(tokens) < 90) updateToken()
+        }
+        const interval = setInterval(refreshIfDue, 30 * 1000)
+        const onVisible = () => { if (document.visibilityState === 'visible') refreshIfDue() }
+        document.addEventListener('visibilitychange', onVisible)
+        window.addEventListener('focus', refreshIfDue)
+        return ()=>{
+            clearInterval(interval)
+            document.removeEventListener('visibilitychange', onVisible)
+            window.removeEventListener('focus', refreshIfDue)
+        }
+    }, [authTokens, loading]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
   
     <Authcontext.Provider value={contextData}>

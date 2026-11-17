@@ -15,6 +15,7 @@
 /* Sidebar / Thumbnail Panel */
 .pdf-thumbnail-panel {
   position: relative;
+  overflow-x: hidden; /* thumbnails are drawn at the panel width */
   height: 85vh;
   width: 20%;
   background-color: #666666;

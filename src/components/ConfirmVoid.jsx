@@ -10,22 +10,14 @@ import axios from 'axios';
 import * as constants from './constants/constants.js';
 import { FaBan, FaTimes } from 'react-icons/fa';
 import Alerts from './Alert.jsx';
+import { PILL } from './common/pillButton';
 
 const pillBtn = {
-  textTransform: 'none',
-  fontSize: '12px',
-  fontWeight: 500,
-  borderRadius: '999px',
-  px: 2,
-  py: 0.8,
-  minHeight: 34,
-  boxShadow: 'none',
+  ...PILL,
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '6px',
 };
 
-const iconStyle = { fontSize: '13px', flexShrink: 0 };
 
 const ConfirmVoid = (props) => {
   const navigate = useNavigate();
@@ -154,8 +146,8 @@ const ConfirmVoid = (props) => {
               disabled={isEmpty}
               sx={pillBtn}
               onClick={handleClose2}
-            >
-              <FaBan style={iconStyle} />
+            
+              startIcon={<FaBan />}>
               Void Document
             </Button>
             <Button
@@ -163,8 +155,8 @@ const ConfirmVoid = (props) => {
               color="warning"
               sx={pillBtn}
               onClick={handleClose}
-            >
-              <FaTimes style={iconStyle} />
+            
+              startIcon={<FaTimes />}>
               Cancel
             </Button>
           </div>

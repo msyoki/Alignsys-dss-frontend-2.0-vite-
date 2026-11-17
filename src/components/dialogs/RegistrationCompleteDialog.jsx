@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { PILL_OUTLINE_NEUTRAL } from '../common/pillButton';
 import { useNavigate, Link } from 'react-router-dom'
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -51,8 +52,8 @@ const RegistrationCompleteDialog = (props) => {
             <p className='text-center text-dark my-3' style={{fontSize:'13px'}}>Thank you for completing the sign-up process. Your account is now awaiting approval, and you can anticipate receiving feedback via the email address you provided within the next 24 hours. Once again, we appreciate your registration !!!</p>
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} >Close</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleClose} sx={PILL_OUTLINE_NEUTRAL}>Close</Button>
           {/* <Button onClick={updateCompany} autoFocus>
             Agree
           </Button> */}

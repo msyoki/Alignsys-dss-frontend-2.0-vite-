@@ -6,7 +6,7 @@
   flex-direction: column;
   align-items: center;
   gap: 10px; /* Space between bubbles */
-  z-index: 999999; /* Ensure this is higher than the modal background */
+  z-index: 1250; /* Above page content, below MUI dialogs (1300) so it never covers an open dialog */
   pointer-events: auto; /* Ensures it remains interactive */
 }
 

@@ -6,6 +6,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import Slide from '@mui/material/Slide';
 
 import { FaInfoCircle, FaCheck } from 'react-icons/fa';
+import { PILL } from '../common/pillButton';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
     return <Slide direction="up" ref={ref} {...props} />;
@@ -51,29 +52,18 @@ function MultipageInfoDialog(props) {
                         </p>
                     </DialogContentText>
 
-                    <div className='d-flex justify-content-center'>
+                    <div className='d-flex justify-content-center mt-3'>
                         <Button
                             variant="contained"
                             color='inherit'
-                            className='m-2'
                             onClick={handleClose}
+                            startIcon={<FaCheck />}
                             sx={{
-                                textTransform: 'none',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                borderRadius: '999px',
-                                px: 1.8,
-                                py: 0.8,
-                                minHeight: 34,
-                                boxShadow: 'none',
-                                
-
+                              ...PILL,
+                              color: '#1C4690',
                             }}
                         >
-                            <span className='mx-2 d-flex align-items-center' style={{ color: '#1C4690' }}>
-                                <FaCheck style={{ marginRight: '6px' }} />
-                                I understand, proceed!
-                            </span>
+                            I understand, proceed!
                         </Button>
                     </div>
                 </DialogContent>

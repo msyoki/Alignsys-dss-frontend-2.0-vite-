@@ -19,6 +19,7 @@ import {
     Paper,
 } from '@mui/material';
 import { FaArrowLeft, FaTimes } from "react-icons/fa";
+import { PILL } from '../common/pillButton';
 
 function CustomTabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -188,13 +189,7 @@ function SignersBoxDialog(props) {
 
 
     const actionButtonSx = {
-        textTransform: 'none',
-        fontSize: '12px',
-        fontWeight: 500,
-        borderRadius: '999px',
-        boxShadow: 'none',
-        margin: '20px'
-
+      ...PILL,
     };
 
 
@@ -418,10 +413,8 @@ function SignersBoxDialog(props) {
                                 <Button
                                     variant="contained"
                                     color="success"
-                                    className='rounded-pill'
                                     sx={{
-                                        fontSize: '12px',
-                                        textTransform: "none",
+                                      ...PILL,
                                     }}
                                     onClick={handleClose}
                                 >

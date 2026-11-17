@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaCircle, FaSpinner } from 'react-icons/fa';
-import { Dialog, DialogContent, DialogTitle, IconButton, Tooltip, Button } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { FaCheckCircle, FaEnvelope, FaEnvelopeOpenText, FaFileAlt } from 'react-icons/fa';
+import { Box, Dialog, DialogContent, TextField, Tooltip, Button, Typography } from '@mui/material';
 import * as constants from '../constants/constants';
-import logo from '../../images/ZFWHITE.webp';
 import axios from 'axios';
 import SimpleAlert from '../SimpleAlert.jsx';
 import { FaDownload } from "react-icons/fa6";
 import HumanizedDate from '../HumanizeDate.jsx';
+import { DialogFooter, DialogHeader, PrimaryButton, PropertyRow, PropertyValue, SecondaryButton, StatusChip, fieldSx } from '../common/dialogKit';
+import { PILL_COMPACT, PILL_OUTLINE } from '../common/pillButton';
 const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, document = {} }) => {
   const handleClose = () => setOpenDialogDocDetails(false);
   const [editingSigner, setEditingSigner] = useState(null);
@@ -77,218 +77,122 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
     signers = [],
   } = document;
 
+  const status = signedcomplete === 'True'
+    ? { tone: 'success', label: 'Signing completed' }
+    : declined === 'True'
+      ? { tone: 'danger', label: 'Voided' }
+      : { tone: 'warning', label: 'Pending signing' };
+
+  // Signed first, then the current signer, then the queue.
+  const orderedSigners = [...signers].sort((a, b) => {
+    const getPriority = (signer) => {
+      if (signer.signed === 'True') return 1;
+      if (signer.current_signer === 'True') return 2;
+      return 3;
+    };
+    return getPriority(a) - getPriority(b);
+  });
+
   return (
-    <Dialog open={opendialogdocdetails} onClose={handleClose} fullWidth maxWidth="sm">
-      {/* Header */}
-      <DialogTitle
-        className="p-2 d-flex justify-content-between align-items-center"
-        style={{ backgroundColor: '#2757aa', color: '#fff', fontSize: '15px' }}
-      >
-        <img src={logo} alt="Logo" width="130px" className="mx-3" />
-        <span className="flex items-center mx-3 cursor-pointer">
-          <span className="font-bold mx-1">Document Details</span>
-          <IconButton onClick={handleClose} style={{ color: 'white' }}>
-            <CloseIcon />
-          </IconButton>
-        </span>
-      </DialogTitle>
+    <Dialog open={opendialogdocdetails} onClose={handleClose} fullWidth maxWidth="sm" aria-labelledby="doc-details-title">
+      <DialogHeader id="doc-details-title" icon={<FaFileAlt />} title="Document details" subtitle={title} onClose={handleClose} />
 
-      {/* Content */}
-      <DialogContent style={{ fontSize: '14px', maxHeight: '60vh', overflowY: 'auto' }}>
-        <div className="row">
-          <p className='text-center font-weight-bold mt-3'>
-            <span style={{ color: '#2757aa' }}>Title</span><br />
-            {title}
-          </p>
-          {signers.length > 0 && (
-            <p className="font-weight-bold text-center" style={{ color: '#2757aa' }}>
-              Signers ({signers.length})
-            </p>
-          )}
-          {openAlert && alertMsg && (
-            <div style={{ marginTop: '16px', marginBottom: '16px' }}>
-              <SimpleAlert openAlert={openAlert} alertMsg={alertMsg} alertSeverity={alertSeverity} />
-            </div>
-          )}
+      <DialogContent dividers sx={{ px: { xs: 2, sm: 3 }, py: 2, maxHeight: '65vh' }}>
+        {openAlert && alertMsg && (
+          <Box sx={{ mb: 1.5 }}>
+            <SimpleAlert openAlert={openAlert} alertMsg={alertMsg} alertSeverity={alertSeverity} />
+          </Box>
+        )}
 
-          {/* <div className="border rounded p-2" style={{ maxHeight: '20vh', overflowY: 'auto', backgroundColor: '#ecf4fc' }}>
-            {signers.map((s, index) => (
-              <div
+        <PropertyRow label="Title"><PropertyValue>{title !== 'N/A' ? title : ''}</PropertyValue></PropertyRow>
+        <PropertyRow label="Owner"><PropertyValue>{owner !== 'N/A' ? owner : ''}</PropertyValue></PropertyRow>
+        <PropertyRow label="Created">
+          <PropertyValue>{docdate && docdate !== 'N/A' ? <HumanizedDate dateStr={docdate} /> : ''}</PropertyValue>
+        </PropertyRow>
+        <PropertyRow label="Status">
+          <Box sx={{ py: 0.5 }}><StatusChip tone={status.tone}>{status.label}</StatusChip></Box>
+        </PropertyRow>
+        <PropertyRow label="Document ID"><PropertyValue mono>{guid !== 'N/A' ? guid : ''}</PropertyValue></PropertyRow>
+
+        <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#111827', mt: 2, mb: 1, px: 1 }}>
+          Signers ({signers.length})
+        </Typography>
+        {signers.length === 0 ? (
+          <Typography sx={{ fontSize: 12.5, color: '#9ca3af', px: 1 }}>No signers on this document.</Typography>
+        ) : (
+          <Box sx={{ border: '1px solid #e5e7eb', borderRadius: 1.5, overflow: 'hidden' }}>
+            {orderedSigners.map((s, index) => (
+              <Box
                 key={index}
-                className={`d-flex justify-content-between align-items-center p-1 ${signers.length > 1 && index !== signers.length - 1 ? 'border-bottom' : ''}`}
-                style={{ fontSize: '13.5px' }}
+                sx={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap',
+                  px: 1.5, py: 1, borderTop: index ? '1px solid #f3f4f6' : 'none', '&:hover': { bgcolor: '#f9fafb' },
+                }}
               >
-                <span>{s.email}</span>
-                <span className="text-muted">
+                <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography noWrap title={s.email} sx={{ fontSize: 13, color: '#111827', fontWeight: 500, maxWidth: 260 }}>{s.email}</Typography>
                   {s.signed === 'True' ? (
-                    <>
-                      signed <i className="fas fa-check-circle text-success mx-1"></i>: {s.signed_time_stamp}
-                    </>
+                    <StatusChip tone="success" icon={<FaCheckCircle size={11} />}>
+                      Signed{s.signed_time_stamp ? <>&nbsp;·&nbsp;<HumanizedDate dateStr={s.signed_time_stamp} /></> : ''}
+                    </StatusChip>
+                  ) : s.current_signer === 'True' ? (
+                    <StatusChip tone="info" icon={<FaEnvelopeOpenText size={11} />}>Current signer</StatusChip>
                   ) : (
-                    <>
-                      {s.current_signer === 'True' ? 'Current Signer' : 'Queued'}
-                      <i className={s.current_signer === 'True' ? 'fas fa-envelope-open-text text-danger mx-1' : 'fas fa-envelope text-warning mx-1'}></i>
-                    </>
+                    <StatusChip tone="neutral" icon={<FaEnvelope size={11} />}>Queued</StatusChip>
                   )}
-                </span>
-              </div>
-            ))}
-          </div> */}
-          <div
-            className="border rounded p-2"
-            style={{ maxHeight: '20vh', overflowY: 'auto', backgroundColor: '#ecf4fc' }}
-          >
-            {[...signers].sort((a, b) => {
-              // Priority: 1. Signed, 2. Current Signer, 3. Queued
-              const getPriority = (signer) => {
-                if (signer.signed === 'True') return 1;
-                if (signer.current_signer === 'True') return 2;
-                return 3;
-              };
-              return getPriority(a) - getPriority(b);
-            }).map((s, index) => (
-              <div
-                key={index}
-                className={`d-flex justify-content-between align-items-center p-1 ${signers.length > 1 && index !== signers.length - 1 ? 'border-bottom' : ''}`}
-                style={{ fontSize: '13.5px' }}
-              >
-                <div>
-                  <span className="fw-semibold">{s.email}</span>
-                  <span className="text-muted ms-2">
-                    {s.signed === 'True' ? (
-                      <>
-                        signed  <FaCheckCircle className="text-success mx-1" />: <HumanizedDate dateStr={s.signed_time_stamp} />
-                      </>
-                    ) : (
-                      <>
-                        {s.current_signer === 'True' ? 'Current Signer' : 'Queued'}
-                        {s.current_signer === 'True' ? <FaEnvelopeOpenText className="text-danger mx-1" /> : <FaEnvelope className="text-warning mx-1" />}
-                      </>
-                    )}
-                  </span>
-                </div>
-                {/* Action column */}
-                <div>
+                </Box>
+
+                {/* Change signer (unchanged logic; see handleSwapSigner) */}
+                <Box sx={{ flexShrink: 0 }}>
                   {editingSigner === s.email ? (
-                    <div className="d-flex align-items-center">
-                      <input
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <TextField
                         type="email"
-                        placeholder="new email"
+                        size="small"
+                        placeholder="New email"
                         value={newEmail}
                         onChange={(e) => setNewEmail(e.target.value)}
-                        className="form-control form-control-sm me-1"
-                        style={{ width: '180px' }}
+                        sx={{ ...fieldSx(), width: 190 }}
                       />
                       <Tooltip title="Save changes">
                         <span>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={submitChange}
-                            disabled={isLoadingSubstitute}
-                            sx={{
-                              textTransform: 'none',
-                              fontSize: '12px',
-                              backgroundColor: '#2757aa',
-                              mr: 0.5,
-                              '&:hover': {
-                                backgroundColor: '#1e4a93',
-                              },
-                            }}
-                          >
-                            {isLoadingSubstitute ? (
-                              <>
-                                <FaSpinner className="fa-spin me-1" /> Saving...
-                              </>
-                            ) : (
-                              'Save'
-                            )}
-                          </Button>
+                          <PrimaryButton onClick={submitChange} loading={isLoadingSubstitute} sx={{ ...PILL_COMPACT }}>
+                            {isLoadingSubstitute ? 'Saving…' : 'Save'}
+                          </PrimaryButton>
                         </span>
                       </Tooltip>
                       <Tooltip title="Cancel editing">
                         <span>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={cancelEdit}
-                            disabled={isLoadingSubstitute}
-                            sx={{
-                              textTransform: 'none',
-                              fontSize: '12px',
-                              color: '#2757aa',
-                              borderColor: '#2757aa',
-                              '&:hover': {
-                                backgroundColor: '#e6eefc',
-                                borderColor: '#1e4a93',
-                              },
-                            }}
-                          >
-                            Cancel
-                          </Button>
+                          <SecondaryButton onClick={cancelEdit} disabled={isLoadingSubstitute} sx={{ minHeight: 32 }}>Cancel</SecondaryButton>
                         </span>
                       </Tooltip>
-                    </div>
+                    </Box>
                   ) : (
                     !s.signed && (
                       <Tooltip title="Change this signer's email">
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => startEdit(s.email)}
-                          sx={{
-                            textTransform: 'none',
-                            fontSize: '12px',
-                            color: '#2757aa',
-                            borderColor: '#2757aa',
-                            '&:hover': {
-                              backgroundColor: '#e6eefc',
-                              borderColor: '#1e4a93',
-                            },
-                          }}
-                        >
+                        <Button onClick={() => startEdit(s.email)} sx={{ ...PILL_OUTLINE, ...{ minHeight: 30, py: 0.25, px: 1.5, fontSize: '12px' } }}>
                           Change
                         </Button>
                       </Tooltip>
                     )
                   )}
-                </div>
-              </div>
+                </Box>
+              </Box>
             ))}
-          </div>
-        </div>
+          </Box>
+        )}
       </DialogContent>
 
-      {/* Action Buttons */}
-      <div className="d-flex justify-content-center my-3 gap-3">
-     
-          <Tooltip title="Download Document">
-            <FaDownload
-              className="mx-2"
-              onClick={() => window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${guid}`)}
-              style={{ fontSize: '30px', color: '#2757aa', cursor: 'pointer' }}
-            />
-          </Tooltip>
-   
-      </div>
-
-      {/* Footer */}
-      <div className="footer bg-light border-top py-2">
-        <div className="container text-center text-muted" style={{ fontSize: '13px' }}>
-          <p className="my-1"><span>Owner:</span> {owner}</p>
-          <p className="my-1">
-            <span>Status:</span>
-            {signedcomplete === 'True' ? (
-              <span><FaCircle className="mx-1 text-success" /> Signing Completed</span>
-            ) : declined === 'True' ? (
-              <span><FaCircle className="mx-1 text-danger" /> Voided</span>
-            ) : (
-              <span><FaCircle className="mx-1 text-warning" /> Pending Signing</span>
-            )}
-          </p>
-          <p className="mt-1" style={{ fontSize: '11px' }}>GUID: {guid}</p>
-        </div>
-      </div>
+      <DialogFooter>
+        <SecondaryButton onClick={handleClose}>Close</SecondaryButton>
+        <PrimaryButton
+          startIcon={<FaDownload />}
+          onClick={() => window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${guid}`)}
+          disabled={!guid || guid === 'N/A'}
+        >
+          Download
+        </PrimaryButton>
+      </DialogFooter>
     </Dialog>
   );
 };

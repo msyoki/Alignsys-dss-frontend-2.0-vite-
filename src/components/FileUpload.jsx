@@ -10,7 +10,8 @@ import {
   AccordionDetails,
   CircularProgress,
   Backdrop,
-  TextField
+  TextField,
+  useMediaQuery
 } from '@mui/material';
 import { FaTrashAlt, FaChevronDown } from 'react-icons/fa';
 import LoadingMini from './loaders/LoadingMini.jsx';
@@ -18,9 +19,11 @@ import LoadingMini from './loaders/LoadingMini.jsx';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FaUpload, FaPlusSquare, FaPenNib, FaEnvelope, FaArchive, FaTimes } from 'react-icons/fa';
+import { FaUpload, FaPlusSquare, FaPenNib, FaEnvelope, FaArchive, FaTimes, FaEye } from 'react-icons/fa';
+import UploadPreviewDialog from './dialogs/UploadPreviewDialog.jsx';
+import { PILL } from './common/pillButton';
 
-function SortableFile({ fileObj, index, deleteFile }) {
+function SortableFile({ fileObj, index, deleteFile, onPreview }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: fileObj.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -42,9 +45,15 @@ function SortableFile({ fileObj, index, deleteFile }) {
       <Typography sx={{ fontSize: 11.5, color: '#495057' }} {...listeners}>
         <span style={{ color: '#2757aa' }}>{index + 1}.</span> {fileObj.file.name}
       </Typography>
-      <IconButton size="small" color="error" onClick={handleDelete}>
-        <FaTrashAlt size={16} />
-      </IconButton>
+      {/* 8px apart so Preview and Remove are hard to mis-tap. */}
+      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 8, marginLeft: 8 }}>
+        <IconButton size="small" onClick={onPreview} aria-label={`Preview ${fileObj.file.name}`} title="Preview" sx={{ color: '#2757aa' }}>
+          <FaEye size={15} />
+        </IconButton>
+        <IconButton size="small" color="error" onClick={handleDelete} aria-label={`Remove ${fileObj.file.name}`} title="Remove">
+          <FaTrashAlt size={15} />
+        </IconButton>
+      </div>
     </div>
   );
 }
@@ -52,9 +61,15 @@ function SortableFile({ fileObj, index, deleteFile }) {
 function FileUpload(props) {
   const inputRef = useRef(null);
   const [dragActive, setDragActive] = useState(false);
+  // Phones/small tablets: same drop box, but compact (no full-height area).
+  const isSmallScreen = useMediaQuery('(max-width: 767.98px)');
 
   const [loadingmini, setLoadingMini] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  // Preview of the picked files before choosing how to proceed (read in the browser).
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const openPreview = (i = 0) => { setPreviewIndex(i); setPreviewOpen(true); };
 
   const allowedExtensions = [
     '.pdf', '.xls', '.xlsx', '.csv', '.doc', '.docx', '.rtf',
@@ -69,7 +84,10 @@ function FileUpload(props) {
     },
     'e-custom-light': {
       variant: 'outlined',
-      sx: { backgroundColor: '#fff', color: '#1C4690', borderColor: '#fff', '&:hover': { backgroundColor: '#fff' } },
+      // Visible brand-blue outline so it reads as a button in the stacked list on a
+      // white card. Side padding is 1px less to absorb the 1px border, keeping its
+      // icon in line with the filled buttons above and below.
+      sx: { backgroundColor: '#fff', color: '#1C4690', border: '1px solid #2757aa', px: '19px', '&:hover': { backgroundColor: '#ecf4fc', borderColor: '#1C4690' } },
     },
     'e-custom-warning': {
       variant: 'contained',
@@ -161,14 +179,33 @@ function FileUpload(props) {
           sx={{
             position: 'absolute',
             zIndex: 10,
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            borderRadius: '12px'
+            backgroundColor: 'rgba(248, 250, 252, 0.72)',
+            backdropFilter: 'blur(2px)',
+            borderRadius: '12px',
+            alignItems: 'flex-start',
+            pt: { xs: 6, sm: 10 },
           }}
         >
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-            <CircularProgress size={50} sx={{ color: '#2757aa' }} />
-            <Typography sx={{ color: '#2757aa', fontSize: '14px', fontWeight: 500 }}>
-              Processing files...
+          <Box
+            role="status"
+            aria-live="polite"
+            sx={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.25,
+              bgcolor: '#fff', borderRadius: 3, px: 4, py: 3, mx: 2, maxWidth: 320, textAlign: 'center',
+              boxShadow: '0 8px 24px rgba(16, 24, 40, 0.12)', border: '1px solid #e5e7eb',
+            }}
+          >
+            <CircularProgress size={34} thickness={4.5} sx={{ color: '#2757aa', mb: 0.5 }} />
+            <Typography sx={{ color: '#111827', fontSize: '14px', fontWeight: 600, lineHeight: 1.35 }}>
+              {props.loadingMessage || 'Processing your files…'}
+            </Typography>
+            {props.files?.length > 0 && (
+              <Typography noWrap title={props.files.length === 1 ? props.files[0].file.name : undefined} sx={{ color: '#2757aa', fontSize: '12.5px', maxWidth: 260 }}>
+                {props.files.length === 1 ? props.files[0].file.name : `${props.files.length} files`}
+              </Typography>
+            )}
+            <Typography sx={{ color: '#6b7280', fontSize: '12px', lineHeight: 1.4 }}>
+              This can take a moment for large or multiple files.
             </Typography>
           </Box>
         </Backdrop>
@@ -184,74 +221,88 @@ function FileUpload(props) {
       />
 
       {!props.files?.length ? (
-        <form id="form-file-upload" onDragEnter={handleDrag} onSubmit={(e) => e.preventDefault()}>
+        <form id="form-file-upload" onDragEnter={handleDrag} onSubmit={(e) => e.preventDefault()} style={isSmallScreen ? { height: "auto" } : undefined}>
           <label
             className={dragActive ? "drag-active" : ""}
             style={{
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              padding: "24px 20px",
+              padding: isSmallScreen ? "16px 14px" : "24px 20px",
               textAlign: "center",
               border: "2px dashed #d0d0d0",
               borderRadius: "12px",
               cursor: "pointer",
               backgroundColor: dragActive ? "#f8f9fa" : "#ecf4fc",
               transition: "background-color 0.2s ease",
-              minHeight: "calc(100vh - 200px)",
+              minHeight: isSmallScreen ? 0 : "calc(100vh - 200px)",
               boxSizing: "border-box",
               overflowY: "auto",
               margin: "0",
             }}
             onClick={onButtonClick}
           >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "2vh",           // gap scales with screen height
-                marginTop: "auto",
-                marginBottom: "auto",
-                maxWidth: "100%",
-              }}
-            >
-              <FaUpload style={{ fontSize: "36px", color: "#2757aa" }} />
-
-              <p style={{ fontSize: "14px", color: "#333", fontWeight: 600, marginBottom: "30px" }}>
-                Upload supported file types
-              </p>
-
-              <p style={{ fontSize: "13px", color: "#555", margin: 0 }}>
-                PDF, Word, Excel, PowerPoint, CSV, Image, RTF
-              </p>
-
-              <Button
-                variant="contained"
-                startIcon={<FaPlusSquare size={16} />}
-                onClick={(e) => {
-                  e.stopPropagation(); // ← prevent bubbling to the label
-                  onButtonClick();
-                }}
-                sx={{
-                  textTransform: 'none',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  borderRadius: '999px',
-                  px: 1.8,
-                  py: 0.8,
-                  minHeight: 34,
-                  boxShadow: 'none',
+            {isSmallScreen ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FaUpload style={{ fontSize: 20, color: '#2757aa' }} />
+                  <span style={{ fontSize: 13.5, color: '#333', fontWeight: 600 }}>Upload a document</span>
+                </div>
+                <Button
+                  variant="contained"
+                  disableElevation
+                  startIcon={<FaPlusSquare size={16} />}
+                  onClick={(e) => { e.stopPropagation(); onButtonClick(); }}
+                  sx={{ ...PILL, minHeight: 44, px: 3, width: '100%', maxWidth: 320, fontSize: '13.5px' }}
+                >
+                  Select files from device
+                </Button>
+                <span style={{ fontSize: 12, color: '#666', lineHeight: 1.5 }}>
+                  or drag and drop · PDF, Word, Excel, PowerPoint, CSV, Image, RTF · up to 20MB
+                </span>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "2vh",           // gap scales with screen height
+                  marginTop: "auto",
+                  marginBottom: "auto",
+                  maxWidth: "100%",
                 }}
               >
-                <span>Select files from device</span>
-              </Button>
+                <FaUpload style={{ fontSize: "36px", color: "#2757aa" }} />
 
-              <p style={{ fontSize: "13px", color: "#777", marginTop: "2vh" }}>
-                or drag and drop files here
-              </p>
-              <p className="mt-3" style={{ fontSize: 13, color: '#495057' }}>Max File Size Requirement: 20MB</p>
-            </div>
+                <p style={{ fontSize: "14px", color: "#333", fontWeight: 600, marginBottom: "30px" }}>
+                  Upload supported file types
+                </p>
+
+                <p style={{ fontSize: "13px", color: "#555", margin: 0 }}>
+                  PDF, Word, Excel, PowerPoint, CSV, Image, RTF
+                </p>
+
+                <Button
+                  variant="contained"
+                  startIcon={<FaPlusSquare size={16} />}
+                  onClick={(e) => {
+                    e.stopPropagation(); // ← prevent bubbling to the label
+                    onButtonClick();
+                  }}
+                  sx={{
+                    ...PILL,
+                  }}
+                >
+                  <span>Select files from device</span>
+                </Button>
+
+                <p style={{ fontSize: "13px", color: "#777", marginTop: "2vh" }}>
+                  or drag and drop files here
+                </p>
+                <p className="mt-3" style={{ fontSize: 13, color: '#495057' }}>Max File Size Requirement: 20MB</p>
+              </div>
+            )}
           </label>
 
           {dragActive && (
@@ -335,7 +386,7 @@ function FileUpload(props) {
               <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={props.files.map(f => f.id)} strategy={verticalListSortingStrategy}>
                   {props.files.map((file, index) => (
-                    <SortableFile key={file.id} fileObj={file} index={index} deleteFile={deleteFile} />
+                    <SortableFile key={file.id} fileObj={file} index={index} deleteFile={deleteFile} onPreview={() => openPreview(index)} />
                   ))}
                 </SortableContext>
               </DndContext>
@@ -343,11 +394,18 @@ function FileUpload(props) {
           </Accordion>
 
 
+          <UploadPreviewDialog
+            open={previewOpen}
+            onClose={() => setPreviewOpen(false)}
+            files={props.files}
+            initialIndex={previewIndex}
+          />
+
           {/* Actions */}
           <div className="text-center  mx-2 ">
             <Box className="text-center bg-white py-1 px-2" sx={{ borderRadius: '6px' }}>
               {loadingmini ? <LoadingMini /> : (
-                <div className="my-1 d-flex flex-wrap justify-content-center" style={{ gap: 8 }}>
+                <div className="my-2 d-flex flex-column align-items-center" style={{ gap: 10 }}>
                   {[
                     { label: 'I want to sign myself now', icon: 'fa-pen-nib', css: 'e-custom-primary', onClick: props.selfSign },
                     { label: 'I want to send to others to sign', icon: 'fa-envelope', css: 'e-custom-primary', onClick: props.mailtoSigners },
@@ -357,31 +415,33 @@ function FileUpload(props) {
                     const cfg = buttonStyles[btn.css] || { variant: 'outlined', sx: {} };
                     // const isDisabled = isTitleRequired && btn.onClick !== resetForm && btn.onClick !== undefined;
                     const isDisabled = false
+                    const Icon = { 'fa-eye': FaEye, 'fa-pen-nib': FaPenNib, 'fa-envelope': FaEnvelope, 'fa-archive': FaArchive, 'fa-times': FaTimes }[btn.icon]
+                    const iconColor = btn.css === 'e-custom-primary' ? '#fff' : btn.css === 'e-custom-warning' ? '#555' : '#2757aa'
                     return (
                       <Button
                         key={idx}
-                        variant={btn.label === 'I want to save for later' ? 'contained' : cfg.variant}
+                        variant={btn.css === 'e-custom-light' ? 'contained' : cfg.variant}
                         onClick={btn.onClick}
                         disabled={isDisabled}
+                        startIcon={<Icon color={iconColor} />}
                         sx={{
-                          width: 250,
-                          textTransform: 'none',
-                          fontSize: '10.5px',
-                          py: 1.5,
-                          borderRadius: '30px',
+                          ...PILL,
+                          // One column, same width for all; icons and labels start at the
+                          // same left edge so the four options line up.
+                          width: '100%',
+                          maxWidth: 280,
+                          minHeight: 40,
+                          px: 2.5,
+                          whiteSpace: 'normal',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 1,
+                          justifyContent: 'flex-start',
+                          textAlign: 'left',
                           ...cfg.sx,
                           opacity: isDisabled ? 0.5 : 1,
                         }}
                       >
-                        {btn.icon === 'fa-pen-nib' && <FaPenNib size={15} color={btn.css === 'e-custom-primary' ? '#fff' : btn.css === 'e-custom-warning' ? '#555' : '#2757aa'} />}
-                        {btn.icon === 'fa-envelope' && <FaEnvelope size={15} color={btn.css === 'e-custom-primary' ? '#fff' : btn.css === 'e-custom-warning' ? '#555' : '#2757aa'} />}
-                        {btn.icon === 'fa-archive' && <FaArchive size={15} color={btn.css === 'e-custom-primary' ? '#fff' : btn.css === 'e-custom-warning' ? '#555' : '#2757aa'} />}
-                        {btn.icon === 'fa-times' && <FaTimes size={15} color={btn.css === 'e-custom-primary' ? '#fff' : btn.css === 'e-custom-warning' ? '#555' : '#2757aa'} />}
-                        <span style={{ whiteSpace: 'normal', lineHeight: 1.1 }}>{btn.label}</span>
+                        <span style={{ whiteSpace: 'normal', lineHeight: 1.2 }}>{btn.label}</span>
                       </Button>
                     );
                   })}

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { PILL_OUTLINE, PILL_OUTLINE_NEUTRAL } from '../common/pillButton';
+import { FaBan } from 'react-icons/fa';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { FontStyle } from '@syncfusion/ej2-react-pdfviewer';
@@ -27,7 +29,7 @@ const LicenseStatus = (props) => {
         <div>
             <CustomDialog open={props.open} >
                 <DialogTitle>
-                    <i class="fas fa-ban mx-2" style={{ fontSize: '25px', color: '#ffda75' }}></i> Access Denied
+                    <FaBan className="mx-2" style={{ fontSize: '25px', color: '#ffda75', verticalAlign: '-0.125em' }} aria-hidden /> Access Denied
                 </DialogTitle>
                 <DialogContent >
                     <Typography variant="body1" style={{ fontSize: '14px'}} >
@@ -39,11 +41,11 @@ const LicenseStatus = (props) => {
                     </Typography>
 
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={props.logoutUser} color="inherit">
+                <DialogActions sx={{ gap: 1, px: 3, pb: 2 }}>
+                    <Button onClick={props.logoutUser} sx={PILL_OUTLINE_NEUTRAL}>
                         Logout
                     </Button>
-                    <Button onClick={reloadPage} color="inherit">
+                    <Button onClick={reloadPage} sx={PILL_OUTLINE}>
                         Try Again
                     </Button>
                  

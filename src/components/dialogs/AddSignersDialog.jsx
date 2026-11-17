@@ -49,13 +49,13 @@ const SignersList = ({ signers, removeSigner }) => (
 
           {item.phone && (
             <Tooltip title="OTP authentication enabled" placement="top">
-              <FaMobileAlt style={{ fontSize: '14px', color: '#0d6efd' }} />
+              <span style={{ display: 'inline-flex' }}><FaMobileAlt style={{ fontSize: '14px', color: '#0d6efd' }} /></span>
             </Tooltip>
           )}
 
           {item.authenticate && (
             <Tooltip title="Account verification enabled" placement="top">
-              <FaUserShield style={{ fontSize: '14px', color: '#0d6efd' }} />
+              <span style={{ display: 'inline-flex' }}><FaUserShield style={{ fontSize: '14px', color: '#0d6efd' }} /></span>
             </Tooltip>
           )}
 

@@ -1,15 +1,13 @@
 import * as React from 'react';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import { PILL, SF_PILL } from '../common/pillButton';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import Slide from '@mui/material/Slide';
-import { ButtonComponent,CheckBoxComponent  } from '@syncfusion/ej2-react-buttons';
-import logo from '../../images/ZFWHITE.webp'
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="down" ref={ref} {...props} />;
@@ -34,19 +32,15 @@ function TermsAndConditionsDialog(props) {
       >
         <AppBar sx={{ position: 'relative' ,backgroundColor:'#1C4690'}}>
           <Toolbar>
-            <IconButton
-              edge="start"
+            <Typography sx={{ flex: 1, fontSize: 15, fontWeight: 600 }} component="h2">
+              Terms and Conditions
+            </Typography>
+            <Button
+              autoFocus
               color="inherit"
               onClick={handleClose}
-              aria-label="close"
+              sx={{ ...PILL, color: '#fff', border: '1px solid rgba(255,255,255,0.75)', '&:hover': { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: '#fff', boxShadow: 'none' } }}
             >
-
-            </IconButton>
-            <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div" style={{fontSize:'14px'}}>
-            
-              <img src={logo} height={'30px'}/>
-            </Typography>
-            <Button autoFocus color="inherit" onClick={handleClose}>
               Close
             </Button>
           </Toolbar>
@@ -69,13 +63,7 @@ function TermsAndConditionsDialog(props) {
                       By proceeding to utilize the service, I acknowledge that the eligibility of electronic signatures placed through this service may or may not be legally binding and/or admissible within all jurisdictions in which it is presented.</li>
                 </ol>
                 {/* <button className='mt-2 btn btn-primary' onClick={handleClose}>I Agree</button> */}
-                <ButtonComponent  
-                  cssClass='e-custom-primary' 
-                  className='m-2 p-2' 
-                  style={{textTransform: 'none',fontWeight:'lighter',fontSize:'12px'}}   
-                  disabled={false} 
-                  onClick={handleClose}
-                  > <span className='mx-2'> I Agree</span> </ButtonComponent>
+                <Button variant="contained" disableElevation sx={SF_PILL.primary} onClick={handleClose}>I Agree</Button>
                                  
               </div>
               <div className='col-2'>   </div>

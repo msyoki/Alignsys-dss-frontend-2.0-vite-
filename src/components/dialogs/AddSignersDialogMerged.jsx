@@ -1,4 +1,4 @@
-import React, { useRef, useContext, useState } from 'react';
+import React, { useRef, useContext, useState, useEffect } from 'react';
 import Dialog from '@mui/material/Dialog';
 import axios from 'axios';
 import AuthContext from '../../context/Authcontext';
@@ -27,6 +27,9 @@ import {
   FaArrowRight,
 } from 'react-icons/fa';
 import TimedAlert from '../TimedAlert';
+import useOtpAvailability from '../../hooks/useOtpAvailability';
+import { otpError } from '../../api/otp';
+import { PILL } from '../common/pillButton';
 
 // =============================================================================
 // PROP INTERFACE
@@ -100,13 +103,13 @@ const SignersList = ({ signers, removeSigner, enableAuthentication }) => (
 
           {item.phone && (
             <Tooltip title="OTP authentication enabled" placement="top">
-              <FaMobileAlt style={{ fontSize: '14px', color: '#0d6efd' }} />
+              <span style={{ display: 'inline-flex' }}><FaMobileAlt style={{ fontSize: '14px', color: '#0d6efd' }} /></span>
             </Tooltip>
           )}
 
           {enableAuthentication && item.authenticate && (
             <Tooltip title="Account verification enabled" placement="top">
-              <FaUserShield style={{ fontSize: '14px', color: '#0d6efd' }} />
+              <span style={{ display: 'inline-flex' }}><FaUserShield style={{ fontSize: '14px', color: '#0d6efd' }} /></span>
             </Tooltip>
           )}
 
@@ -138,6 +141,9 @@ const AddSignerForm = React.memo(({
   phoneNumberRef,
   phoneCodeRef,
   enableAuthentication,
+  otpAvailable,
+  otpLoading,
+  otpMessage,
 }) => (
   <form onSubmit={onSubmit}>
     <div className="rounded mb-2">
@@ -159,14 +165,8 @@ const AddSignerForm = React.memo(({
           size="medium"
           disabled={loadingAddSigner}
           startIcon={<FaPlusCircle size={13} />}
-          className='rounded-pill'
-          style={{
-
-            textTransform: 'none',
-            fontSize: '12px',
-            px: { xs: 1.75, sm: 2.25 },     // balanced horizontal padding
-            py: 1,
-
+          sx={{
+            ...PILL,
           }}
         >
           Add Signer
@@ -181,17 +181,27 @@ const AddSignerForm = React.memo(({
         >
           Enable SMS OTP verification
         </label>
-        <Switch
-          id="otpSwitch"
-          checked={checked}
-          onChange={(e) => setChecked(e.target.checked)}
-          inputProps={{ 'aria-label': 'Enable SMS OTP verification' }}
-          className="ms-1   mt-4"
-          size="small"
-        />
+        <Tooltip title={!otpLoading && !otpAvailable ? otpMessage : ''} placement="top">
+          <span>
+            <Switch
+              id="otpSwitch"
+              checked={checked && otpAvailable}
+              disabled={otpLoading || !otpAvailable}
+              onChange={(e) => setChecked(e.target.checked)}
+              inputProps={{ 'aria-label': 'Enable SMS OTP verification' }}
+              className="ms-1   mt-4"
+              size="small"
+            />
+          </span>
+        </Tooltip>
       </div>
+      {!otpLoading && !otpAvailable && (
+        <div className="alert alert-warning py-1 px-2 mb-2" role="status" style={{ fontSize: 12 }}>
+          {otpMessage}
+        </div>
+      )}
 
-      {checked && (
+      {checked && otpAvailable && (
         <div className="d-flex gap-1 mb-2" style={{ maxWidth: 300 }}>
           <select
             ref={phoneCodeRef}
@@ -316,6 +326,11 @@ const AddSignersDialogMerged = (props) => {
 
   const textcolor = { color: '#2757aa' };
 
+  const otpAvailability = useOtpAvailability(!!opendialogaddsigners);
+  useEffect(() => {
+    if (!otpAvailability.loading && !otpAvailability.available) setChecked(false);
+  }, [otpAvailability.loading, otpAvailability.available]);
+
   // --- Alert helper --------------------------------------------------------
   // Shows alert locally inside the dialog. For v1, also bubbles up to parent.
   const showAlert = (message, severity, duration = 3000) => {
@@ -396,6 +411,16 @@ const AddSignersDialogMerged = (props) => {
     }
 
     setSelectedWorkflowTitle(selectedWorkflow.title);
+    const hasOtpSigners = selectedWorkflow.signers.some((s) => s.phone);
+    if (hasOtpSigners && !otpAvailability.available) {
+      setSigners(selectedWorkflow.signers.map(({ phone, ...rest }) => rest)); // eslint-disable-line no-unused-vars
+      showAlert(
+        `OTP was removed for this workflow's signers. ${otpAvailability.message}`,
+        'warning',
+        8000
+      );
+      return;
+    }
     setSigners([...selectedWorkflow.signers]);
   };
 
@@ -426,6 +451,11 @@ const AddSignersDialogMerged = (props) => {
 
     const email = emailInputRef.current.value;
 
+    if (checked && !otpAvailability.available) {
+      showAlert(otpAvailability.message, 'error', 6000);
+      setLoadingAddSigner(false);
+      return;
+    }
     if (checked && (!phoneNumberRef.current.value || !phoneCodeRef.current.value)) {
       showAlert('Phone number is required for OTP', 'error');
       setLoadingAddSigner(false);
@@ -497,8 +527,9 @@ const AddSignersDialogMerged = (props) => {
       wfTitleRef.current.value = '';
       setChecked2(false);
       showAlert('Workflow was saved successfully', 'success');
-    } catch {
-      showAlert('Error saving workflow', 'error');
+    } catch (err) {
+      const e = otpError(err, 'Error saving workflow');
+      showAlert(e.code ? e.message : 'Error saving workflow', 'error', e.code ? 8000 : 3000);
     }
   };
 
@@ -568,9 +599,12 @@ const AddSignersDialogMerged = (props) => {
       } else {
         showAlert('Something went wrong, try again.', 'error');
       }
-    } catch {
+    } catch (err) {
       setLoading(false);
-      showAlert('Failed to send document. Please try again.', 'error');
+      // The backend explains OTP blocks (e.g. no SMS provider configured).
+      const e = otpError(err, 'Failed to send document. Please try again.');
+      showAlert(e.code ? e.message : 'Failed to send document. Please try again.', 'error', e.code ? 8000 : 3000);
+      if (e.code && e.code.startsWith('otp_')) otpAvailability.refresh();
     }
     setLoadingSend(false);
   };
@@ -631,6 +665,9 @@ const AddSignersDialogMerged = (props) => {
                 phoneNumberRef={phoneNumberRef}
                 phoneCodeRef={phoneCodeRef}
                 enableAuthentication={enableAuthentication}
+                otpAvailable={otpAvailability.available}
+                otpLoading={otpAvailability.loading}
+                otpMessage={otpAvailability.message}
               />
 
               <div className="text-center" style={{ margin: '5px 0' }}>
@@ -722,18 +759,12 @@ const AddSignersDialogMerged = (props) => {
                   color="warning"
                   size="medium"
                   onClick={handleClose2}
-                  className="rounded-pill"
+
                   disableElevation
                   sx={{
-                    textTransform: "none",
-                    fontSize: "12px",
-                    fontWeight: 500,
-                    minHeight: 32,
-                    px: 2,
-                    py: 0.6,
+                    ...PILL,
                     minWidth: 160,
                     width: "fit-content",
-                    borderRadius: "999px",
                     alignSelf: "center",
                   }}
                 >
@@ -813,19 +844,13 @@ const AddSignersDialogMerged = (props) => {
                       variant="contained"
                       color="primary"
                       size='medium'
-                      className='rounded-pill'
-                      style={{
-
-                        textTransform: 'none',
-                        fontSize: '12px',
-                        px: { xs: 1.75, sm: 2.25 },     // balanced horizontal padding
-                        py: 1,
-
+                      sx={{
+                        ...PILL,
                       }}
                       onClick={() => setOpen(true)}
                       disableElevation
                     >
-                      <span className="mx-2">Preview / Mark Where to Sign</span>
+                      Preview / Mark Where to Sign
                     </Button>
                   )}
 
@@ -875,30 +900,15 @@ const AddSignersDialogMerged = (props) => {
                       variant="contained"
                       color="success"
                       size='large'
-                      className='rounded-pill'
-                      style={{
-
-                        textTransform: 'none',
-                        fontSize: '12px',
-                        px: { xs: 1.75, sm: 2.25 },     // balanced horizontal padding
-                        py: 1,
-
+                      sx={{
+                        ...PILL,
                       }}
                       onClick={sendForSigning}
                       disableElevation
                       disabled={loadingSend}
+                      startIcon={loadingSend ? <CircularProgress size={14} color="inherit" /> : <FaMailBulk />}
                     >
-                      {loadingSend ? (
-                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <CircularProgress size={18} color="inherit" style={{ marginRight: 8 }} />
-                          Sending for signing...
-                        </span>
-                      ) : (
-                        <>
-                          <FaMailBulk size={15} className="mx-1" />
-                          <span className="mx-2">Send to Signers</span>
-                        </>
-                      )}
+                      {loadingSend ? 'Sending for signing...' : 'Send to Signers'}
                     </Button>
                   </div>
                 </div>

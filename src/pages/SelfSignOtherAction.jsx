@@ -12,20 +12,13 @@ import PDFViewerPreviewLoader from '../components/preview/PDFViewerPreviewLoader
 
 import logo from '../images/ZFBLU.webp';
 import * as constants from '../components/constants/constants';
+import { PILL } from '../components/common/pillButton';
 
 /* ---------------- PILL BUTTON STYLE ---------------- */
 const pillBtn = {
-  textTransform: 'none',
-  fontSize: '13px',
-  fontWeight: 500,
-  borderRadius: '999px',
-  px: 2,
-  py: 0.8,
-  minHeight: 36,
-  boxShadow: 'none',
+  ...PILL,
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '6px',
 };
 
 /* icon consistency */
@@ -138,14 +131,17 @@ function SelfSignOtherAction() {
 
       {/* ---------------- MAIN UI ---------------- */}
       {!opendialogaddsigners && (
-        <Box sx={{ minHeight: '100vh', bgcolor: '#1C4690' }}>
+        // Exactly one screen tall and full width, so no background shows around the
+        // content. Phones/tablets (panels stacked) scroll inside it: body has
+        // overflow: hidden app-wide.
+        <Box sx={{ height: '100dvh', overflowY: { xs: 'auto', md: 'hidden' }, overflowX: 'hidden', bgcolor: '#fff' }}>
           <Box
             sx={{
               display: 'flex',
               flexDirection: { xs: 'column', md: 'row' },
-              maxWidth: 1600,
-              mx: 'auto',
-              height: { md: '100vh' },
+              width: '100%',
+              height: { md: '100%' },
+              minHeight: { xs: '100%' },
             }}
           >
             {/* LEFT PANEL - VIEWER */}
@@ -155,11 +151,16 @@ function SelfSignOtherAction() {
               sx={{
                 flex: { md: 1 },
                 minWidth: 0,
-                minHeight: { xs: '60vh', md: 0 },
+                // The viewer fills this panel exactly (fill): full height beside the
+                // actions on desktop, a fixed share of the screen when stacked.
+                display: 'flex',
+                flexDirection: 'column',
+                height: { xs: '75dvh', md: 'auto' },
+                minHeight: 0,
                 overflow: 'hidden',
               }}
             >
-              <PDFViewerPreviewLoader height="100%" document={pdfPath} />
+              <PDFViewerPreviewLoader height="100%" document={pdfPath} fill />
             </Paper>
 
             {/* RIGHT PANEL - BUTTONS */}
@@ -183,8 +184,9 @@ function SelfSignOtherAction() {
                   <Box
                     component="img"
                     src={logo}
-                    alt="Logo"
-                    sx={{ width: 180, maxWidth: '100%', height: 'auto' }}
+                    alt="Alignsys"
+                    // Same size as the dashboard / signing-page Alignsys logo.
+                    sx={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }}
                   />
                 </a>
               </Box>

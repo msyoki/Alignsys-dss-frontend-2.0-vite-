@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import mergeActionColumns from './common/mergeActionColumns';
+import autoSizeColumns from './common/autoSizeColumns';
 import { Box, CircularProgress, Button } from '@mui/material';
-import { FaInfoCircle, FaFilter } from 'react-icons/fa';
+import { FaInfoCircle } from 'react-icons/fa';
 
 import {
   DataGrid,
@@ -13,6 +15,8 @@ import DocDetailsDialog from './dialogs/DocDetailsDialog';
 
 
 
+import TableIconButton from './common/TableIconButton';
+import DateRangeFilter from './common/DateRangeFilter';
 function DocumentLogs(props) {
   const [opendialogdocdetails, setOpenDialogDocDetails] = useState(false)
   const [document, setDocument] = useState({})
@@ -55,25 +59,7 @@ function DocumentLogs(props) {
         };
 
         return (
-          <span
-            onClick={handleClick}
-            style={{
-              fontSize: '16px',
-              color: '#403d39',
-              borderRadius: '50%',
-              cursor: 'pointer',
-              padding: '8px',
-              backgroundColor: '#f0f0f0',
-              transition: 'background-color 0.3s ease',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            onMouseOver={e => (e.currentTarget.style.backgroundColor = '#ffff')}
-            onMouseOut={e => (e.currentTarget.style.backgroundColor = '#f0f0f0')}
-          >
-            <FaInfoCircle className="mx-1" />
-          </span>
+          <TableIconButton title="Document details" onClick={handleClick}><FaInfoCircle /></TableIconButton>
         );
       },
       filterable: false
@@ -147,50 +133,10 @@ function DocumentLogs(props) {
           </div>
         ) : (
           <>
-            <div className='col-lg-12 col-md-12 col-sm-12 p-3' style={{ display: 'flex', gap: '16px' }}>
-              <div className='input-group'>
-                <label className='mx-3 text-dark'>Start Date:</label>
-                <input
-                  type="date"
-                  name="start_date"
-                  value={props.filters.start_date}
-                  onChange={handleFilterChange}
-                  className="form-control form-control-sm"
-                />
-
-                <label className='mx-3 text-dark'>End Date:</label>
-                <input
-                  type="date"
-                  name="end_date"
-                  value={props.filters.end_date}
-                  onChange={handleFilterChange}
-                  className="form-control form-control-sm"
-                />
-                <Button
-                  style={{
-                    backgroundColor: '#2757aa',
-                    color: '#fff',
-                    border: 'none',           // To remove any default border
-                    padding: '4px 8px',      // Adjust the padding to make the button look better
-                    fontSize: '14px',        // Adjust font size if needed
-                    display: 'flex',         // Use flexbox to align the text and icon
-                    alignItems: 'center',    // Vertically center the text and icon
-                    gap: '5px'               // Add space between text and icon
-                  }}
-                  className="btn btn-sm rounded mx-2"
-                  onClick={props.getDocLogs}
-                >
-                  <FaFilter /> Filter
-                </Button>
-
-              </div>
-
-
-
-            </div>
+            <DateRangeFilter filters={props.filters} onChange={handleFilterChange} onApply={props.getDocLogs} />
             <DataGrid
               rows={sortedCompanydocs}
-              columns={columns}
+              columns={autoSizeColumns(mergeActionColumns(columns), sortedCompanydocs)}
               density='compact'
               components={{
                 Toolbar: CustomToolbar,
@@ -207,7 +153,7 @@ function DocumentLogs(props) {
               disableRowSelectionOnClick
               style={{ fontSize: '13px', fontWeight: "lighter", flex: 1, minHeight: 0, height: '100%' }}
               getRowId={getRowId}
-              className='bg-light '
+              className='app-table'
             />
           </>
         )}

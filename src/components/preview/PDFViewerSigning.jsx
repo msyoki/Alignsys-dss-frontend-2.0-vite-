@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { PILL_COMPACT } from '../common/pillButton';
 import {
   FaTrash,
   FaBars,
@@ -12,6 +13,9 @@ import {
 } from 'react-icons/fa6';
 import { FaThList } from "react-icons/fa";
 import { Document, Page, pdfjs } from 'react-pdf';
+import SmoothPage from './SmoothPage';
+import useFitWidthZoom from './useFitWidthZoom';
+import usePanelWidth from './usePanelWidth';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Draggable from 'react-draggable';
 import '../../styles/PDFViewerTechedge.css';
@@ -30,6 +34,7 @@ import { GoSidebarCollapse } from "react-icons/go";
 import { GoSidebarExpand } from "react-icons/go";
 import { TfiLayoutSidebarLeft } from "react-icons/tfi";
 import { TfiLayoutSidebarNone } from "react-icons/tfi";
+import ThumbnailOverlay from "./ThumbnailOverlay";
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
@@ -777,7 +782,9 @@ const PDFViewerSigning = (props) => {
     if (!pageDim) return 1;
     const { width, height } = pageDim;
     const isLandscape = width > height;
-    props.setLandscape(isLandscape);
+    // Pure calculation: this runs during render, so it must not set parent state
+    // (props.setLandscape here caused "Cannot update a component while rendering
+    // a different component"; the parent's `landscape` value was never read).
 
     if (isLandscape) {
       const container = mainContainerRef.current;
@@ -792,6 +799,37 @@ const PDFViewerSigning = (props) => {
   const getScaleForPageThumbnail = (pageNumber) => {
     const pageDim = pageDimensions.find(dim => dim.pageNumber === pageNumber);
     return pageDim && pageDim.width > pageDim.height ? 0.18 : 0.28;
+  };
+
+  // View-only copy of the page's placed signatures, stamps, text and unsigned signature
+  // boxes on its thumbnail (same positions as the main page, scaled down).
+  const renderThumbnailOverlay = (pageNumber) => {
+    const pageDim = pageDimensions.find(dim => dim.pageNumber === pageNumber);
+    if (!pageDim) return null;
+    const { width: pageWidth, height: pageHeight } = pageDim;
+    const scale = thumbWidth ? thumbWidth / pageWidth : getScaleForPageThumbnail(pageNumber);
+    const rotation = props.pageRotations?.[pageNumber] || 0;
+
+    const placed = (props.annotations || [])
+      .filter(a => a.pageNumber === pageNumber)
+      .map(a => {
+        let { x, y } = a;
+        // Same rotation mapping as renderAnnotations.
+        if (rotation === 90) [x, y] = [y, pageWidth - x];
+        else if (rotation === 180) { x = pageWidth - x; y = pageHeight - y; }
+        else if (rotation === 270) [x, y] = [pageHeight - y, x];
+        return {
+          id: `a_${a.id}`, kind: a.type === 'text' ? 'text' : 'image',
+          x, y, width: a.width, height: a.height, src: a.src, content: a.content, color: a.color, size: a.size,
+        };
+      });
+    const boxes = showSignatureBoxes
+      ? (props.signerAnnotations || [])
+        .filter(b => b && b.page_number === pageNumber)
+        .map(b => ({ id: `b_${b.annotation_id}`, kind: 'box', x: b.x, y: b.y, width: b.width, height: b.height, color: b.color }))
+      : [];
+
+    return <ThumbnailOverlay items={[...boxes, ...placed]} scale={scale} pageWidth={pageWidth} pageHeight={pageHeight} />;
   };
 
   const handlePageInputChange = (e) => {
@@ -952,14 +990,10 @@ const PDFViewerSigning = (props) => {
     }
   }, [props.customImage]);
 
-  useEffect(() => {
-    const checkScreenSizeAndSetZoom = () => {
-      setZoom(window.innerWidth <= 768 ? 0.5 : 1);
-    };
-    checkScreenSizeAndSetZoom();
-    window.addEventListener('resize', checkScreenSizeAndSetZoom);
-    return () => window.removeEventListener('resize', checkScreenSizeAndSetZoom);
-  }, []);
+  // Start every page fitted to the viewer's width (phones, tablets, desktop).
+  useFitWidthZoom(mainContainerRef, setZoom);
+  // Thumbnails are drawn at the side panel's width, so the panel never scrolls sideways.
+  const thumbWidth = usePanelWidth(containerRef, isAsideOpen);
 
 
   const downloadPDFWithAnnotations = async () => {
@@ -1218,10 +1252,10 @@ const PDFViewerSigning = (props) => {
           />
 
           <Tooltip title="Reset Zoom">
-            <FaRotateRight
+            <span style={{ display: 'inline-flex' }}><FaRotateRight
               onClick={resetZoom}
               style={{ fontSize: 16, color: "#2757aa", cursor: "pointer" }}
-            />
+            /></span>
           </Tooltip>
 
           <Typography sx={{ fontSize: "12px", minWidth: 40, textAlign: "center" }}>
@@ -1244,19 +1278,13 @@ const PDFViewerSigning = (props) => {
                   size="small"
                   startIcon={
                     props.isStamp ? (
-                      <FaStamp style={{ fontSize: "13px" }} />
+                      <FaStamp />
                     ) : (
-                      <FaSignature style={{ fontSize: "13px" }} />
+                      <FaSignature />
                     )
                   }
                   onClick={addMultipageAnnotation}
-                  sx={{
-                    textTransform: "none",
-                    fontSize: "12px",
-                    borderRadius: "20px",
-                    px: 1.2,
-                    whiteSpace: "nowrap",
-                  }}
+                  sx={PILL_COMPACT}
                 >
                   {props.isStamp ? "Stamp All" : "Sign All"}
                 </Button>
@@ -1267,13 +1295,7 @@ const PDFViewerSigning = (props) => {
                   variant="outlined"
                   size="small"
                   onClick={handleAbortMultipageAnnotation}
-                  sx={{
-                    textTransform: "none",
-                    fontSize: "12px",
-                    borderRadius: "20px",
-                    px: 1.2,
-                    whiteSpace: "nowrap",
-                  }}
+                  sx={PILL_COMPACT}
                 >
                   Abort
                 </Button>
@@ -1298,17 +1320,13 @@ const PDFViewerSigning = (props) => {
             <Button
               variant="outlined"
               size="small"
-              startIcon={<FaKeyboard style={{ fontSize: "13px" }} />}
+              startIcon={<FaKeyboard />}
               onClick={() => props.setSelectedTool("text")}
               sx={{
-                textTransform: "none",
-                fontSize: "12px",
-                borderRadius: "25px",
-                px: 1.5,
-                whiteSpace: "nowrap",
+                ...PILL_COMPACT,
                 display: "flex",
                 alignItems: "center",
-                gap: 0.5,
+                gap: 0.75,
               }}
             >
               Add Text
@@ -1360,13 +1378,16 @@ const PDFViewerSigning = (props) => {
                     className={`thumbnail-item ${pageNumber === pageIndex + 1 ? 'active' : ''}`}
                     onClick={() => thumbnailNavigation(pageIndex)}
                   >
-                    <Page
-                      pageNumber={pageIndex + 1}
-                      scale={getScaleForPageThumbnail(pageIndex + 1)}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                      className="page-container"
-                    />
+                    <div style={{ position: 'relative', width: 'fit-content', margin: '0 auto' }}>
+                      <Page
+                        pageNumber={pageIndex + 1}
+                        {...(thumbWidth ? { width: thumbWidth } : { scale: getScaleForPageThumbnail(pageIndex + 1) })}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        className="page-container"
+                      />
+                      {renderThumbnailOverlay(pageIndex + 1)}
+                    </div>
                     <span className="thumbnail-page-number">{pageIndex + 1}</span>
 
                   </div>
@@ -1417,7 +1438,7 @@ const PDFViewerSigning = (props) => {
                       justifyContent: 'center',
                     }}
                   >
-                    <Page
+                    <SmoothPage
                       pageNumber={pageIndex + 1}
                       scale={pageScale}
                       renderTextLayer={false}

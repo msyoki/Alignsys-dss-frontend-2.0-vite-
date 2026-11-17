@@ -1,6 +1,7 @@
 // Dashboard API service
 import axios from 'axios';
 import * as constants from '../components/constants/constants';
+import { companyLogoUrl } from '../utils/companyLogo';
 
 export const getWorkflows = async (authToken) => {
   const headers = { 'Authorization': `Bearer ${authToken}` };
@@ -21,7 +22,7 @@ export const getCompanyLogo = async (authToken) => {
   const res = await axios.get(`${constants.devApiBaseUrl}/api/logo/`, {
     headers: { 'Authorization': `Bearer ${authToken}` }
   });
-  return `${constants.devApiBaseUrl}${res.data['logo_url']}`;
+  return companyLogoUrl(res.data);
 };
 
 export const getAvatar = async (authToken) => {

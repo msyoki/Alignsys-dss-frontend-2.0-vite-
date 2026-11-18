@@ -8,14 +8,20 @@ import axios from 'axios';
 import SimpleAlert from '../SimpleAlert.jsx';
 import { FaDownload } from "react-icons/fa6";
 import HumanizedDate from '../HumanizeDate.jsx';
+import SignerOtpBadge from './SignerOtpBadge.jsx';
+import SignerOtpStatus from './SignerOtpStatus.jsx';
 import { DialogFooter, DialogHeader, PrimaryButton, PropertyRow, PropertyValue, SecondaryButton, StatusChip, fieldSx } from '../common/dialogKit';
 import { PILL_COMPACT, PILL_OUTLINE } from '../common/pillButton';
+import useOtpAvailability from '../../hooks/useOtpAvailability';
+import SubstituteOtpFields, { EMPTY_SUBSTITUTE_OTP, substituteOtpProblem, substitutePhone } from './SubstituteOtpFields.jsx';
 const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, document = {}, onChanged }) => {
   const handleClose = () => setOpenDialogDocDetails(false);
   const { authTokens } = useContext(AuthContext) || {};
   const [editingSigner, setEditingSigner] = useState(null);
   const [newEmail, setNewEmail] = useState('');
   const [isLoadingSubstitute, setIsLoadingSubstitute] = useState(false);
+  const [substituteOtp, setSubstituteOtp] = useState(EMPTY_SUBSTITUTE_OTP);
+  const otpAvailability = useOtpAvailability(!!editingSigner);
   const [openAlert, setOpenAlert] = useState(false);
   const [alertSeverity, setAlertSeverity] = useState('info');
   const [alertMsg, setAlertMsg] = useState('');
@@ -23,11 +29,13 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
   const startEdit = (email) => {
     setEditingSigner(email);
     setNewEmail('');
+    setSubstituteOtp(EMPTY_SUBSTITUTE_OTP);
   };
 
   const cancelEdit = () => {
     setEditingSigner(null);
     setNewEmail('');
+    setSubstituteOtp(EMPTY_SUBSTITUTE_OTP);
   };
 
   const showAlert = (message, severity) => {
@@ -49,20 +57,23 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
 
   const submitChange = () => {
     if (!newEmail) return alert('Please enter a new email');
-    handleSwapSigner(editingSigner, newEmail);
+    const otpProblem = substituteOtpProblem(substituteOtp);
+    if (otpProblem) return showAlert(otpProblem, 'error');
+    handleSwapSigner(editingSigner, newEmail, substitutePhone(substituteOtp));
     cancelEdit();
   };
 
-  const handleSwapSigner = async (oldEmail, newEmail) => {
+  const handleSwapSigner = async (oldEmail, newEmail, phone = '') => {
     setIsLoadingSubstitute(true);
     try {
-      // Via dssauth, which checks the caller owns the document before asking dsscall to swap.
-      await axios.post(
+      // Via dssauth, which checks the caller may manage the document before asking dsscall to swap.
+      const res = await axios.post(
         `${constants.devApiBaseUrl}/api/signers/substitute/`,
-        { email: newEmail, oldsigneremail: oldEmail, documentid: document.guid },
+        { email: newEmail, oldsigneremail: oldEmail, documentid: document.guid, ...(phone ? { phone } : {}) },
         { headers: { Authorization: `Bearer ${authTokens?.access}` } },
       );
-      showAlert(`Signer changed from ${oldEmail} → ${newEmail}`, 'success');
+      if (res.data?.warning) showAlert(res.data.warning, 'warning');
+      else showAlert(`Signer changed from ${oldEmail} → ${newEmail}${res.data?.otp ? ' (SMS verification on)' : ''}`, 'success');
       // Show the message briefly, then reload the list (it still has the old signer) and close.
       setTimeout(() => {
         onChanged?.();
@@ -155,16 +166,22 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
                   ) : (
                     <StatusChip tone="neutral" icon={<FaEnvelope size={11} />}>Queued</StatusChip>
                   )}
+                  <SignerOtpStatus key={`${s.email}-${s.otpnumber || ''}`} signer={s} documentGuid={guid} canChange={canChangeSigners} />
                 </Box>
 
                 {/* Change signer (unchanged logic; see handleSwapSigner) */}
                 <Box sx={{ flexShrink: 0 }}>
                   {editingSigner === s.email ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography sx={{ flexBasis: '100%', fontSize: 12.5, color: '#374151', overflowWrap: 'anywhere' }}>
+                        Replacing <strong>{s.email}</strong> <SignerOtpBadge signer={s} /> with:
+                      </Typography>
                       <TextField
                         type="email"
                         size="small"
-                        placeholder="New email"
+                        autoFocus
+                        placeholder="New signer's email"
+                        inputProps={{ 'aria-label': `New signer's email to replace ${s.email}` }}
                         value={newEmail}
                         onChange={(e) => setNewEmail(e.target.value)}
                         sx={{ ...fieldSx(), width: 190 }}
@@ -181,6 +198,14 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
                           <SecondaryButton onClick={cancelEdit} disabled={isLoadingSubstitute} sx={{ minHeight: 32 }}>Cancel</SecondaryButton>
                         </span>
                       </Tooltip>
+                      <Box sx={{ flexBasis: '100%' }}>
+                        <SubstituteOtpFields
+                          value={substituteOtp}
+                          onChange={setSubstituteOtp}
+                          availability={otpAvailability}
+                          disabled={isLoadingSubstitute}
+                        />
+                      </Box>
                     </Box>
                   ) : (
                     canChangeSigners && s.signed !== 'True' && (

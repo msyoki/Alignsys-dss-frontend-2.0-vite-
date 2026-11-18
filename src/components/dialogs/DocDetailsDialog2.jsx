@@ -23,6 +23,10 @@ import logo from '../../images/ZFWHITE.webp';
 import Alerts from '../Alert.jsx';
 import SimpleAlert from '../SimpleAlert.jsx';
 import HumanizedDate from '../HumanizeDate.jsx';
+import SignerOtpBadge from './SignerOtpBadge.jsx';
+import SignerOtpStatus from './SignerOtpStatus.jsx';
+import useOtpAvailability from '../../hooks/useOtpAvailability';
+import SubstituteOtpFields, { EMPTY_SUBSTITUTE_OTP, substituteOtpProblem, substitutePhone } from './SubstituteOtpFields.jsx';
 
 const DocDetailsDialog2 = ({
   opendialogdocdetails,
@@ -40,6 +44,9 @@ const DocDetailsDialog2 = ({
   const [editingSigner, setEditingSigner] = useState(null);
   const [newEmail, setNewEmail] = useState('');
   const [isLoadingSubstitute, setIsLoadingSubstitute] = useState(false);
+  const [substituteOtp, setSubstituteOtp] = useState(EMPTY_SUBSTITUTE_OTP);
+  // Only asked once a signer is being substituted.
+  const otpAvailability = useOtpAvailability(!!editingSigner);
   const [isLoadingResend, setIsLoadingResend] = useState(false);
   const [isLoadingVoid, setIsLoadingVoid] = useState(false);
   const isSubstitutionAllowed =
@@ -112,36 +119,42 @@ const DocDetailsDialog2 = ({
   const startEdit = (email) => {
     setEditingSigner(email);
     setNewEmail('');
+    setSubstituteOtp(EMPTY_SUBSTITUTE_OTP);
   };
 
   const cancelEdit = () => {
     setEditingSigner(null);
     setNewEmail('');
+    setSubstituteOtp(EMPTY_SUBSTITUTE_OTP);
   };
 
   const submitChange = () => {
     if (!newEmail) return alert('Please enter a new email');
-    handleSwapSigner(editingSigner, newEmail);
+    const otpProblem = substituteOtpProblem(substituteOtp);
+    if (otpProblem) return showAlert(otpProblem, 'error');
+    handleSwapSigner(editingSigner, newEmail, substitutePhone(substituteOtp));
     cancelEdit();
   };
 
-  const handleSwapSigner = async (oldEmail, newEmail) => {
+  const handleSwapSigner = async (oldEmail, newEmail, phone = '') => {
     setIsLoadingSubstitute(true);
     try {
       const payload = {
         email: newEmail,
         oldsigneremail: oldEmail,
         documentid: document.guid,
+        ...(phone ? { phone } : {}),
       };
 
       // Via dssauth, which checks the caller owns the document before asking dsscall to swap.
-      await axios.post(
+      const res = await axios.post(
         `${constants.devApiBaseUrl}/api/signers/substitute/`,
         payload,
         { headers: { Authorization: `Bearer ${authTokens?.access}` } },
       );
 
-      showAlert(`Signer changed from ${oldEmail} → ${newEmail}`, 'success');
+      if (res.data?.warning) showAlert(res.data.warning, 'warning');
+      else showAlert(`Signer changed from ${oldEmail} → ${newEmail}${res.data?.otp ? ' (SMS verification on)' : ''}`, 'success');
 
       // Keep dialog open for 2s to show alert, then refresh & close
       setTimeout(() => {
@@ -219,20 +232,28 @@ const DocDetailsDialog2 = ({
                     {editingSigner === s.email ? (
                       // --- Editing Mode ---
                       <form
-                        className="d-flex w-100 justify-content-between align-items-center"
+                        className="d-flex w-100 justify-content-between align-items-center flex-wrap"
                         onSubmit={(e) => {
                           e.preventDefault(); // prevent page reload
                           submitChange();
                         }}
                       >
+                        {/* Keep the signer being replaced visible while the new email is typed. */}
+                        <div style={{ flexBasis: '100%', fontSize: '12.5px', color: '#374151', marginBottom: 6, overflowWrap: 'anywhere' }}>
+                          Replacing <strong>{s.email}</strong>
+                          <span className="text-muted">{s.current_signer === 'True' ? ' (current signer)' : ' (queued)'}</span>
+                          <SignerOtpBadge signer={s} style={{ marginLeft: 6 }} /> with:
+                        </div>
                         <input
                           type="email"
                           required
+                          autoFocus
                           className="form-control form-control-sm me-2"
                           value={newEmail}
                           onChange={(e) => setNewEmail(e.target.value)}
-                          placeholder="Enter substitute email"
-                          style={{ fontSize: '13px' }}
+                          placeholder="New signer's email"
+                          aria-label={`New signer's email to replace ${s.email}`}
+                          style={{ fontSize: '13px', flex: '1 1 200px', width: 'auto' }}
                         />
                         <div className="d-flex">
                           <Tooltip title="Save changes">
@@ -287,11 +308,27 @@ const DocDetailsDialog2 = ({
                             </span>
                           </Tooltip>
                         </div>
+                        <div style={{ flexBasis: '100%', marginTop: 6 }}>
+                          <SubstituteOtpFields
+                            value={substituteOtp}
+                            onChange={setSubstituteOtp}
+                            availability={otpAvailability}
+                            disabled={isLoadingSubstitute}
+                          />
+                        </div>
                       </form>
                     ) : (
                       // --- Display Mode ---
                       <>
-                        <span>{s.email}</span>
+                        <span className="d-flex align-items-center flex-wrap" style={{ gap: 6, minWidth: 0, overflowWrap: 'anywhere' }}>
+                          {s.email}
+                          <SignerOtpStatus
+                            key={`${s.email}-${s.otpnumber || ''}`}
+                            signer={s}
+                            documentGuid={document.guid}
+                            canChange={document.owner === user.email && isSubstitutionAllowed}
+                          />
+                        </span>
                         <span className="text-muted d-flex align-items-center">
                           {s.signed === 'True' ? (
                             <>

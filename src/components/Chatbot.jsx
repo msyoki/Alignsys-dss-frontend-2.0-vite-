@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo, lazy, Suspense } from 'react';
-import { FaAndroid, FaUser, FaEraser, FaFilePdf, FaPaperPlane } from 'react-icons/fa';
-import { Modal, Box, IconButton, Button, Tooltip } from '@mui/material';
-import { FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect, useRef, useCallback, memo, lazy, Suspense, useId } from 'react';
+import { IconButton, Tooltip, Slide } from '@mui/material';
+import { HiSparkles } from 'react-icons/hi';
+import {
+    FaTimes, FaPaperPlane, FaListUl, FaFileAlt, FaLightbulb, FaChevronRight, FaExclamationTriangle,
+} from 'react-icons/fa';
+import { FaPenToSquare, FaRegCopy, FaCheck, FaRotateRight } from 'react-icons/fa6';
 import axios from 'axios';
 import '../styles/Chatbot.css';
 import * as constants from './constants/constants';
@@ -11,78 +14,91 @@ const ReactMarkdown = lazy(() => import('react-markdown'));
 const SyntaxHighlighter = lazy(() => import('react-syntax-highlighter').then(module => ({
     default: module.Prism
 })));
-const vscDarkPlus = lazy(() => import('react-syntax-highlighter/dist/esm/styles/prism').then(module => ({
-    default: module.vscDarkPlus
-})));
 
 const CodeBlock = memo(({ language, value }) => (
     <Suspense fallback={<pre>{value}</pre>}>
-        <SyntaxHighlighter language={language} style={vscDarkPlus}>
+        <SyntaxHighlighter language={language}>
             {value}
         </SyntaxHighlighter>
     </Suspense>
 ));
 
-const Message = memo(({ message }) => (
-    <div className={`message ${message.type}`}>
-        {message.type !== 'user' && (
-            <FaAndroid style={{ color: '#2757aa', fontSize: '20px' }} />
-        )}
-        <div className={`message-content ${message.type}-message`}>
-            <Suspense fallback={<div>{message.content}</div>}>
-                <ReactMarkdown components={{ code: CodeBlock }}>
-                    {message.content}
-                </ReactMarkdown>
-            </Suspense>
-        </div>
-        {message.type === 'user' && (
-            <FaUser style={{ color: '#555', fontSize: '20px' }} />
-        )}
-    </div>
-));
+const SUGGESTIONS = [
+    { text: 'Summarize this document', short: 'Summarize', icon: FaListUl },
+    { text: 'What are the main themes of this document?', short: 'Main themes?', icon: FaFileAlt },
+    { text: 'What conclusions does the author make?', short: "Author's conclusions?", icon: FaLightbulb },
+];
 
-const LoadingIndicator = memo(() => (
-    <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '15px' }}>
-        <FaAndroid style={{
-            fontSize: '18px',
-            color: '#2757aa',
-            marginRight: '10px',
-            marginTop: '5px'
-        }} />
-        <div style={{
-            backgroundColor: '#f4f4f4',
-            padding: '12px 16px',
-            borderRadius: '18px 18px 18px 4px',
-            fontSize: '13px',
-            color: '#666',
-        }}>
-            <span className="loading-dots">
-                Analyzing<span>.</span><span>.</span><span>.</span>
-            </span>
-        </div>
-    </div>
-));
+const TYPING_SPEED = 20; // ms per character
 
-const SuggestedActions = memo(({ onSubmit, summarized }) => {
-    const actions = useMemo(() => [
-        "Summarize this document",
-        "What are the main themes of this document?",
-        "What conclusions does the author make?"
-    ], []);
+const Spark = ({ size = 'sm' }) => (
+    <span className={`aia-spark aia-spark-${size}`} aria-hidden>
+        <HiSparkles />
+    </span>
+);
+
+async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        // Fallback for browsers that refuse clipboard access.
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch { ok = false; }
+        document.body.removeChild(ta);
+        return ok;
+    }
+}
+
+const AssistantMessage = memo(({ message, typing, onRetry }) => {
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        if (!copied) return undefined;
+        const t = setTimeout(() => setCopied(false), 2000);
+        return () => clearTimeout(t);
+    }, [copied]);
+
+    if (message.type === 'error') {
+        return (
+            <div className="aia-error" role="alert">
+                <FaExclamationTriangle className="aia-error-icon" aria-hidden />
+                <span>{message.content}</span>
+                <button type="button" className="aia-retry" onClick={() => onRetry(message)}>
+                    <FaRotateRight size={11} aria-hidden /> Retry
+                </button>
+            </div>
+        );
+    }
 
     return (
-        <div className="d-flex flex-column align-items-center justify-content-center gap-2 p-3">
-            {actions.map((action, index) => (
-                <button
-                    key={index}
-                    onClick={(e) => onSubmit(e, action)}
-                    disabled={summarized}
-                    className="summarize-btn btn btn-sm rounded-pill text-dark d-flex align-items-center justify-content-center px-3"
-                    style={{ minHeight: 34, fontSize: '12.5px', lineHeight: 1.2 }}
-                >
-                    {action}
-                </button>
-            ))}
+        <div className="aia-msg-a">
+            <Spark />
+            <div className="aia-msg-a-text">
+                <Suspense fallback={<div>{message.content}</div>}>
+                    <ReactMarkdown components={{ code: CodeBlock }}>
+                        {message.content}
+                    </ReactMarkdown>
+                </Suspense>
+                {!typing && message.content && (
+                    <div className="aia-acts">
+                        <button
+                            type="button"
+                            className={`aia-act${copied ? ' done' : ''}`}
+                            onClick={async () => setCopied(await copyText(message.content))}
+                        >
+                            {copied ? <FaCheck size={11} aria-hidden /> : <FaRegCopy size={11} aria-hidden />}
+                            {copied ? 'Copied' : 'Copy'}
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 });
@@ -92,49 +108,113 @@ const Chatbot = memo((props) => {
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
     const [loading, setLoading] = useState(false);
-    const [summarized, setSummarized] = useState(false);
+    const [typing, setTyping] = useState(false);
+    const [used, setUsed] = useState([]); // suggestions already asked in this chat
     const messagesEndRef = useRef(null);
     const abortControllerRef = useRef(null);
+    const typingRef = useRef(null);
+    const inputRef = useRef(null);
+    const buttonRef = useRef(null);
+    const titleId = useId();
+
+    const busy = loading || typing;
+    const fileLabel = props.filename
+        ? (/\.pdf$/i.test(props.filename) ? props.filename : `${props.filename}.pdf`)
+        : 'This document';
 
     const scrollToBottom = useCallback(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, []);
 
     useEffect(() => {
         const timeoutId = setTimeout(scrollToBottom, 100);
         return () => clearTimeout(timeoutId);
-    }, [messages.length, scrollToBottom]);
+    }, [messages, loading, scrollToBottom]);
 
-    const handleOpen = useCallback(() => {
-        setOpen(prev => !prev);
+    const stopTyping = useCallback(() => {
+        if (typingRef.current) {
+            clearInterval(typingRef.current);
+            typingRef.current = null;
+        }
+        setTyping(false);
     }, []);
+
+    const stopAll = useCallback(() => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        stopTyping();
+        setLoading(false);
+    }, [stopTyping]);
+
+    const clearChat = useCallback(() => {
+        stopAll();
+        setMessages([]);
+        setUsed([]);
+        setInputValue('');
+        setTimeout(() => inputRef.current?.focus(), 0);
+    }, [stopAll]);
+
+    // A different document starts a fresh chat.
+    useEffect(() => {
+        stopAll();
+        setMessages([]);
+        setUsed([]);
+    }, [props.base64, stopAll]);
+
+    // Stop everything when the component goes away.
+    useEffect(() => () => {
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        if (typingRef.current) clearInterval(typingRef.current);
+    }, []);
+
+    const handleOpen = useCallback(() => setOpen(prev => !prev), []);
 
     const handleClose = useCallback(() => {
         setOpen(false);
+        setTimeout(() => buttonRef.current?.focus(), 0);
     }, []);
 
-    const clearChat = useCallback(() => {
-        setMessages([]);
-        setSummarized(false);
-    }, []);
+    // Focus the input when the panel opens; Esc closes it.
+    useEffect(() => {
+        if (!open) return undefined;
+        const t = setTimeout(() => inputRef.current?.focus(), 250);
+        const onKey = (e) => {
+            if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('.MuiDialog-root')) {
+                handleClose();
+            }
+        };
+        document.addEventListener('keydown', onKey);
+        return () => { clearTimeout(t); document.removeEventListener('keydown', onKey); };
+    }, [open, handleClose]);
+
+    // Grow the input with its text, up to a limit.
+    useEffect(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+    }, [inputValue, open]);
 
     const makeAPICall = useCallback(async (topic) => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
 
-        abortControllerRef.current = new AbortController();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        let base64Data = props.base64;
+        if (base64Data.startsWith('data:application/pdf;base64,')) {
+            base64Data = base64Data.split(',')[1];
+        }
+
+        const formData = new URLSearchParams();
+        formData.append('topic', topic);
+        formData.append('base64_data', base64Data);
 
         try {
-            let base64Data = props.base64;
-            if (base64Data.startsWith('data:application/pdf;base64,')) {
-                base64Data = base64Data.split(',')[1];
-            }
-
-            const formData = new URLSearchParams();
-            formData.append('topic', topic);
-            formData.append('base64_data', base64Data);
-
             const response = await axios.post(
                 `${constants.boturl}/query-topic-base64`,
                 formData,
@@ -143,305 +223,252 @@ const Chatbot = memo((props) => {
                         'Accept': 'application/json',
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    signal: abortControllerRef.current.signal,
+                    signal: controller.signal,
                 }
             );
-
-            return response.data.response;
-        } catch (error) {
-            if (error.name === 'AbortError') return null;
-            throw error;
+            return { data: response.data.response };
+        } finally {
+            if (abortControllerRef.current === controller) abortControllerRef.current = null;
         }
     }, [props.base64]);
 
-    const handleSubmitWithTyping = useCallback(async (question) => {
-        const userMessage = {
-            type: 'user',
-            content: question,
-            timestamp: new Date()
-        };
+    const typeOut = useCallback((fullText) => {
+        const timestamp = new Date();
+        setMessages(prev => [...prev, { type: 'copilot', content: '', timestamp }]);
+        setTyping(true);
 
-        setMessages(prev => [...prev, userMessage]);
+        let index = 0;
+        typingRef.current = setInterval(() => {
+            index++;
+            const currentText = fullText.slice(0, index);
+            setMessages(prev => {
+                const updated = [...prev];
+                const lastIndex = updated.length - 1;
+                if (updated[lastIndex]?.type === 'copilot') {
+                    updated[lastIndex] = { ...updated[lastIndex], content: currentText };
+                }
+                return updated;
+            });
+            if (index >= fullText.length) {
+                clearInterval(typingRef.current);
+                typingRef.current = null;
+                setTyping(false);
+            }
+        }, TYPING_SPEED);
+    }, []);
+
+    const ask = useCallback(async (question) => {
+        if (!question || !props.base64) return;
+        stopTyping();
+        setMessages(prev => [...prev, { type: 'user', content: question, timestamp: new Date() }]);
         setLoading(true);
 
         try {
-            const responseData = await makeAPICall(question);
-
-            if (responseData) {
-                const fullText = responseData.join('\n\n');
-                let currentText = '';
-                const timestamp = new Date();
-
-                setMessages(prev => [...prev, {
-                    type: 'copilot',
-                    content: '',
-                    timestamp
-                }]);
-
-                let index = 0;
-                const typingSpeed = 20; // ms per character
-
-                const interval = setInterval(() => {
-                    currentText += fullText.charAt(index);
-                    index++;
-
-                    setMessages(prev => {
-                        const updated = [...prev];
-                        const lastIndex = updated.length - 1;
-
-                        if (updated[lastIndex]?.type === 'copilot') {
-                            updated[lastIndex] = {
-                                ...updated[lastIndex],
-                                content: currentText,
-                                timestamp
-                            };
-                        }
-
-                        return updated;
-                    });
-
-                    if (index >= fullText.length) {
-                        clearInterval(interval);
-                    }
-                }, typingSpeed);
+            const { data } = await makeAPICall(question);
+            const fullText = Array.isArray(data) ? data.join('\n\n') : (data || '');
+            setLoading(false);
+            if (fullText.trim()) {
+                typeOut(fullText);
             } else {
                 setMessages(prev => [...prev, {
                     type: 'copilot',
-                    content: "Sorry, I didn't get that. Could you please try again?",
-                    timestamp: new Date()
+                    content: "I couldn't find an answer to that in this document. Try asking it another way.",
+                    timestamp: new Date(),
                 }]);
             }
         } catch (error) {
-            console.error('Error:', error);
-            setMessages(prev => [...prev, {
-                type: 'copilot',
-                content: "There was an error communicating with the server. Please try again later.",
-                timestamp: new Date()
-            }]);
-        } finally {
+            if (axios.isCancel(error) || error?.name === 'AbortError' || error?.name === 'CanceledError') {
+                return; // stopped by the user, a new chat, or a new document
+            }
+            console.error('AI assistant error:', error);
             setLoading(false);
+            setMessages(prev => [...prev, {
+                type: 'error',
+                question,
+                content: error?.response
+                    ? "The assistant couldn't answer just now. Please try again."
+                    : "Couldn't reach the assistant. Check your connection, then try again.",
+                timestamp: new Date(),
+            }]);
         }
-    }, [makeAPICall]);
+    }, [props.base64, makeAPICall, typeOut, stopTyping]);
 
-    const handleQuickAction = useCallback(async (e, question) => {
-        e.preventDefault();
-        setSummarized(true);
-        await handleSubmitWithTyping(question);
-    }, [handleSubmitWithTyping]);
+    const askSuggestion = useCallback((text) => {
+        if (busy) return;
+        setUsed(prev => (prev.includes(text) ? prev : [...prev, text]));
+        ask(text);
+    }, [ask, busy]);
 
-    const handleChatSubmit = useCallback(async (e) => {
-        e.preventDefault();
+    const handleRetry = useCallback((errMessage) => {
+        if (busy) return;
+        // Drop the error and the question it belongs to, then ask again.
+        setMessages(prev => {
+            const i = prev.indexOf(errMessage);
+            if (i < 0) return prev;
+            const start = i > 0 && prev[i - 1].type === 'user' && prev[i - 1].content === errMessage.question ? i - 1 : i;
+            return [...prev.slice(0, start), ...prev.slice(i + 1)];
+        });
+        ask(errMessage.question);
+    }, [ask, busy]);
+
+    const handleChatSubmit = useCallback((e) => {
+        e?.preventDefault();
         const msg = inputValue.trim();
-        if (!msg || loading) return;
-
+        if (!msg || busy) return;
         setInputValue('');
-        await handleSubmitWithTyping(msg);
-    }, [inputValue, loading, handleSubmitWithTyping]);
-
-    const handleInputChange = useCallback((e) => {
-        setInputValue(e.target.value);
-    }, []);
+        ask(msg);
+    }, [inputValue, busy, ask]);
 
     const handleKeyDown = useCallback((e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
             e.preventDefault();
-            handleChatSubmit(e);
+            handleChatSubmit();
         }
     }, [handleChatSubmit]);
 
-    const renderedMessages = useMemo(() =>
-        messages.map((message, index) => (
-            <Message key={`${message.timestamp.getTime()}-${index}`} message={message} />
-        )), [messages]
-    );
-
-    const isSubmitDisabled = useMemo(() =>
-        loading || !inputValue.trim(), [loading, inputValue]
-    );
-
-    useEffect(() => {
-        return () => {
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-            }
-        };
-    }, []);
+    const hasMessages = messages.length > 0;
+    const unusedSuggestions = SUGGESTIONS.filter((s) => !used.includes(s.text));
+    const lastIndex = messages.length - 1;
 
     return (
         <div>
             {props.base64 ? (
                 <Tooltip placement="left-end" title="Ask AI Assistant">
                     <IconButton
+                        ref={buttonRef}
+                        aria-label="Ask AI assistant"
+                        aria-expanded={open}
                         sx={{
                             backgroundColor: '#2757aa',
                             borderRadius: '50%',
                             width: '50px',
                             height: '50px',
-
-                            animation: 'pulse 2s infinite',
-
+                            animation: open ? 'none' : 'pulse 2s infinite',
                             '@keyframes pulse': {
-                                '0%': {
-                                    boxShadow: '0 0 0 0 rgba(39, 87, 170, 0.45)',
-                                },
-                                '70%': {
-                                    boxShadow: '0 0 0 12px rgba(39, 87, 170, 0)',
-                                },
-                                '100%': {
-                                    boxShadow: '0 0 0 0 rgba(39, 87, 170, 0)',
-                                },
+                                '0%': { boxShadow: '0 0 0 0 rgba(39, 87, 170, 0.45)' },
+                                '70%': { boxShadow: '0 0 0 12px rgba(39, 87, 170, 0)' },
+                                '100%': { boxShadow: '0 0 0 0 rgba(39, 87, 170, 0)' },
                             },
-
-                            '&:hover': {
-                                backgroundColor: '#1C4690',
-                            },
+                            '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+                            '&:hover': { backgroundColor: '#1C4690' },
                         }}
                         onClick={handleOpen}
                     >
-                        <FaAndroid style={{ fontSize: 20, color: '#fff' }} />
+                        <HiSparkles style={{ fontSize: 22, color: '#fff' }} />
                     </IconButton>
                 </Tooltip>
             ) : null}
 
-            <Modal
-                open={open}
-                onClose={handleClose}
-                sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-            >
-                <Box className="chatbot-modal" sx={{
-                    width: '500px',
-                    height: '600px',
-                    bgcolor: 'background.paper',
-                    borderRadius: 2,
-                    boxShadow: 24,
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}>
+            <Slide direction="left" in={open} mountOnEnter unmountOnExit>
+                <section className="aia-panel" role="dialog" aria-modal="false" aria-labelledby={titleId}>
                     {/* Header */}
-                    <div className="chatbot-header" style={{
-                        width: '100%',
+                    <header className="aia-header">
+                        <HiSparkles className="aia-header-icon" aria-hidden />
+                        <h2 id={titleId} className="aia-title">AI assistant</h2>
+                        {props.filename && <span className="aia-subtitle" title={props.filename}>• {props.filename}</span>}
+                        <span className="aia-grow" />
+                        {hasMessages && (
+                            <Tooltip title="New chat">
+                                <IconButton onClick={clearChat} aria-label="New chat" size="small" className="aia-head-btn">
+                                    <FaPenToSquare size={15} />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                        <Tooltip title="Close">
+                            <IconButton onClick={handleClose} aria-label="Close AI assistant" size="small" className="aia-head-btn">
+                                <FaTimes size={15} />
+                            </IconButton>
+                        </Tooltip>
+                    </header>
 
-                        backgroundColor: '#2757aa',
-                        color: 'white',
-                        textAlign: 'center',
-                        borderRadius: '8px 8px 0 0',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                    }}>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            flexGrow: 1,
-                        }}>
-                            <span className='mx-2' style={{ fontSize: '13px', fontWeight: 500 }}>
-                                Ask AI Assistant
-                            </span>
+                    {/* Document */}
+                    <div className="aia-docline">
+                        <span className="aia-pdf" aria-hidden>PDF</span>
+                        <div className="aia-docline-text">
+                            <b title={fileLabel}>{fileLabel}</b>
+                            <span>Answers come from this document only</span>
                         </div>
-
-                        <IconButton onClick={handleClose} sx={{ color: 'white' }} aria-label="Close chatbot">
-                            <FaTimes />
-                        </IconButton>
                     </div>
 
-                    {/* Document Info */}
-                    {props.filename && (
-                        <>
-                            <div style={{
-
-                                backgroundColor: '#ecf4fc',
-                                display: 'flex',
-                                alignItems: 'center',
-                            }}
-                                className='p-2'
-                            >
-                                <span className='mx-2' style={{ fontSize: '13px', color: 'black' }}>
-                                    Hello, how can I help with this document?
-                                </span>
-                                {messages.length > 0 && (
-                                    <Tooltip title="Clear chat and start new">
-                                        <IconButton onClick={clearChat} sx={{ color: '#2757aa', marginRight: '5px' }}>
-                                            <FaEraser style={{ fontSize: '20px' }} />
-                                        </IconButton>
-                                    </Tooltip>
-                                )}
-                            </div>
-                            <div style={{
-
-                                borderBottom: '1px solid #ecf4fc',
-                                backgroundColor: '#ecf4fc',
-                                display: 'flex',
-                                alignItems: 'center',
-                            }}
-                                className='p-2'
-                            >
-                                <FaFilePdf className="text-danger mx-2" style={{ fontSize: '20px', marginRight: '8px' }} />
-                                <span style={{ fontSize: '13px', color: 'black' }}>{props.filename}.pdf</span>
-                            </div>
-                        </>
-                    )}
-
                     {/* Messages */}
-                    <div className="chatbot-messages" style={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        padding: '15px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                    }}>
-                        {messages.length < 1 ? (
-                            <SuggestedActions onSubmit={handleQuickAction} summarized={summarized} />
-                        ) : (
-                            renderedMessages
+                    <div className="aia-body" aria-live="polite">
+                        {!hasMessages && (
+                            <div className="aia-hello">
+                                <Spark size="lg" />
+                                <h3>Ask about this document</h3>
+                                <p>Pick a question or type your own.</p>
+                                <div className="aia-sugs">
+                                    {SUGGESTIONS.map(({ text, icon: Icon }) => (
+                                        <button key={text} type="button" className="aia-sug" onClick={() => askSuggestion(text)} disabled={busy}>
+                                            <Icon className="aia-sug-icon" aria-hidden />
+                                            <span>{text}</span>
+                                            <FaChevronRight className="aia-sug-go" aria-hidden />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         )}
 
-                        {loading && <LoadingIndicator />}
+                        {messages.map((message, index) => (
+                            message.type === 'user' ? (
+                                <div key={`${message.timestamp.getTime()}-${index}`} className="aia-msg-u">{message.content}</div>
+                            ) : (
+                                <AssistantMessage
+                                    key={`${message.timestamp.getTime()}-${index}`}
+                                    message={message}
+                                    typing={typing && index === lastIndex}
+                                    onRetry={handleRetry}
+                                />
+                            )
+                        ))}
+
+                        {loading && (
+                            <div className="aia-thinking">
+                                <Spark />
+                                <span className="aia-dots" aria-hidden><span /><span /><span /></span>
+                                Reading the document…
+                            </div>
+                        )}
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Chat Input Form */}
-                    <form onSubmit={handleChatSubmit} className="input-container">
-                        <div>
+                    {/* Composer */}
+                    <form onSubmit={handleChatSubmit} className="aia-foot">
+                        {hasMessages && unusedSuggestions.length > 0 && (
+                            <div className="aia-chips">
+                                {unusedSuggestions.map((s) => (
+                                    <button key={s.text} type="button" className="aia-chip" title={s.text} onClick={() => askSuggestion(s.text)} disabled={busy}>
+                                        {s.short}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        <div className="aia-box">
                             <textarea
-                                className="chat-input"
-                                placeholder="Ask your own question..."
+                                ref={inputRef}
+                                id="aia-input"
+                                className="aia-input"
+                                rows={1}
+                                aria-label="Ask a question about this document"
+                                placeholder={hasMessages ? 'Ask a follow-up…' : 'Ask a question about this document…'}
                                 value={inputValue}
-                                onChange={handleInputChange}
+                                onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
                             />
-                            <button
-                                type="submit"
-                                className="send-button"
-                                disabled={isSubmitDisabled}
-                            >
-                                <FaPaperPlane />
-                            </button>
+                            {busy ? (
+                                <button type="button" className="aia-stop" onClick={stopAll}>
+                                    <i aria-hidden /> Stop
+                                </button>
+                            ) : (
+                                <button type="submit" className="aia-send" disabled={!inputValue.trim()} aria-label="Send">
+                                    <FaPaperPlane size={13} />
+                                </button>
+                            )}
                         </div>
+                        <div className="aia-note">AI can make mistakes. Check important details in the document.</div>
                     </form>
-                </Box>
-            </Modal>
-
-            <style>{`
-                .loading-dots span {
-                    animation: loading 1.4s infinite ease-in-out both;
-                }
-                .loading-dots span:nth-child(1) {
-                    animation-delay: -0.32s;
-                }
-                .loading-dots span:nth-child(2) {
-                    animation-delay: -0.16s;
-                }
-                @keyframes loading {
-                    0%,
-                    80%,
-                    100% {
-                        opacity: 0;
-                    }
-                    40% {
-                        opacity: 1;
-                    }
-                }
-            `}</style>
+                </section>
+            </Slide>
         </div>
     );
 });

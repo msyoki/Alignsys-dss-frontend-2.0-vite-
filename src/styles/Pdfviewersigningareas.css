@@ -16,7 +16,10 @@
   position: relative;
   overflow-x: hidden; /* thumbnails are drawn at the panel width */
   height: 100%;
-  width: 20%;
+  width: 176px;
+  /* Always keep room for the scrollbar: otherwise it appearing shrinks the thumbnails,
+     which can hide it again, and the thumbnails flicker between two sizes. */
+  scrollbar-gutter: stable;
   background-color: #666666;
   color: black;
   z-index: 1000;
@@ -169,3 +172,47 @@
   scrollbar-width: thin;
   scrollbar-color: #666666 #bfc0be;
 }
+
+/* Light page list (redesign): white cards, the current page outlined in brand blue.
+   Scoped to this viewer so the shared .thumbnail-item rules elsewhere don't change. */
+.sa-thumbnail-panel .thumbnail-item {
+  background-color: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 4px;
+  color: #4b5563;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.sa-thumbnail-panel .thumbnail-item:hover { border-color: #9aa3b2; }
+/* Same 1px border as the others plus a ring, so the highlight never changes the size
+   of the thumbnail (a thicker border nudged the pages by a pixel on every page change). */
+.sa-thumbnail-panel .thumbnail-item.active {
+  border-color: #2757aa;
+  box-shadow: 0 0 0 1px #2757aa;
+  background-color: #ffffff;
+  color: #1a3a7a;
+}
+.sa-thumbnail-panel .thumbnail-page-number {
+  font-size: 11.5px;
+  margin-top: 0;
+  padding: 3px 0;
+  background-color: #f3f4f6;
+}
+.sa-thumbnail-panel .thumbnail-item.active .thumbnail-page-number {
+  background-color: #e3edf7;
+  font-weight: 600;
+}
+
+/* Toolbar on top, document area fills the rest of the height. */
+.sa-viewer-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.sa-viewer-root .sa-viewer-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+

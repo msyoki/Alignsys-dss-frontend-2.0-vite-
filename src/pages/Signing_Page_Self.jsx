@@ -10,6 +10,7 @@ import OtpDialog from '../components/OtpDialog';
 import { getComponent } from '@syncfusion/ej2-base';
 import logo from '../images/ZFBLU.webp';
 import BrandLogo from '../components/common/BrandLogo';
+import DocumentDetailsPanel from '../components/common/DocumentDetailsPanel';
 import Button from '@mui/material/Button';
 import HelpBubble from '../components/HelpBubble';
 import '../styles/SigningLayout.css';
@@ -288,7 +289,7 @@ function Signing_Page_Self() {
           <HelpBubble content='' base64={sampleURL} filename={docname} />
           <div className="row bg-white signing-layout">
             {/* Main Document Viewer */}
-            <div className="col-lg-9 col-md-12 col-sm-12 order-lg-1 order-sm-1 bg-white">
+            <div className="col-lg-9 col-md-12 col-sm-12 order-lg-1 order-sm-1 bg-white signing-viewer-col">
               <div>
                 {sampleURL ? (
                   <PDFViewerSigningLoader
@@ -358,94 +359,25 @@ function Signing_Page_Self() {
               </div>
             </div>
             {/* Sidebar (Right on Large Screens, Top on Small Screens) */}
-            <div className="bg-white col-lg-3 col-md-12 col-sm-12 text-center shadow-lg order-lg-2 order-sm-2 d-flex flex-column signing-details">
-              {/* Logo Section */}
-              <div className="d-flex flex-column justify-content-center align-items-center" style={{ height: "60px", minHeight: "60px", overflow: "hidden" }}>
-                <BrandLogo
-                  src={companylogo}
-                  fallback={logo}
-                  alt="Organization logo"
-                  className="logo"
-                  style={{ maxWidth: "80%", maxHeight: "48px", objectFit: "contain" }}
-                />
-              </div>
-
-              {/* Document Details Header */}
-              <p className="text-white p-2" style={{ fontSize: "11px", backgroundColor: "#1C4690" }}>Document Details</p>
-
-              {/* Document Information - This will grow to fill available space */}
-              <div className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
-                <ul className="list-unstyled m-0 p-0 flex-grow-1 signing-details-list" style={{ overflowY: 'auto' }}>
-                  <li className="mb-2" style={{ fontSize: "12px", fontWeight: 450, color: "#1C4690" }}>Title</li>
-                  <li className="mt-2 mb-2" style={{ fontSize: "12px", fontWeight: 440 }}>{docname}</li>
-                  <li className="mt-2 mb-2" style={{ fontSize: "12px", color: "#1C4690" }}>
-                    Owner: <span style={{ fontSize: "12px", color: "#595959" }}>{docowner}</span>
-                  </li>
-                  <li className="mt-2 mb-2" style={{ fontSize: "12px", color: "#1C4690" }}>
-                    Created: <span style={{ fontSize: "12px", color: "#595959" }}>
-                      <HumanizedDate dateStr={doccreated} />
-                    </span>
-                  </li>
-                  {/* Signers List */}
-                  <li className="mt-2 mb-2" style={{ fontSize: "12px", fontWeight: 440 }}>Signers ({signers.length}):</li>
-                  {signers.length > 0 && (
-                    <div className="border rounded p-2 bg-light" style={{ maxHeight: "20vh", overflowY: "auto", backgroundColor: '#ecf4fc' }}>
-                      {signers.map((s, index) => (
-                        <div
-                          onContextMenu={e => {
-                            e.preventDefault();
-                            alert(`Right-clicked Email:${s.email}`);
-                          }}
-                          key={index}
-                          className={`d-flex justify-content-between align-items-center ${signers.length > 1 && index !== signers.length - 1 ? "border-bottom" : ""}`}
-                          style={{ fontSize: "12px" }}
-                        >
-                          <span>{s.email}</span>
-                          <span className="text-muted">
-                            {s.signed === "True" ? (
-                              <>
-                                Signed <FaCheckCircle className="text-success mx-1" />
-                              </>
-                            ) : (
-                              <>
-                                {s.current_signer === "True" ? "Signing" : "Queued"}
-                                {s.current_signer === "True" ? (
-                                  <FaEnvelopeOpenText className="text-danger mx-1" />
-                                ) : (
-                                  <FaEnvelope className="text-warning mx-1" />
-                                )}
-                              </>
-                            )}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ul>
-              </div>
-
-              {/* Comments Button and Footer - Always at bottom */}
-              <div className='footer bottom-buttons mt-auto'>
-                <div className="container">
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleComments}
-                    disabled={false}
-                    startIcon={<FaComment size={13} />}
-                    sx={{
-                      ...PILL,
-                    }}
-                  >
-                    Comments ({comments.length})
-                  </Button>
-                </div>
-                <div className="mt-3 p-1 bg-white">
-                  <a className="my-4" href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
-                    <img src={logo} alt="Alignsys" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }} />
-                  </a>
-                </div>
-              </div>
+            <div className="bg-white col-lg-3 col-md-12 col-sm-12 shadow-lg order-lg-2 order-sm-2 d-flex flex-column signing-details p-0">
+              {/* Document details: same panel as the dashboard preview */}
+              <DocumentDetailsPanel
+                topLogo={(
+                  <BrandLogo
+                    src={companylogo}
+                    fallback={logo}
+                    alt="Organization logo"
+                    className="logo"
+                    style={{ width: "auto", maxWidth: "80%", maxHeight: "48px", objectFit: "contain" }}
+                  />
+                )}
+                title={docname}
+                owner={docowner}
+                created={doccreated}
+                signers={signers}
+                commentsCount={comments.length}
+                onComments={handleComments}
+              />
             </div>
           </div>
         </>

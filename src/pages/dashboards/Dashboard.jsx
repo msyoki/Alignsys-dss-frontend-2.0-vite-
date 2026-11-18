@@ -15,6 +15,7 @@ import Trashed from '../../components/dashboard/Trashed.jsx';
 import LicenseStatus from '../../components/dialogs/LicenseStatusDialog.jsx';
 import TimedAlert from '../../components/TimedAlert.jsx';
 import AddSignersDialogMerged from '../../components/dialogs/AddSignersDialogMerged';
+import { readDraft } from '../../utils/addSignersDraft';
 import CommentsDialog from '../../components/dialogs/CommentsDialog.jsx';
 import ProfileDialog from '../../components/dialogs/ProfileDialog.jsx';
 import PreviewerDialog from '../../components/dialogs/PreviewerDialog.jsx';
@@ -620,6 +621,12 @@ function Dashboard() {
         setUploadedFileUrl(guid)
         setOpenDialogAddSigners(true)
     }
+
+    // After a reload of this tab, reopen "Send for signing" where it was (see addSignersDraft).
+    useEffect(() => {
+        const draft = readDraft()
+        if (draft?.origin === 'dashboard' && draft.file) sendUploadForSigning(draft.file)
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     // --- Data Refresh ---
     const refreshdata = () => {

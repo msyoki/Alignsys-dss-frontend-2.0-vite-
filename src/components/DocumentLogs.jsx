@@ -144,7 +144,8 @@ function DocumentLogs(props) {
 
 
   return (
-    <div >
+    // Fills the tab so only the rows scroll; the filters and the table footer stay put.
+    <div style={{ flex: 1, minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <DocDetailsDialog
         setOpenDialogDocDetails={setOpenDialogDocDetails}
         opendialogdocdetails={opendialogdocdetails}

@@ -3,6 +3,7 @@ import mergeActionColumns from '../common/mergeActionColumns';
 import autoSizeColumns from '../common/autoSizeColumns';
 import CollapsibleFilters from '../common/CollapsibleFilters';
 import { FaPenNib, FaEye, FaInfoCircle, FaTrash, FaCircle, FaFilter } from 'react-icons/fa';
+import StatusDot, { DOT_COLORS } from '../common/StatusDot';
 import Box from '@mui/material/Box';
 import DocDetailsDialog2 from '../dialogs/DocDetailsDialog2.jsx';
 
@@ -236,7 +237,7 @@ function Inbox(props) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ecf4fc', padding: '5px 5px', width: '100%' }}>
           <div className='row '>
             <h6 className='text-dark col-lg-12 col-md-12 col-sm-12 p-1 mx-3' style={{ fontSize: '12.8px' }}>
-              <FaCircle className="dot text-danger shadow-lg mx-2" aria-hidden="true" size={13} color='#2757aa' />
+              <StatusDot color={DOT_COLORS.inbox} size={12} style={{ margin: '0 8px' }} />
               Inbox <span style={{ fontSize: '13.5px' }}>({props.inbox ? <>{props.inbox.length}</> : <></>})</span>
             </h6>
 

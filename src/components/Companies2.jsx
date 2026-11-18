@@ -153,7 +153,7 @@ function Companies2(props) {
       </ConfirmDialog>
 
 
-      <Box sx={{ height: 'max(400px, calc(100dvh - 230px))', width: '100%', fontSize: '10px' }}>
+      <Box sx={{ flex: 1, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', fontSize: '10px' }}>
         <DataGrid
           rows={props.companies}
           columns={autoSizeColumns(columns, props.companies)}
@@ -171,7 +171,7 @@ function Companies2(props) {
           pageSizeOptions={[5, 15, 20, 100]}
           // checkboxSelection
           disableRowSelectionOnClick
-          style={{ fontSize: '12px', fontWeight: "lighter" }}
+          style={{ fontSize: '12px', fontWeight: "lighter", flex: 1, minHeight: 0 }}
           getRowId={getRowId}
           className='app-table'
 

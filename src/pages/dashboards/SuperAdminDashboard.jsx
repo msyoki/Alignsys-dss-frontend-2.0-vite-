@@ -364,9 +364,9 @@ function SuperAdminDashboard() {
                   )))}
                 </Tabs>
               </Box>
-              <CustomTabPanel value={tab} index={0} className='admin-tabpanel'>
+              <CustomTabPanel value={tab} index={0} className='admin-tabpanel' fill>
                 <PanelHeader title="Company accounts" subtitle="Approved organisations using Alignsys DSS." />
-                <div id='Company Accounts'>
+                <div id='Company Accounts' className='admin-grid'>
                   <Companies2
                     getCompanies={getCompanies}
                     getNewCompanies={getNewCompanies}
@@ -405,18 +405,18 @@ function SuperAdminDashboard() {
                   />
                 </div>
               </CustomTabPanel>
-              <CustomTabPanel value={tab} index={2} className='admin-tabpanel'>
+              <CustomTabPanel value={tab} index={2} className='admin-tabpanel' fill>
                 <PanelHeader title="Individual accounts" subtitle="People using Alignsys DSS without an organisation." />
-                <div id='Individual Accounts'>
+                <div id='Individual Accounts' className='admin-grid'>
                   <IndividualAccounts
                     getIndividualUsers={getIndividualUsers}
                     individualusers={individualusers}
                   />
                 </div>
               </CustomTabPanel>
-              <CustomTabPanel value={tab} index={3} className='admin-tabpanel'>
+              <CustomTabPanel value={tab} index={3} className='admin-tabpanel' fill>
                 <PanelHeader title="Pending approval" subtitle="Organisations that registered and are waiting to be approved." />
-                <div id='Accounts Pending Approval'>
+                <div id='Accounts Pending Approval' className='admin-grid'>
                   <NewCompanies2
                     newcompanies={newcompanies}
                     company4approval={company4approval}

@@ -51,7 +51,7 @@ const getRowId = (row) => row.id;
   return (
   <>
 
-        <Box sx={{ height: 'max(400px, calc(100dvh - 230px))', width: '100%' ,fontSize:'12px'}}>
+        <Box sx={{ flex: 1, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', fontSize: '12px' }}>
             <DataGrid
                 rows={props.individualusers}
                 columns={autoSizeColumns(columns, props.individualusers)}
@@ -69,7 +69,7 @@ const getRowId = (row) => row.id;
                 pageSizeOptions={[5,15,20,100]}
                 // checkboxSelection
                 disableRowSelectionOnClick
-                style={{ fontSize: '12px',fontWeight:"lighter"}}
+                style={{ fontSize: '12px', fontWeight: "lighter", flex: 1, minHeight: 0 }}
                 getRowId={getRowId} 
                 className='app-table'
        

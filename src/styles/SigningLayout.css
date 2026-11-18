@@ -56,11 +56,18 @@
     height: 100dvh;
     min-height: 0;
   }
-  .signing-layout > .signing-viewer-col > .signing-toolbar,
-  .signing-layout > .signing-viewer-col > .sa-toolbar {
+  /* The self-sign page wraps the viewer in one more element; it passes the height on. */
+  .signing-layout > .signing-viewer-col > .signing-viewer-stack {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .signing-layout > .signing-viewer-col .signing-toolbar,
+  .signing-layout > .signing-viewer-col .sa-toolbar {
     flex-shrink: 0;
   }
-  .signing-layout > .signing-viewer-col > .pdf-viewer-container {
+  .signing-layout > .signing-viewer-col .pdf-viewer-container {
     flex: 1 1 auto;
     min-height: 0;
     height: auto;

@@ -172,7 +172,8 @@ function DocumentLogs(props) {
           </div>
         ) : (
           <>
-            <DateRangeFilter filters={props.filters} onChange={handleFilterChange} onApply={props.getDocLogs}>
+            <DateRangeFilter filters={props.filters} onChange={handleFilterChange} onApply={props.getDocLogs}
+              summaryExtra={STAGES.find((st) => st.value === stage)?.label || ''}>
               <div className="d-flex flex-column" style={{ minWidth: '180px', flex: 1 }}>
                 <label htmlFor="filter-stage" className="mb-1 text-dark fw-medium" style={{ fontSize: '12px', lineHeight: 1.1 }}>Stage</label>
                 <select

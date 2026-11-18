@@ -290,7 +290,7 @@ function Signing_Page_Self() {
           <div className="row bg-white signing-layout">
             {/* Main Document Viewer */}
             <div className="col-lg-9 col-md-12 col-sm-12 order-lg-1 order-sm-1 bg-white signing-viewer-col">
-              <div>
+              <div className="signing-viewer-stack">
                 {sampleURL ? (
                   <PDFViewerSigningLoader
                     getSavedSignatures={getSavedSignatures}

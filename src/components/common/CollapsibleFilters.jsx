@@ -9,18 +9,19 @@ const fmt = (d) => {
 };
 
 /**
- * Date filter bar for the document lists. On small screens it is collapsed by
- * default behind a "Date filters" toggle (showing the current range), so the
- * table gets the height; on larger screens the filters are always shown.
+ * Filter bar above a table. On small screens it is collapsed by default behind a
+ * toggle (showing the current date range and any `summaryExtra`, e.g. a chosen
+ * stage), so the table gets the height; on larger screens the filters are always shown.
  */
-const CollapsibleFilters = ({ startDate, endDate, children }) => {
+const CollapsibleFilters = ({ startDate, endDate, children, label = 'Date filters', summaryExtra = '' }) => {
   const isSmall = useMediaQuery('(max-width: 767.98px)');
   const [open, setOpen] = useState(false);
   const panelId = useId();
 
   if (!isSmall) return children;
 
-  const range = startDate || endDate ? `${fmt(startDate) || '…'} – ${fmt(endDate) || '…'}` : 'All dates';
+  const dates = startDate || endDate ? `${fmt(startDate) || '…'} – ${fmt(endDate) || '…'}` : 'All dates';
+  const range = summaryExtra ? `${dates} · ${summaryExtra}` : dates;
 
   return (
     <Box sx={{ borderBottom: '1px solid #e5e7eb' }}>
@@ -38,8 +39,8 @@ const CollapsibleFilters = ({ startDate, endDate, children }) => {
         }}
       >
         <FaFilter size={12} aria-hidden />
-        <span style={{ fontWeight: 600 }}>Date filters</span>
-        <span style={{ color: '#6b7280', fontSize: 12.5, marginLeft: 4 }}>{range}</span>
+        <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
+        <span style={{ color: '#6b7280', fontSize: 12.5, marginLeft: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{range}</span>
         <FaChevronDown
           size={11}
           aria-hidden

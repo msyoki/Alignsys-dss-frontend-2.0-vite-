@@ -176,6 +176,30 @@ const Chatbot = memo((props) => {
         setTimeout(() => buttonRef.current?.focus(), 0);
     }, []);
 
+    // On wide screens, sit exactly over the Document Details column when the page has one,
+    // so the panel lines up with the layout instead of covering part of it.
+    const [dock, setDock] = useState(null);
+    useEffect(() => {
+        if (!open) return undefined;
+        const target = document.querySelector('.signing-details');
+        const update = () => {
+            const r = target?.getBoundingClientRect();
+            if (!r || window.innerWidth < 992 || r.width < 280) { setDock(null); return; }
+            setDock((prev) => {
+                const next = { left: Math.round(r.left), width: Math.round(r.width) };
+                return prev && prev.left === next.left && prev.width === next.width ? prev : next;
+            });
+        };
+        update();
+        window.addEventListener('resize', update);
+        let ro;
+        if (target && typeof ResizeObserver !== 'undefined') {
+            ro = new ResizeObserver(update);
+            ro.observe(target);
+        }
+        return () => { window.removeEventListener('resize', update); if (ro) ro.disconnect(); };
+    }, [open]);
+
     // Focus the input when the panel opens; Esc closes it.
     useEffect(() => {
         if (!open) return undefined;
@@ -360,7 +384,13 @@ const Chatbot = memo((props) => {
             ) : null}
 
             <Slide direction="left" in={open} mountOnEnter unmountOnExit>
-                <section className="aia-panel" role="dialog" aria-modal="false" aria-labelledby={titleId}>
+                <section
+                    className={`aia-panel${dock ? ' aia-docked' : ''}`}
+                    role="dialog"
+                    aria-modal="false"
+                    aria-labelledby={titleId}
+                    style={dock ? { left: dock.left, width: dock.width, right: 'auto' } : undefined}
+                >
                     {/* Header */}
                     <header className="aia-header">
                         <HiSparkles className="aia-header-icon" aria-hidden />

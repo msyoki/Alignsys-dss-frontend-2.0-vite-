@@ -17,6 +17,12 @@
   text-align: left;
 }
 
+/* Lined up with the page's Document Details column (its edge already has a shadow). */
+.aia-panel.aia-docked {
+  max-width: none;
+  box-shadow: none;
+}
+
 @media (max-width: 600px) {
   .aia-panel {
     width: 100vw;

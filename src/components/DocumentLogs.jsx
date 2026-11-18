@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import mergeActionColumns from './common/mergeActionColumns';
 import autoSizeColumns from './common/autoSizeColumns';
 import { Box, CircularProgress, Button } from '@mui/material';
@@ -17,12 +17,42 @@ import DocDetailsDialog from './dialogs/DocDetailsDialog';
 
 import TableIconButton from './common/TableIconButton';
 import DateRangeFilter from './common/DateRangeFilter';
+import { StatusChip } from './common/dialogKit';
+
+// Document stages, as on the dashboard tabs. The server sends `stage`; the fallback
+// works it out from the flags for an older backend (which doesn't send `trashed`).
+export const STAGES = [
+  { value: 'pending', label: 'Pending', tone: 'warning' },
+  { value: 'saved', label: 'Saved for later', tone: 'neutral' },
+  { value: 'completed', label: 'Completed', tone: 'success' },
+  { value: 'voided', label: 'Voided', tone: 'danger' },
+  { value: 'trashed', label: 'Trashed', tone: 'neutral' },
+];
+const isTrue = (v) => v === true || v === 'True';
+export const docStage = (d) => d.stage || (
+  isTrue(d.trashed) ? 'trashed'
+    : isTrue(d.declined) ? 'voided'
+      : isTrue(d.signedcomplete) ? 'completed'
+        : (d.signers || []).length ? 'pending' : 'saved'
+);
+
 function DocumentLogs(props) {
   const [opendialogdocdetails, setOpenDialogDocDetails] = useState(false)
   const [document, setDocument] = useState({})
   const [documentsigners, setDocumentSigners] = useState([])
-  // Sort the inbox data based on docdate in descending order
-  const sortedCompanydocs = [...props.companydocs].sort((a, b) => new Date(b.docdate) - new Date(a.docdate));
+  const [stage, setStage] = useState('')
+  // Newest first, then narrowed to the chosen stage (client-side, within the date range).
+  const allDocs = useMemo(
+    () => [...props.companydocs].sort((a, b) => new Date(b.docdate) - new Date(a.docdate)),
+    [props.companydocs],
+  );
+  const stageCounts = useMemo(() => allDocs.reduce((acc, d) => {
+    const k = docStage(d); acc[k] = (acc[k] || 0) + 1; return acc;
+  }, {}), [allDocs]);
+  const sortedCompanydocs = useMemo(
+    () => (stage ? allDocs.filter((d) => docStage(d) === stage) : allDocs),
+    [allDocs, stage],
+  );
 
 
   let ontableclick = async (e, active, admin, Id, email, first, last, phone) => {
@@ -45,8 +75,16 @@ function DocumentLogs(props) {
 
     { field: 'owner', headerName: 'Owner', width: 200 },
 
-    // { field: 'signedcomplete', headerName: 'Complete', width: 100 },
-    // { field: 'declined', headerName: 'Voided', width: 100 },
+    {
+      field: 'stage',
+      headerName: 'Status',
+      width: 130,
+      valueGetter: (params) => STAGES.find((x) => x.value === docStage(params.row))?.label || '',
+      renderCell: (params) => {
+        const st = STAGES.find((x) => x.value === docStage(params.row));
+        return st ? <StatusChip tone={st.tone}>{st.label}</StatusChip> : null;
+      },
+    },
     { field: 'docdate', headerName: 'Created', width: 200 },
     {
       field: 'action2',
@@ -133,7 +171,23 @@ function DocumentLogs(props) {
           </div>
         ) : (
           <>
-            <DateRangeFilter filters={props.filters} onChange={handleFilterChange} onApply={props.getDocLogs} />
+            <DateRangeFilter filters={props.filters} onChange={handleFilterChange} onApply={props.getDocLogs}>
+              <div className="d-flex flex-column" style={{ minWidth: '180px', flex: 1 }}>
+                <label htmlFor="filter-stage" className="mb-1 text-dark fw-medium" style={{ fontSize: '12px', lineHeight: 1.1 }}>Stage</label>
+                <select
+                  id="filter-stage"
+                  value={stage}
+                  onChange={(e) => setStage(e.target.value)}
+                  className="form-select form-select-sm"
+                  style={{ minHeight: '32px', paddingTop: '2px', paddingBottom: '2px', fontSize: '12px' }}
+                >
+                  <option value="">All stages ({allDocs.length})</option>
+                  {STAGES.map((st) => (
+                    <option key={st.value} value={st.value}>{st.label} ({stageCounts[st.value] || 0})</option>
+                  ))}
+                </select>
+              </div>
+            </DateRangeFilter>
             <DataGrid
               rows={sortedCompanydocs}
               columns={autoSizeColumns(mergeActionColumns(columns), sortedCompanydocs)}

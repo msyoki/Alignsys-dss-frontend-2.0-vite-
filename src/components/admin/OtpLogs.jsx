@@ -24,6 +24,7 @@ const EVENT_TONE = {
   'otp failed': { fg: '#8a6100', bg: '#fff8e1' },
   'otp send failed': { fg: '#b42318', bg: '#fdecea' },
   'otp blocked': { fg: '#4b5563', bg: '#f3f4f6' },
+  'otp phone changed': { fg: '#5b3a9a', bg: '#f1ebfb' },
 };
 
 const Tile = ({ label, value, hint, tone = '#1C4690' }) => (

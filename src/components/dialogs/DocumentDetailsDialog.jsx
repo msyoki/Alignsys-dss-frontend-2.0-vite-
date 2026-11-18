@@ -3,12 +3,13 @@ import axios from 'axios';
 import moment from 'moment';
 import { Box, Button, Dialog, DialogContent, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import {
-  FaBan, FaCheck, FaClock, FaEnvelopeOpenText, FaExclamationCircle, FaFileAlt, FaMobileAlt, FaPaperPlane, FaShieldAlt,
+  FaBan, FaCheck, FaClock, FaEnvelopeOpenText, FaExclamationCircle, FaFileAlt, FaMobileAlt, FaPaperPlane, FaSearch, FaShieldAlt,
 } from 'react-icons/fa';
 import { FaDownload } from 'react-icons/fa6';
 import AuthContext from '../../context/Authcontext.jsx';
 import * as constants from '../constants/constants.js';
 import { downloadDocument } from '../../api/documentFiles';
+import { isValidEmail } from '../../utils/email';
 import useOtpAvailability from '../../hooks/useOtpAvailability';
 import { jsonPhoneCodesData } from '../../data/country-phone-codes';
 import SimpleAlert from '../SimpleAlert.jsx';
@@ -80,32 +81,36 @@ function OtpUnavailable({ availability }) {
   );
 }
 
-function SignerChips({ signer, showNoSms }) {
+function SignerChips({ signer }) {
+  const signedAt = fmtShort(signer.signed_time_stamp);
   const verifiedAt = fmtShort(signer.otp_verified_at);
+  const phone = maskPhone(signer.otpnumber);
   return (
-    <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+      {signer.otp && (
+        <Tooltip title={signer.otp_verified
+          ? `SMS verified${verifiedAt ? ` ${verifiedAt}` : ''}${phone ? ` (${phone})` : ''}`
+          : `SMS code${phone ? ` to ${phone}` : ''}, not verified yet`}
+        >
+          <Box
+            component="span"
+            aria-label={signer.otp_verified ? 'SMS verified' : 'SMS code required'}
+            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 11.5, color: signer.otp_verified ? '#2e7d32' : '#8a6100', whiteSpace: 'nowrap' }}
+          >
+            {signer.otp_verified ? <FaShieldAlt size={11} /> : <FaMobileAlt size={11} />}
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{phone}</Box>
+          </Box>
+        </Tooltip>
+      )}
       {isTrue(signer.signed) ? (
-        <StatusChip tone="success" icon={<FaCheck size={10} />}>
-          Signed{fmtShort(signer.signed_time_stamp) ? ` · ${fmtShort(signer.signed_time_stamp)}` : ''}
-        </StatusChip>
+        <Tooltip title={signedAt ? `Signed ${signedAt}` : 'Signed'}>
+          <span><StatusChip tone="success" icon={<FaCheck size={10} />}>Signed</StatusChip></span>
+        </Tooltip>
       ) : isTrue(signer.current_signer) ? (
-        <StatusChip tone="info" icon={<FaEnvelopeOpenText size={10} />}>Current signer</StatusChip>
+        <StatusChip tone="info" icon={<FaEnvelopeOpenText size={10} />}>Current</StatusChip>
       ) : (
         <StatusChip tone="neutral" icon={<FaClock size={10} />}>Queued</StatusChip>
       )}
-      {signer.otp ? (
-        signer.otp_verified ? (
-          <StatusChip tone="info" icon={<FaShieldAlt size={10} />}>
-            SMS verified{verifiedAt ? ` · ${verifiedAt}` : ''}{signer.otpnumber ? ` · ${maskPhone(signer.otpnumber)}` : ''}
-          </StatusChip>
-        ) : (
-          <StatusChip tone="neutral" icon={<FaMobileAlt size={10} />}>
-            SMS code{signer.otpnumber ? ` to ${maskPhone(signer.otpnumber)}` : ''}
-          </StatusChip>
-        )
-      ) : showNoSms ? (
-        <Typography component="span" sx={{ fontSize: 11.5, color: '#6D7386', py: '2px' }}>No SMS code</Typography>
-      ) : null}
     </Box>
   );
 }
@@ -137,6 +142,7 @@ export default function DocumentDetailsDialog({
     if (open) {
       setSigners(initialSigners);
       setPanel(null); setAlert(null); setBusy(''); setRecallOpen(false); setReason('');
+      setSignerQuery(''); setShowAllSigners(false);
     }
   }, [open, doc.guid]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -158,18 +164,26 @@ export default function DocumentDetailsDialog({
   const canRecall = isOwner && inProgress && (type === 'inbox' || type === 'outbox');
   const recallLabel = type === 'outbox' ? 'Recall document' : 'Void document';
 
+  // Long lists: search, and collapsed to the first few plus the current signer and any open panel.
+  const [signerQuery, setSignerQuery] = useState('');
+  const [showAllSigners, setShowAllSigners] = useState(false);
   const ordered = useMemo(() => {
     const rank = (s) => (isTrue(s.signed) ? 1 : isTrue(s.current_signer) ? 2 : 3);
     return [...signers].sort((a, b) => rank(a) - rank(b));
   }, [signers]);
   const signedCount = signers.filter((s) => isTrue(s.signed)).length;
+  const manySigners = signers.length > 8;
+  const collapsible = manySigners;
+  const visibleSigners = (() => {
+    const all = ordered.map((s, index) => ({ s, index }));
+    const q = signerQuery.trim().toLowerCase();
+    if (q) return all.filter(({ s }) => s.email.toLowerCase().includes(q));
+    if (!collapsible || showAllSigners) return all;
+    return all.filter(({ s, index }) => index < 5
+      || (isTrue(s.current_signer) && !isTrue(s.signed))
+      || (panel && panel.email === s.email));
+  })();
   const current = signers.find((s) => isTrue(s.current_signer) && !isTrue(s.signed));
-
-  const expiry = useMemo(() => {
-    if (!doc.expirydate || !moment(doc.expirydate).isValid()) return null;
-    const days = moment(doc.expirydate).startOf('day').diff(moment().startOf('day'), 'days');
-    return { date: moment(doc.expirydate).format('DD/MMM/YYYY'), days };
-  }, [doc.expirydate]);
 
   const status = completed ? { tone: 'success', label: 'Signing completed' }
     : voided ? { tone: 'danger', label: 'Voided' }
@@ -190,7 +204,7 @@ export default function DocumentDetailsDialog({
   // --- Actions ----------------------------------------------------------------
   const substitute = async (signer) => {
     const email = newEmail.trim();
-    if (!/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(email)) return show('Enter a valid email address.', 'error');
+    if (!isValidEmail(email)) return show('Enter a valid email address, e.g. name@example.com.', 'error');
     if (subOtp) { const p = phoneProblem(phone); if (p) return show(p, 'error'); }
     setBusy('substitute');
     try {
@@ -381,21 +395,10 @@ export default function DocumentDetailsDialog({
             </Box>
           )}
 
-          <PropertyRow label="Title"><PropertyValue>{doc.title}</PropertyValue></PropertyRow>
           <PropertyRow label="Owner">
             <PropertyValue>{doc.owner}{isOwner ? ' (you)' : ''}</PropertyValue>
           </PropertyRow>
           {fmt(doc.docdate) && <PropertyRow label="Sent"><PropertyValue>{fmt(doc.docdate)}</PropertyValue></PropertyRow>}
-          {inProgress && expiry && (
-            <PropertyRow label="Expires">
-              <PropertyValue>
-                {expiry.date} ·{' '}
-                <Box component="span" sx={{ color: expiry.days <= 3 ? '#b42318' : '#8a6100' }}>
-                  {expiry.days < 0 ? 'expired' : expiry.days === 0 ? 'today' : `in ${expiry.days} day${expiry.days === 1 ? '' : 's'}`}
-                </Box>
-              </PropertyValue>
-            </PropertyRow>
-          )}
           {completed && fmt(doc.signeddate) && <PropertyRow label="Completed"><PropertyValue>{fmt(doc.signeddate)}</PropertyValue></PropertyRow>}
           <PropertyRow label="Status">
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
@@ -425,35 +428,52 @@ export default function DocumentDetailsDialog({
           )}
           <PropertyRow label="Document ID"><PropertyValue mono>{doc.guid}</PropertyValue></PropertyRow>
 
-          <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#111827', mt: 2, mb: 1, px: 0.5 }}>
-            Signers ({signers.length})
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 2, mb: 1, px: 0.5 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>Signers ({signers.length})</Typography>
+            {signers.length > 1 && (
+              <Typography sx={{ fontSize: 12, color: '#6D7386' }}>· {signedCount} signed</Typography>
+            )}
+            {manySigners && (
+              <TextField
+                size="small"
+                value={signerQuery}
+                onChange={(e) => setSignerQuery(e.target.value)}
+                placeholder="Find a signer"
+                inputProps={{ 'aria-label': 'Find a signer' }}
+                InputProps={{ startAdornment: <FaSearch size={11} color="#9aa3b2" style={{ marginRight: 8 }} /> }}
+                sx={{ ml: { sm: 'auto' }, width: { xs: '100%', sm: 210 }, '& .MuiInputBase-root': { fontSize: 12.8, minHeight: 32 }, '& .MuiInputBase-input': { py: '5px' } }}
+              />
+            )}
+          </Box>
           {signers.length === 0 ? (
             <Typography sx={{ fontSize: 12.5, color: '#9ca3af', px: 0.5 }}>No signers on this document.</Typography>
           ) : (
-            <Box sx={{ border: '1px solid #e5e7eb', borderRadius: 1.5, overflow: 'hidden' }}>
-              {ordered.map((s, index) => {
+            <>
+            {visibleSigners.length === 0 && (
+              <Typography sx={{ fontSize: 12.5, color: '#9ca3af', px: 0.5, py: 1 }}>No signer matches "{signerQuery}".</Typography>
+            )}
+            <Box sx={{ border: visibleSigners.length ? '1px solid #e5e7eb' : 0, borderRadius: 1.5, overflow: 'hidden' }}>
+              {visibleSigners.map(({ s, index }, row) => {
                 const open_ = panel && panel.email === s.email ? panel.mode : null;
                 const editable = canManage && !isTrue(s.signed);
                 return (
                   <Box
                     key={s.uid || s.email}
                     sx={{
-                      px: 1.5, py: 1.25, borderTop: index ? '1px solid #f3f4f6' : 'none',
+                      px: 1.25, py: open_ ? 1.25 : '6px', minHeight: 40, boxSizing: 'border-box', borderTop: row ? '1px solid #f3f4f6' : 'none',
                       bgcolor: open_ === 'confirmOff' ? '#fdf3f2' : open_ || (isTrue(s.current_signer) && !isTrue(s.signed)) ? '#f7faff' : 'transparent',
                       display: 'flex', flexDirection: 'column', gap: open_ ? 1.5 : 0,
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+                    {/* One line per signer (about 40px); the buttons drop below on phones. */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
                       <Box component="span" sx={numberBadge(s)}>{index + 1}</Box>
-                      <Box sx={{ flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        <Typography noWrap title={s.email} sx={{ fontSize: 13, fontWeight: 500, color: open_ === 'substitute' ? '#6D7386' : '#111827', textDecoration: open_ === 'substitute' ? 'line-through' : 'none' }}>
-                          {s.email}
-                        </Typography>
-                        <SignerChips signer={s} showNoSms={editable} />
-                      </Box>
+                      <Typography noWrap title={s.email} sx={{ flex: { xs: '1 1 calc(100% - 32px)', sm: '1 1 120px' }, minWidth: 0, fontSize: 13, fontWeight: 500, color: open_ === 'substitute' ? '#6D7386' : '#111827', textDecoration: open_ === 'substitute' ? 'line-through' : 'none' }}>
+                        {s.email}
+                      </Typography>
+                      <Box sx={{ display: 'flex' }}><SignerChips signer={s} /></Box>
                       {editable && !panel && (
-                        <Box sx={{ display: 'flex', gap: 0.75, flexShrink: 0 }}>
+                        <Box sx={{ display: 'flex', gap: 0.75, flexShrink: 0, ml: { xs: 'auto', sm: 0 } }}>
                           <Tooltip title={s.otp ? 'Change the number or turn off the SMS code' : 'Ask this signer for an SMS code before signing'}>
                             <Button onClick={() => openPanel(s, 'sms')} sx={SMALL_BTN}>{s.otp ? 'SMS code' : 'Add SMS code'}</Button>
                           </Tooltip>
@@ -475,10 +495,22 @@ export default function DocumentDetailsDialog({
                 );
               })}
             </Box>
+            {collapsible && !signerQuery.trim() && (
+              <Button
+                size="small"
+                onClick={() => setShowAllSigners((v) => !v)}
+                sx={{ mt: 0.75, textTransform: 'none', fontSize: 12.5, color: '#2757aa', px: 0.5, minWidth: 0 }}
+              >
+                {showAllSigners ? 'Show fewer' : `Show all ${signers.length} signers`}
+              </Button>
+            )}
+            </>
           )}
         </DialogContent>
 
         <DialogFooter>
+          {/* Wraps onto two lines on narrow screens instead of running off the edges. */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
           {panel ? (
             <>
               <Typography sx={{ flex: '1 1 auto', fontSize: 12, color: '#6D7386' }}>Finish or cancel the change to use the other actions.</Typography>
@@ -508,6 +540,7 @@ export default function DocumentDetailsDialog({
               <PrimaryButton startIcon={<FaDownload />} onClick={download} disabled={!doc.guid || !!busy}>Download</PrimaryButton>
             </>
           )}
+          </Box>
         </DialogFooter>
       </Dialog>
 

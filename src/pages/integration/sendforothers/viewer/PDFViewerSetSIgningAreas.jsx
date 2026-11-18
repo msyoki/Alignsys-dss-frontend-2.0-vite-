@@ -7,20 +7,16 @@ import ThumbnailOverlay from '../../../../components/preview/ThumbnailOverlay';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Draggable from 'react-draggable';
 import './SfoViewer.css';
-import { Slider, Tooltip, Button,Box,Typography  } from '@mui/material';
 import {
-    FaEraser,
-    FaSearchMinus,
-    FaSearchPlus,
-    FaRedo,
-    FaBars,
-    FaTrash,
-    FaThList,
+    FaChevronLeft,
+    FaChevronRight,
 } from 'react-icons/fa';
 
 import { TfiLayoutSidebarLeft } from "react-icons/tfi";
 import { TfiLayoutSidebarNone } from "react-icons/tfi";
-import { PILL } from './pillButton';
+// Same look as the DSS app's place-signature-boxes viewer.
+import SignBoxVisual from '../../../../components/preview/SignBoxVisual';
+import ViewerToolbar from '../../../../components/preview/ViewerToolbar';
 
 // Same worker source as the app's other PDF viewers (PDFViewerSigning, PDFViewerPreview).
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
@@ -198,6 +194,9 @@ const PDFViewerSetSIgningAreas = ({
 
     useEffect(() => {
         const handleKeyDown = (event) => {
+            // Not while typing in a field (signer search, page number, ...).
+            const tag = event.target?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return;
             if (event.key === 'Delete' && selectedAnnotationId) {
                 deleteAnnotation(selectedAnnotationId);
             }
@@ -286,7 +285,6 @@ const PDFViewerSetSIgningAreas = ({
                 {filteredAnnotations.map(annotation => {
 
                     const isSelected = selectedAnnotationId === annotation.id;
-                    const backgroundColor = annotation.color ? `${annotation.color}33` : 'rgba(255,255,0,0.1)';
 
                     let { x, y } = annotation;
                     // switch (rotation) {
@@ -318,6 +316,7 @@ const PDFViewerSetSIgningAreas = ({
                             key={annotation.id}
                             position={{ x: renderX, y: renderY }}
                             onStop={(e, data) => handleDragStop(annotation, data)}
+                            cancel=".sa-no-drag"
                             bounds={{
                                 left: 0,
                                 top: 0,
@@ -337,36 +336,16 @@ const PDFViewerSetSIgningAreas = ({
                                     position: 'absolute',
                                     width: `${renderWidth}px`,
                                     height: `${renderHeight}px`,
-                                    border: '2px dashed rgba(169,169,169,0.7)',
-                                    boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-                                    backgroundColor,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    textAlign: 'center',
-                                    cursor: 'pointer',
-                                    transition: 'background-color 0.3s ease-in-out',
+                                    cursor: 'move',
                                 }}
                             >
-                                <p style={{ margin: 0, fontSize: `${11 * pageScale}px` }}>Sign Here</p>
-                                {isSelected && (
-                                    <FaTrash
-                                        className="delete-icon"
-                                        onClick={(e) => { e.stopPropagation(); deleteAnnotation(annotation.id); }}
-                                        style={{
-                                            position: 'absolute',
-                                            top: '-10px',
-                                            right: '-10px',
-                                            cursor: 'pointer',
-                                            color: '#d32f2f',
-                                            background: 'white',
-                                            borderRadius: '50%',
-                                            boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
-                                            padding: 2,
-                                            fontSize: 18
-                                        }}
-                                    />
-                                )}
+                                <SignBoxVisual
+                                    color={annotation.color}
+                                    email={annotation.text}
+                                    selected={isSelected}
+                                    scale={pageScale}
+                                    onRemove={() => deleteAnnotation(annotation.id)}
+                                />
                             </div>
                         </Draggable>
                     );
@@ -470,140 +449,40 @@ const PDFViewerSetSIgningAreas = ({
         }
     }, [pageNumber]);
 
-    const iconSz = isMobile ? 14 : 18;
-    const labelSz = isMobile ? '10px' : '12px';
 
     return (
         // Column layout: the toolbar keeps its height and the pages area fills the rest, so the
         // panel never overflows and the toolbar can't be scrolled out of view.
-        <div className="sfov-viewer-root">
+        <div className="sfov-viewer-root"
+            // Clicking anywhere in the viewer outside a box deselects the selected box
+            // (the box itself, and its Remove label, keep their own clicks).
+            onMouseDownCapture={(e) => {
+                if (selectedAnnotationId && !e.target.closest?.('.react-draggable')) setSelectedAnnotationId(null);
+            }}
+        >
             {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
 
-            {/* ── Toolbar ── */}
-            <div className="sfov-toolbar controls bg-white shadow-lg text-dark p-1 d-flex align-items-center justify-content-between">
-                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginLeft: '1rem' }}>
-
-                    {/* Thumbnail toggle */}
-     <Tooltip title={isAsideOpen ? "Hide page navigation" : "Show page navigation"}>
-            <Box
-              onClick={toggleAside}
-              className='shadow-lg'
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.75,
-                px: 1,
-                height: 32,
-                borderRadius: 1.5,
-                cursor: "pointer",
-                userSelect: "none",
-                bgcolor: isAsideOpen ? "#EEF4FF" : "transparent",
-                color: isAsideOpen ? "#1C4690" : "text.secondary",
-                transition: "all .2s ease",
-
-                "&:hover": {
-                  bgcolor: "#F5F8FD",
-                },
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  transition: "transform .2s ease",
-                  // transform: isAsideOpen ? "rotate(0deg)" : "rotate(180deg)",
-                }}
-              >
-               
-                 {isAsideOpen?   <TfiLayoutSidebarLeft size={15} />: <TfiLayoutSidebarNone  size={15} />}
-              </Box>
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  flexGrow: 1,
-                }}
-              >
-                {isAsideOpen ? "Close" : "Open"} Pages Navigation
-              </Typography>
-
-
-            </Box>
-          </Tooltip>
-
-                    {/* Page input */}
-                    <span className="text-dark" style={{ fontSize: labelSz }}>
-                        Page{' '}
-                        <input
-                            type="number"
-                            value={pageNumber}
-                            placeholder={pageNumber}
-                            onChange={handlePageInputChange}
-                            style={{
-                                marginLeft: '0.5rem',
-                                width: isMobile ? '40px' : '60px',
-                                padding: '5px',
-                                border: '1px solid #ccc',
-                                borderRadius: '4px',
-                                fontSize: labelSz,
-                            }}
-                        />{' '}
-                        / {numPages}
-                    </span>
-
-                    {/* Erase all */}
-                    {signatureBoxes?.length > 0 && (
-                        <Tooltip title="Clear all signature boxes">
-                            <Button
-                                variant="outlined"
-                                color="warning"
-                                size="small"
-                                onClick={() => setSignatureBoxes([])}
-                                sx={{
-                                  ...PILL,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                }}
-                            
-                                startIcon={<FaEraser />}>
-                                Erase All Signature Boxes
-                            </Button>
-                        </Tooltip>
-                    )}
-
-                    {/* Zoom controls */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FaSearchMinus
-                            onClick={zoomOut}
-                            style={{ fontSize: iconSz, color: '#2757aa', cursor: 'pointer' }}
-                        />
-                        <Slider
-                            size="small"
-                            value={zoom * 100}
-                            onChange={(_, v) => setZoom(v / 100)}
-                            min={25}
-                            max={200}
-                            aria-label="Zoom"
-                            sx={{ width: 120 }}
-                        />
-                        <FaSearchPlus
-                            onClick={zoomIn}
-                            style={{ fontSize: iconSz, color: '#2757aa', cursor: 'pointer' }}
-                        />
-                        <span style={{ minWidth: '40px', textAlign: 'center', fontSize: '12.8px', color: '#333' }}>
-                            {Math.round(zoom * 100)}%
-                        </span>
-                        <Tooltip title="Reset Zoom">
-                            <span>
-                                <FaRedo
-                                    onClick={resetZoom}
-                                    style={{ fontSize: iconSz, color: '#2757aa', cursor: 'pointer' }}
-                                />
-                            </span>
-                        </Tooltip>
-                    </div>
-                </div>
-            </div>
+            {/* ── Toolbar ── (same actions as before, restyled) */}
+            <ViewerToolbar
+                className="sfov-toolbar"
+                asideOpen={isAsideOpen}
+                onToggleAside={toggleAside}
+                asideIcon={isAsideOpen ? <TfiLayoutSidebarLeft size={14} /> : <TfiLayoutSidebarNone size={14} />}
+                pageNumber={pageNumber}
+                numPages={numPages}
+                onPageInput={handlePageInputChange}
+                onPrev={() => pageNumber > 1 && thumbnailNavigation(pageNumber - 2)}
+                onNext={() => numPages && pageNumber < numPages && thumbnailNavigation(pageNumber)}
+                prevIcon={<FaChevronLeft size={12} />}
+                nextIcon={<FaChevronRight size={12} />}
+                zoom={zoom}
+                setZoom={setZoom}
+                onZoomIn={zoomIn}
+                onZoomOut={zoomOut}
+                onResetZoom={resetZoom}
+                canClear={signatureBoxes?.some((b) => b.annotations?.length > 0)}
+                onClear={() => setSignatureBoxes([])}
+            />
 
             {/* ── Body: thumbnail sidebar + main viewer side by side ── */}
             <div className="sfov-viewer-container">
@@ -671,8 +550,9 @@ const PDFViewerSetSIgningAreas = ({
                                                 ? {
                                                     width: `${scaledWidth}px`,
                                                     height: `${scaledHeight}px`,
+                                                    cursor: addSignatureBox ? 'crosshair' : undefined,
                                                 }
-                                                : undefined
+                                                : (addSignatureBox ? { cursor: 'crosshair' } : undefined)
                                         }
                                     >
                                         <SmoothPage

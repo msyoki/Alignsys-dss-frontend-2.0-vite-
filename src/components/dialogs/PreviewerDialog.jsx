@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaComments, FaEye, FaShieldAlt, FaMobileAlt, FaBan } from 'react-icons/fa';
-import { DialogHeader } from '../common/dialogKit';
+import { FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaComments, FaEye, FaShieldAlt, FaMobileAlt, FaBan, FaTimes } from 'react-icons/fa';
+import DocumentDetailsPanel from '../common/DocumentDetailsPanel';
 import alignsysLogo from '../../images/ZFBLU.webp';
 import { useState, useEffect } from 'react';
 import Button from '@mui/material/Button';
@@ -131,6 +131,8 @@ function PreviewerDialog(props) {
     setSidebarOpen(!isMobile);
   }, [isMobile]);
 
+  // Same structure as "Place signature boxes": blue top bar, the document on the left
+  // (shared viewer toolbar, original backgrounds), details on the right.
   return (
     <div>
       <CommentsDialog setText={setText} text={text} addComment={addComment} signerguid={props.signeruid} canComment={!!props.signeruid} comments={props.comments} opendialogcomments={opendialogcomments} setOpenDialogComments={setOpenDialogComments} />
@@ -140,250 +142,83 @@ function PreviewerDialog(props) {
         open={props.openpreviewerdialog}
         onClose={handleClose}
         TransitionComponent={Transition}
+        aria-labelledby="previewer-title"
       >
-        <DialogContent sx={{ backgroundColor: '#fff', p: 0 }}>
-          <DialogContent sx={{ backgroundColor: '#fff', p: 0 }}>
-            <DialogContentText
-              id="alert-dialog-description"
-              sx={{ m: 0, p: 0 }}
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+
+          {/* Top bar */}
+          <Box sx={{ height: 52, flexShrink: 0, bgcolor: '#2757aa', color: '#fff', display: 'flex', alignItems: 'center', gap: 1.25, pl: 2.25, pr: 1.5 }}>
+            <FaEye size={15} aria-hidden />
+            <Typography id="previewer-title" component="h2" sx={{ fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap' }}>Preview</Typography>
+            {props.filepreviewtitle && (
+              <>
+                <Box component="span" aria-hidden sx={{ fontSize: 12, color: 'rgba(255,255,255,.75)' }}>•</Box>
+                <Typography noWrap title={props.filepreviewtitle} sx={{ fontSize: 13, opacity: 0.92, minWidth: 0 }}>{props.filepreviewtitle}</Typography>
+              </>
+            )}
+            <Box sx={{ flex: '1 1 auto' }} />
+            <Button
+              onClick={handleClose}
+              startIcon={<FaTimes size={12} />}
+              sx={{ ...PILL, minHeight: 32, bgcolor: '#fff', color: '#2757aa', '&:hover': { bgcolor: '#e9f2ff', boxShadow: 'none' } }}
             >
-              <div
-                className="container-fluid p-0 m-0 "
-                style={{ maxHeight: '100%', overflowY: 'hidden' }} // enable full scroll
+              Close
+            </Button>
+          </Box>
+
+          <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, overflow: { xs: 'auto', md: 'hidden' } }}>
+
+            {/* Document */}
+            <Box sx={{ flex: '1 1 auto', minWidth: 0, minHeight: { xs: '75vh', md: 0 }, display: 'flex', flexDirection: 'column', bgcolor: '#bfc0be' }}>
+              {props.previewComplete && (
+                <Box sx={{ flexShrink: 0, bgcolor: '#fff', borderBottom: '1px solid #e5e7eb', px: 1.5 }}>
+                  <Tabs
+                    value={value}
+                    onChange={handleChange}
+                    aria-label="Document or summary report"
+                    variant={isMobile ? 'fullWidth' : 'standard'}
+                    TabIndicatorProps={{ sx: { height: 2 } }}
+                    sx={{ minHeight: 40 }}
+                  >
+                    <Tab label="Signed Document" {...a11yProps(0)} sx={{ minHeight: 40, py: 0.5, px: 1.5, textTransform: 'none', fontSize: 13 }} />
+                    <Tab label="Summary Report" {...a11yProps(1)} sx={{ minHeight: 40, py: 0.5, px: 1.5, textTransform: 'none', fontSize: 13 }} />
+                  </Tabs>
+                </Box>
+              )}
+              <Box
+                role={props.previewComplete ? 'tabpanel' : undefined}
+                id={props.previewComplete ? `simple-tabpanel-${value}` : undefined}
+                aria-labelledby={props.previewComplete ? `simple-tab-${value}` : undefined}
+                sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}
               >
-                <div className="row g-0">
-                  {/* Main Content */}
-                  <div
-                    className='col-md-9 col-12 bg-white px-2 order-lg-1 order-sm-1'
-                    style={{
+                <PDFViewerPreviewLoader
+                  key={props.previewComplete && value === 1 ? 'report' : 'document'}
+                  title={props.previewComplete && value === 1 ? `summary_${props.filepreviewtitle}` : props.filepreviewtitle}
+                  complete={props.previewComplete}
+                  height="100%"
+                  document={props.previewComplete && value === 1 ? ReportDocName : mainDocName}
+                  handleClose={handleClose}
+                  fill
+                />
+              </Box>
+            </Box>
 
-                      order: 1, // Document first; on small screens the details panel follows below it
-                    }}
-                  >
-                    {/* Close is always reachable here (on phones the details panel, with its
-                        own Close Preview button, sits below the document). */}
-                    <Box sx={{ mx: -1, mb: 1 }}>
-                      <DialogHeader icon={<FaEye />} title="Preview" subtitle={props.filepreviewtitle} onClose={handleClose} closeLabel="Close preview" />
-                    </Box>
-                    {props.previewComplete ? (
-                      <Box sx={{ width: '100%' }}>
-                        <Tabs
-                          value={value}
-                          onChange={handleChange}
-                          aria-label="basic tabs"
-                          variant={isMobile ? "fullWidth" : "standard"}
-                          TabIndicatorProps={{ sx: { height: 2 } }}
-                          sx={{ minHeight: '40px' }}
-                         
-                        >
-                          <Tab label="Signed Document" {...a11yProps(0)} sx={{ minHeight: '40px', py: 0.5, px: 1, textTransform: 'none' }} />
-                          <Tab label="Summary Report" {...a11yProps(1)} sx={{ minHeight: '40px', py: 0.5, px: 1, textTransform: 'none' }} />
-                        </Tabs>
-
-                        <CustomTabPanel value={value} index={0}>
-                          <PDFViewerPreviewLoader
-                            title={props.filepreviewtitle}
-                            complete={props.previewComplete}
-                            height={isMobile ? '70vh' : '85vh'}
-                            document={mainDocName}
-                            handleClose={handleClose}
-                          />
-                        </CustomTabPanel>
-
-                        <CustomTabPanel value={value} index={1}>
-                          <PDFViewerPreviewLoader
-                            title={`summary_${props.filepreviewtitle}`}
-                            complete={props.previewComplete}
-                            height={isMobile ? '70vh' : '85vh'}
-                            document={ReportDocName}
-                            handleClose={handleClose}
-                          />
-                        </CustomTabPanel>
-                      </Box>
-                    ) : (
-                      <PDFViewerPreviewLoader
-                        title={props.filepreviewtitle}
-                        complete={props.previewComplete}
-                        height="90vh"
-                        document={`${props.filepreviewurl}.pdf`}
-                        handleClose={handleClose}
-                      />
-                    )}
-                  </div>
-
-                  {/* Sidebar */}
-                  <div
-                    className={`col-md-3 col-12 px-3 text-center order-lg-2 order-sm-2 shadow-lg`}
-                    style={{
-                      order: 2, // Details always after the document (beside it on desktop, below it on small screens)
-                      backgroundColor: '#fff',
-                      paddingTop: '1rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      minHeight: isMobile ? 'auto' : '100dvh',
-                    }}
-                  >
-                    {/* Sidebar Header */}
-                    <div
-                      className="my-3 p-2 text-white"
-                      style={{
-                        fontSize: isMobile ? '10px' : '12px',
-                        backgroundColor: '#2757aa',
-                        width: '100%',
-                        overflow:'hidden'
-                      }}
-                    >
-                      Document Preview
-                    </div>
-
-                    {/* Sidebar Content */}
-                    <div className="d-flex flex-column flex-grow-1" style={{ minHeight: 0 }}>
-                      <ul className="list-unstyled m-0 p-0 flex-grow-1" style={{ overflowY: 'auto' }}>
-                        <li className="mb-2" style={{ fontSize: '12px', fontWeight: 450, color: '#1C4690' }}>
-                          Title
-                        </li>
-                        <li className="my-2" style={{ fontSize: '12px', fontWeight: 440 }}>
-                          {props.filepreviewtitle}
-                        </li>
-                        <li className="my-2" style={{ fontSize: '12px', color: '#1C4690' }}>
-                          Owner: <span style={{ color: '#595959' }}>{props.docowner}</span>
-                        </li>
-                        <li className="my-2" style={{ fontSize: '12px', color: '#1C4690' }}>
-                          Created:{' '}
-                          <span style={{ color: '#595959' }}>
-                            <HumanizedDate dateStr={props.doccreated} />
-                          </span>
-                        </li>
-                        {props.docinfo?.status && (
-                          <li className="my-2" style={{ fontSize: '12px', color: '#1C4690' }}>
-                            Status:{' '}
-                            <span style={{ color: props.docinfo.status.declined ? '#b42318' : props.docinfo.status.signedcomplete ? '#2e7d32' : '#8a6100', fontWeight: 500 }}>
-                              {props.docinfo.status.declined ? 'Voided' : props.docinfo.status.signedcomplete ? 'Signing completed' : props.docinfo.status.trashed ? 'In trash' : 'Pending signing'}
-                            </span>
-                          </li>
-                        )}
-                        {props.docinfo?.voidedBy && (
-                          <li
-                            className="my-2 text-start"
-                            style={{ fontSize: '12px', background: '#fdecea', border: '1px solid #f5c2c0', borderRadius: 6, padding: '8px 10px', color: '#374151' }}
-                          >
-                            <div style={{ color: '#b42318', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <FaBan aria-hidden /> Voided
-                            </div>
-                            <div className="mt-1">
-                              By: {props.docinfo.voidedBy.by
-                                ? <>{props.docinfo.voidedBy.by} <span style={{ color: '#6D7386' }}>({props.docinfo.voidedBy.role === 'owner' ? 'sender, recalled it' : 'signer, declined to sign'})</span></>
-                                : <span style={{ color: '#6D7386' }}>not recorded</span>}
-                            </div>
-                            {props.docinfo.voidedBy.at && (
-                              <div>When: <HumanizedDate dateStr={props.docinfo.voidedBy.at} /></div>
-                            )}
-                            {props.docinfo.voidedBy.reason && (
-                              <div style={{ overflowWrap: 'anywhere' }}>Reason: {props.docinfo.voidedBy.reason}</div>
-                            )}
-                          </li>
-                        )}
-                        <li className="my-2" style={{ fontSize: '12px', color: '#1C4690' }}>
-                          Signers ({props.signers.length}):
-                        </li>
-
-                        {props.signers.length > 0 && (
-                          <div
-                            className="border rounded p-2"
-                            style={{ maxHeight: '20vh', overflowY: 'auto', backgroundColor: '#ecf4fc' }}
-                          >
-                            {props.signers.map((s, index) => (
-                              <div
-                                key={index}
-                                className={`d-flex justify-content-between align-items-center ${props.signers.length > 1 && index !== props.signers.length - 1
-                                  ? 'border-bottom'
-                                  : ''
-                                  }`}
-                                style={{ fontSize: '12px', padding: '5px 0' }}
-                              >
-                                <span className="text-start" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-                                  {s.email}
-                                  {/* SMS verification, as on the signing page. */}
-                                  {s.otp && (
-                                    <span
-                                      className="d-flex align-items-center"
-                                      style={{ fontSize: '10.5px', marginTop: 2, color: s.otp_verified ? '#2e7d32' : '#8a6100' }}
-                                      title={s.otp_verified && s.otp_verified_at
-                                        ? `Phone verified by SMS code on ${new Date(s.otp_verified_at).toLocaleString()}`
-                                        : 'This signer must verify their phone with an SMS code before signing'}
-                                    >
-                                      {s.otp_verified ? (
-                                        <>
-                                          <FaShieldAlt className="me-1" aria-hidden />
-                                          Verified by SMS
-                                          {s.otp_verified_at && <>&nbsp;·&nbsp;<HumanizedDate dateStr={s.otp_verified_at} /></>}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <FaMobileAlt className="me-1" aria-hidden />
-                                          SMS verification required
-                                        </>
-                                      )}
-                                    </span>
-                                  )}
-                                </span>
-                                <span className="text-muted" style={{ flexShrink: 0 }}>
-                                  {s.signed === 'True' ? (
-                                    <>
-                                      Signed <FaCheckCircle className="text-success mx-1" />
-                                    </>
-                                  ) : props.docinfo?.voidedBy?.role === 'signer'
-                                    && String(props.docinfo.voidedBy.by || '').toLowerCase() === String(s.email || '').toLowerCase() ? (
-                                    <span style={{ color: '#b42318' }}>
-                                      Declined <FaBan className="mx-1" aria-hidden />
-                                    </span>
-                                  ) : (
-                                    <>
-                                      {s.current_signer === 'True' ? 'Signing' : 'Queued'}
-                                      {s.current_signer === 'True' ? (
-                                        <FaEnvelopeOpenText className="text-danger mx-1" />
-                                      ) : (
-                                        <FaEnvelope className="text-warning mx-1" />
-                                      )}
-                                    </>
-                                  )}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </ul>
-                    </div>
-
-                    {/* Footer: Comments + Alignsys logo, at the bottom of the panel (as on the signing page) */}
-                    <div className="d-flex flex-column align-items-center gap-3 pt-3 pb-4" style={{ marginTop: 'auto' }}>
-                      <Button
-                        variant="contained"
-                        color='primary'
-                        startIcon={<FaComments />}
-                        onClick={handleComments}
-                        sx={PILL}
-                      >
-                        Comments ({props.comments.length})
-                      </Button>
-                      <a href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
-                        <img src={alignsysLogo} alt="Alignsys" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }} />
-                      </a>
-                    </div>
-
-
-                  </div>
-
-                </div>
-              </div>
-
-            </DialogContentText>
-          </DialogContent>
-
-        </DialogContent>
-
+            {/* Document details (shared with the signing pages) */}
+            <Box sx={{ width: { xs: '100%', md: 340 }, flexShrink: 0, borderLeft: { md: '1px solid #e5e7eb' }, borderTop: { xs: '1px solid #e5e7eb', md: 0 }, minHeight: 0 }}>
+              <DocumentDetailsPanel
+                owner={props.docowner}
+                created={props.doccreated}
+                status={props.docinfo?.status}
+                voidedBy={props.docinfo?.voidedBy}
+                signers={props.signers}
+                commentsCount={props.comments.length}
+                onComments={handleComments}
+              />
+            </Box>
+          </Box>
+        </Box>
       </Dialog>
-    </div >
+    </div>
   );
 }
 

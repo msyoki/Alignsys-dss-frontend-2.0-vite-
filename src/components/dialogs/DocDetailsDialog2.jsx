@@ -16,6 +16,7 @@ import { RiMailSendLine } from "react-icons/ri";
 import axios from 'axios';
 import AuthContext from '../../context/Authcontext.jsx';
 import DocExpiryDate from '../GetExpiryDate.jsx';
+import { downloadDocument } from '../../api/documentFiles';
 import * as constants from '../constants/constants.js';
 import TimedAlert from '../TimedAlert.jsx';
 import logo from '../../images/ZFWHITE.webp';
@@ -32,7 +33,7 @@ const DocDetailsDialog2 = ({
   type = '',
 
 }) => {
-  const { user } = useContext(AuthContext);
+  const { user, authTokens } = useContext(AuthContext);
   const [openAlert, setOpenAlert] = useState(false);
   const [alertSeverity, setAlertSeverity] = useState('info');
   const [alertMsg, setAlertMsg] = useState('');
@@ -67,9 +68,11 @@ const DocDetailsDialog2 = ({
   const handleVoiding = async () => {
     setIsLoadingVoid(true);
     try {
-      await axios.post(`${constants.devApi2BaseUrl}/api/SendSigning/OwnerDecline`, {
-        fileGuid: document.guid,
-      });
+      await axios.post(
+        `${constants.devApiBaseUrl}/api/owner/void/`,
+        { guid: document.guid },
+        { headers: { Authorization: `Bearer ${authTokens?.access}` } },
+      );
       showAlert('Document successfully voided.', 'success');
 
       setTimeout(() => {
@@ -77,7 +80,7 @@ const DocDetailsDialog2 = ({
         handleClose();
       }, 2000);
     } catch (error) {
-      showAlert('Failed to void document.', 'error');
+      showAlert(error?.response?.data?.msg || 'Failed to void document.', 'error');
       console.error('Error:', error);
     } finally {
       setIsLoadingVoid(false);
@@ -87,9 +90,12 @@ const DocDetailsDialog2 = ({
   const resendSigner = async () => {
     setIsLoadingResend(true);
     try {
-      await axios.post(`${constants.devApi2BaseUrl}/api/signers/Resend`, {
-        fileGuid: document.guid,
-      });
+      // Via dssauth (logged-in caller), which forwards to the signing service.
+      await axios.post(
+        `${constants.devApiBaseUrl}/api/resend/mail/signer/`,
+        { fileGuid: document.guid },
+        { headers: { Authorization: `Bearer ${authTokens?.access}` } },
+      );
       showAlert('Signer request resent successfully.', 'success');
       setTimeout(() => {
         refreshdata();
@@ -128,15 +134,11 @@ const DocDetailsDialog2 = ({
         documentid: document.guid,
       };
 
+      // Via dssauth, which checks the caller owns the document before asking dsscall to swap.
       await axios.post(
-        `${constants.devApi2BaseUrl}/api/signers/SubstituteSigner`,
+        `${constants.devApiBaseUrl}/api/signers/substitute/`,
         payload,
-        {
-          headers: {
-            accept: '*/*',
-            'Content-Type': 'application/json',
-          },
-        }
+        { headers: { Authorization: `Bearer ${authTokens?.access}` } },
       );
 
       showAlert(`Signer changed from ${oldEmail} → ${newEmail}`, 'success');
@@ -148,7 +150,7 @@ const DocDetailsDialog2 = ({
       }, 2000);
     } catch (err) {
       console.error('Error swapping signer:', err);
-      showAlert('Failed to update signer', 'error');
+      showAlert(err?.response?.data?.msg || 'Failed to update signer', 'error');
     } finally {
       setIsLoadingSubstitute(false);
     }
@@ -366,7 +368,8 @@ const DocDetailsDialog2 = ({
                 className="mx-2"
                 style={{ fontSize: '30px', color: '#2757aa', cursor: 'pointer' }}
                 onClick={() =>
-                  window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${document.guid}`)
+                  downloadDocument(document.guid, { token: authTokens?.access, title: document.title })
+                    .catch((err) => { showAlert('Download failed. Please try again.', 'error'); console.error(err); })
                 }
               />
             </span>

@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import AuthContext from '../../context/Authcontext.jsx';
+import { downloadDocument } from '../../api/documentFiles';
 import { FaCheckCircle, FaEnvelope, FaEnvelopeOpenText, FaFileAlt } from 'react-icons/fa';
 import { Box, Dialog, DialogContent, TextField, Tooltip, Button, Typography } from '@mui/material';
 import * as constants from '../constants/constants';
@@ -10,6 +12,7 @@ import { DialogFooter, DialogHeader, PrimaryButton, PropertyRow, PropertyValue, 
 import { PILL_COMPACT, PILL_OUTLINE } from '../common/pillButton';
 const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, document = {} }) => {
   const handleClose = () => setOpenDialogDocDetails(false);
+  const { authTokens } = useContext(AuthContext) || {};
   const [editingSigner, setEditingSigner] = useState(null);
   const [newEmail, setNewEmail] = useState('');
   const [isLoadingSubstitute, setIsLoadingSubstitute] = useState(false);
@@ -53,13 +56,16 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
   const handleSwapSigner = async (oldEmail, newEmail) => {
     setIsLoadingSubstitute(true);
     try {
-      // Call backend or perform update
-      await axios.post('/api/swap-signer', { oldEmail, newEmail });
+      // Via dssauth, which checks the caller owns the document before asking dsscall to swap.
+      await axios.post(
+        `${constants.devApiBaseUrl}/api/signers/substitute/`,
+        { email: newEmail, oldsigneremail: oldEmail, documentid: document.guid },
+        { headers: { Authorization: `Bearer ${authTokens?.access}` } },
+      );
       showAlert(`Signer changed from ${oldEmail} → ${newEmail}`, 'success');
-      // Optionally refresh signer list
     } catch (err) {
       console.error(err);
-      showAlert('Failed to update signer', 'error');
+      showAlert(err?.response?.data?.msg || 'Failed to update signer', 'error');
     } finally {
       setIsLoadingSubstitute(false);
     }
@@ -187,7 +193,7 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
         <SecondaryButton onClick={handleClose}>Close</SecondaryButton>
         <PrimaryButton
           startIcon={<FaDownload />}
-          onClick={() => window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${guid}`)}
+          onClick={() => downloadDocument(guid, { token: authTokens?.access, title: title !== 'N/A' ? title : '' }).catch((err) => console.error('Download failed', err))}
           disabled={!guid || guid === 'N/A'}
         >
           Download

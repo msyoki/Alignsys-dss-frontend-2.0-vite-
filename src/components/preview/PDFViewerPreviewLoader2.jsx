@@ -1,7 +1,7 @@
-import React, { useEffect, useRef ,useState} from "react";
+import React, { useContext, useEffect, useRef ,useState} from "react";
 import PropTypes from "prop-types";
-import * as constants from '../constants/constants'
-import axios from 'axios'
+import AuthContext from '../../context/Authcontext.jsx';
+import { getDocumentBase64 } from '../../api/documentFiles';
 import LoadingMini from "../loaders/LoadingMini2";
 import CustomViewer from "./PDFViewerPreview";
 import PDFViewerSetSIgningAreas from "./PDFViewerSetSIgningAreas";
@@ -11,21 +11,23 @@ function PDFViewerPreviewLoader2(props) {
 
   const [document,setDocument]=useState('')
   const [loadingPercentage, setLoadingPercentage] = useState(0);
+  const { authTokens } = useContext(AuthContext) || {};
+  // Read at fetch time, so a token refresh doesn't reload the document.
+  const tokenRef = useRef(null);
+  tokenRef.current = authTokens?.access;
 
   let getDocument = async() => {
 
     try {
-   
-        // Add onDownloadProgress to the Axios configuration
-        const response = await axios.get(`${constants.devApiBaseUrl}/api/base64/${props.document}/`, {
+
+        const uri = await getDocumentBase64(props.document, {
+            token: tokenRef.current,
             onDownloadProgress: progressEvent => {
               const percentage = (progressEvent.loaded / progressEvent.total) * 100;
               displayPercentageWaitingTime(percentage);
             }
         });
-        // console.log(response.data.base64_uri)
-        // Handle the response data
-        setDocument(response.data.base64_uri);
+        setDocument(uri);
        
       return () => {
         // Unmount cleanup if needed

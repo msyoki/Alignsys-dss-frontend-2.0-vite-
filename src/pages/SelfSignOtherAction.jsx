@@ -12,6 +12,7 @@ import PDFViewerPreviewLoader from '../components/preview/PDFViewerPreviewLoader
 
 import logo from '../images/ZFBLU.webp';
 import * as constants from '../components/constants/constants';
+import { downloadDocument } from '../api/documentFiles';
 import { PILL } from '../components/common/pillButton';
 
 /* ---------------- PILL BUTTON STYLE ---------------- */
@@ -52,7 +53,8 @@ function SelfSignOtherAction() {
 
   const pdfPath = `${docguid}.pdf`;
   const download = () =>
-    window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${docguid}`);
+    downloadDocument(docguid, { token: authTokens?.access, title: doctitle })
+      .catch((err) => console.error('Download failed', err));
 
   const handleSendSuccess = () => {
     if (location.pathname === '/selfsign/otheractions') {

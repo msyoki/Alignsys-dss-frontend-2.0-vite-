@@ -16,6 +16,7 @@ import '../styles/SigningLayout.css';
 import LoadingDialog from '../components/loaders/LoadingDialog';
 import CommentsDialog from '../components/dialogs/CommentsDialog';
 import * as constants from '../components/constants/constants';
+import { getDocumentBase64 } from '../api/documentFiles';
 import LoadingMini from '../components/loaders/LoadingMini2';
 import AuthGuestDialog from '../components/AuthenticateGuest';
 import PDFViewerSigningLoader from '../components/preview/PDFViewerSigningLoader';
@@ -216,14 +217,14 @@ function Signing_Page_Self() {
   const getFileURL = async () => {
     try {
       console.log('Fetching file with fileurl:', location.state.fileurl);
-      const response = await axios.get(`${constants.devApiBaseUrl}/api/base64/${location.state.fileurl}/`, {
+      const uri = await getDocumentBase64(location.state.fileurl, {
+        token: authTokens?.access,
         onDownloadProgress: progressEvent => {
           const percentage = (progressEvent.loaded / progressEvent.total) * 100;
           setLoadingPercentage(parseFloat(percentage.toFixed(2)));
         }
       });
-      console.log('API response for file:', response);
-      setSampleUrl(response.data.base64_uri);
+      setSampleUrl(uri);
     } catch (error) {
       console.error('Error fetching file:', error);
     }

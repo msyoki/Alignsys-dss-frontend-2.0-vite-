@@ -1,28 +1,32 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Tooltip } from '@mui/material';
-import { useNavigate } from "react-router-dom";
-import * as constants from '../constants/constants';
-import axios from 'axios';
+import AuthContext from '../../context/Authcontext.jsx';
+import { getDocumentBase64 } from '../../api/documentFiles';
 
 import LoadingMini from "../loaders/LoadingMini2";
 import PDFViewerPreview from "./PDFViewerPreview";
 
-function PDFViewerPreviewLoader({ document: docId, title, complete, height ,handleClose, fill = false}) {
+// publicOnly: the QR verify page, which anyone may open, always uses the public endpoint.
+function PDFViewerPreviewLoader({ document: docId, title, complete, height ,handleClose, fill = false, publicOnly = false}) {
   const [documentBase64, setDocumentBase64] = useState('');
   const [loadingPercentage, setLoadingPercentage] = useState(0);
+  const { authTokens } = useContext(AuthContext) || {};
+  // Read at fetch time, so a token refresh doesn't reload the document.
+  const tokenRef = useRef(null);
+  tokenRef.current = publicOnly ? null : authTokens?.access;
 
   useEffect(() => {
     const fetchDocument = async () => {
       try {
-        const response = await axios.get(`${constants.devApiBaseUrl}/api/base64/${docId}/`, {
+        const uri = await getDocumentBase64(docId, {
+          token: tokenRef.current,
           onDownloadProgress: (progressEvent) => {
             const percentage = (progressEvent.loaded / progressEvent.total) * 100;
             setLoadingPercentage(parseFloat(percentage.toFixed(2)));
           },
         });
-     
-        setDocumentBase64(response.data.base64_uri);
+
+        setDocumentBase64(uri);
       } catch (error) {
         console.error("Error fetching document:", error);
       }
@@ -56,6 +60,7 @@ PDFViewerPreviewLoader.propTypes = {
   title: PropTypes.string,
   complete: PropTypes.bool,
   height: PropTypes.string,
+  publicOnly: PropTypes.bool,
 };
 
 export default PDFViewerPreviewLoader;

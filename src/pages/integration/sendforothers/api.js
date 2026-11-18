@@ -11,8 +11,27 @@ const toBase64 = (bytes) => {
   return btoa(bin);
 };
 
+// The PDF from the authenticated endpoint (token from the M-Files link), or null when that
+// isn't possible (backend without it, session expired, not found there) so the caller can
+// fall back to the public download.
+async function getSecureDocument(guid, signal) {
+  try {
+    const res = await authFetch(`${AUTH_URL}/api/secure/download/${encodeURIComponent(guid)}/`, { headers: { accept: 'application/pdf' }, signal });
+    if (res.ok) return new Uint8Array(await res.arrayBuffer());
+    console.warn(`[integration] secure download answered ${res.status}; using the public endpoint`);
+  } catch (err) {
+    // authFetch turns network errors (aborts included) into its own Error, so check the signal.
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    console.warn(`[integration] secure download failed (${err.message}); using the public endpoint`);
+  }
+  return null;
+}
+
 // Returns the PDF as plain base64 (what the viewer uses).
 export async function getDocument(guid, signal) {
+  const secure = await getSecureDocument(guid, signal);
+  if (secure && secure.length >= 5 && String.fromCharCode(...secure.subarray(0, 4)) === '%PDF') return toBase64(secure);
+
   let res;
   try {
     res = await fetch(`${DSS_URL}/api/Doc/FileDownload/${encodeURIComponent(guid)}`, { headers: { accept: 'application/pdf, */*' }, signal });

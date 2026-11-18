@@ -111,7 +111,7 @@ function DocumentLogs(props) {
         setOpenDialogDocDetails={setOpenDialogDocDetails}
         opendialogdocdetails={opendialogdocdetails}
         document={document}
-  
+        onChanged={props.getDocLogs}
 
       />
 

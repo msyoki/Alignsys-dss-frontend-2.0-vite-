@@ -10,7 +10,7 @@ import { FaDownload } from "react-icons/fa6";
 import HumanizedDate from '../HumanizeDate.jsx';
 import { DialogFooter, DialogHeader, PrimaryButton, PropertyRow, PropertyValue, SecondaryButton, StatusChip, fieldSx } from '../common/dialogKit';
 import { PILL_COMPACT, PILL_OUTLINE } from '../common/pillButton';
-const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, document = {} }) => {
+const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, document = {}, onChanged }) => {
   const handleClose = () => setOpenDialogDocDetails(false);
   const { authTokens } = useContext(AuthContext) || {};
   const [editingSigner, setEditingSigner] = useState(null);
@@ -63,6 +63,11 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
         { headers: { Authorization: `Bearer ${authTokens?.access}` } },
       );
       showAlert(`Signer changed from ${oldEmail} → ${newEmail}`, 'success');
+      // Show the message briefly, then reload the list (it still has the old signer) and close.
+      setTimeout(() => {
+        onChanged?.();
+        handleClose();
+      }, 2000);
     } catch (err) {
       console.error(err);
       showAlert(err?.response?.data?.msg || 'Failed to update signer', 'error');
@@ -82,6 +87,10 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
     expirydate = 'N/A',
     signers = [],
   } = document;
+
+  // Signers can be changed while the document is in progress, and only those who haven't
+  // signed. The API sends these flags as the strings 'True' / 'False'.
+  const canChangeSigners = signedcomplete !== 'True' && declined !== 'True';
 
   const status = signedcomplete === 'True'
     ? { tone: 'success', label: 'Signing completed' }
@@ -174,7 +183,7 @@ const DocDetailsDialog = ({ opendialogdocdetails, setOpenDialogDocDetails, docum
                       </Tooltip>
                     </Box>
                   ) : (
-                    !s.signed && (
+                    canChangeSigners && s.signed !== 'True' && (
                       <Tooltip title="Change this signer's email">
                         <Button onClick={() => startEdit(s.email)} sx={{ ...PILL_OUTLINE, ...{ minHeight: 30, py: 0.25, px: 1.5, fontSize: '12px' } }}>
                           Change

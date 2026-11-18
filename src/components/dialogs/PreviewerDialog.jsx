@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaComments, FaEye } from 'react-icons/fa';
+import { FaCheckCircle, FaEnvelopeOpenText, FaEnvelope, FaComments, FaEye, FaShieldAlt, FaMobileAlt, FaBan } from 'react-icons/fa';
 import { DialogHeader } from '../common/dialogKit';
 import alignsysLogo from '../../images/ZFBLU.webp';
 import { useState, useEffect } from 'react';
@@ -133,7 +133,7 @@ function PreviewerDialog(props) {
 
   return (
     <div>
-      <CommentsDialog setText={setText} text={text} addComment={addComment} signerguid={props.signeruid} comments={props.comments} opendialogcomments={opendialogcomments} setOpenDialogComments={setOpenDialogComments} />
+      <CommentsDialog setText={setText} text={text} addComment={addComment} signerguid={props.signeruid} canComment={!!props.signeruid} comments={props.comments} opendialogcomments={opendialogcomments} setOpenDialogComments={setOpenDialogComments} />
 
       <Dialog
         fullScreen
@@ -254,6 +254,35 @@ function PreviewerDialog(props) {
                             <HumanizedDate dateStr={props.doccreated} />
                           </span>
                         </li>
+                        {props.docinfo?.status && (
+                          <li className="my-2" style={{ fontSize: '12px', color: '#1C4690' }}>
+                            Status:{' '}
+                            <span style={{ color: props.docinfo.status.declined ? '#b42318' : props.docinfo.status.signedcomplete ? '#2e7d32' : '#8a6100', fontWeight: 500 }}>
+                              {props.docinfo.status.declined ? 'Voided' : props.docinfo.status.signedcomplete ? 'Signing completed' : props.docinfo.status.trashed ? 'In trash' : 'Pending signing'}
+                            </span>
+                          </li>
+                        )}
+                        {props.docinfo?.voidedBy && (
+                          <li
+                            className="my-2 text-start"
+                            style={{ fontSize: '12px', background: '#fdecea', border: '1px solid #f5c2c0', borderRadius: 6, padding: '8px 10px', color: '#374151' }}
+                          >
+                            <div style={{ color: '#b42318', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <FaBan aria-hidden /> Voided
+                            </div>
+                            <div className="mt-1">
+                              By: {props.docinfo.voidedBy.by
+                                ? <>{props.docinfo.voidedBy.by} <span style={{ color: '#6D7386' }}>({props.docinfo.voidedBy.role === 'owner' ? 'sender, recalled it' : 'signer, declined to sign'})</span></>
+                                : <span style={{ color: '#6D7386' }}>not recorded</span>}
+                            </div>
+                            {props.docinfo.voidedBy.at && (
+                              <div>When: <HumanizedDate dateStr={props.docinfo.voidedBy.at} /></div>
+                            )}
+                            {props.docinfo.voidedBy.reason && (
+                              <div style={{ overflowWrap: 'anywhere' }}>Reason: {props.docinfo.voidedBy.reason}</div>
+                            )}
+                          </li>
+                        )}
                         <li className="my-2" style={{ fontSize: '12px', color: '#1C4690' }}>
                           Signers ({props.signers.length}):
                         </li>
@@ -272,12 +301,42 @@ function PreviewerDialog(props) {
                                   }`}
                                 style={{ fontSize: '12px', padding: '5px 0' }}
                               >
-                                <span>{s.email}</span>
-                                <span className="text-muted">
+                                <span className="text-start" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                                  {s.email}
+                                  {/* SMS verification, as on the signing page. */}
+                                  {s.otp && (
+                                    <span
+                                      className="d-flex align-items-center"
+                                      style={{ fontSize: '10.5px', marginTop: 2, color: s.otp_verified ? '#2e7d32' : '#8a6100' }}
+                                      title={s.otp_verified && s.otp_verified_at
+                                        ? `Phone verified by SMS code on ${new Date(s.otp_verified_at).toLocaleString()}`
+                                        : 'This signer must verify their phone with an SMS code before signing'}
+                                    >
+                                      {s.otp_verified ? (
+                                        <>
+                                          <FaShieldAlt className="me-1" aria-hidden />
+                                          Verified by SMS
+                                          {s.otp_verified_at && <>&nbsp;·&nbsp;<HumanizedDate dateStr={s.otp_verified_at} /></>}
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FaMobileAlt className="me-1" aria-hidden />
+                                          SMS verification required
+                                        </>
+                                      )}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-muted" style={{ flexShrink: 0 }}>
                                   {s.signed === 'True' ? (
                                     <>
                                       Signed <FaCheckCircle className="text-success mx-1" />
                                     </>
+                                  ) : props.docinfo?.voidedBy?.role === 'signer'
+                                    && String(props.docinfo.voidedBy.by || '').toLowerCase() === String(s.email || '').toLowerCase() ? (
+                                    <span style={{ color: '#b42318' }}>
+                                      Declined <FaBan className="mx-1" aria-hidden />
+                                    </span>
                                   ) : (
                                     <>
                                       {s.current_signer === 'True' ? 'Signing' : 'Queued'}

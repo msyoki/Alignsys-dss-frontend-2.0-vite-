@@ -405,6 +405,24 @@ export default function DocumentDetailsDialog({
               )}
             </Box>
           </PropertyRow>
+          {voided && doc.voided_by && (
+            <>
+              <PropertyRow label="Voided by">
+                <PropertyValue>
+                  {doc.voided_by.by ? (
+                    <>
+                      {doc.voided_by.by}
+                      <Box component="span" sx={{ color: '#6D7386' }}>
+                        {doc.voided_by.role === 'owner' ? ' · sender, recalled it' : doc.voided_by.role === 'signer' ? ' · signer, declined to sign' : ''}
+                      </Box>
+                    </>
+                  ) : <Box component="span" sx={{ color: '#9ca3af' }}>Not recorded</Box>}
+                </PropertyValue>
+              </PropertyRow>
+              {fmt(doc.voided_by.at) && <PropertyRow label="Voided on"><PropertyValue>{fmt(doc.voided_by.at)}</PropertyValue></PropertyRow>}
+              {doc.voided_by.reason && <PropertyRow label="Reason" alignTop><PropertyValue>{doc.voided_by.reason}</PropertyValue></PropertyRow>}
+            </>
+          )}
           <PropertyRow label="Document ID"><PropertyValue mono>{doc.guid}</PropertyValue></PropertyRow>
 
           <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#111827', mt: 2, mb: 1, px: 0.5 }}>

@@ -3,6 +3,7 @@ import mergeActionColumns from '../common/mergeActionColumns';
 import autoSizeColumns from '../common/autoSizeColumns';
 const ICON_COLOR = '#2757aa';
 import { FaCircle, FaEye, FaInfoCircle } from 'react-icons/fa';
+import StatusDot, { DOT_COLORS } from '../common/StatusDot';
 import Box from '@mui/material/Box';
 import DocDetailsDialog2 from '../dialogs/DocDetailsDialog2';
 import logo from '../../images/ZFBLU.webp'
@@ -91,6 +92,24 @@ function Voided(props) {
 
     // { field: 'owner', headerName: 'Owner', width: 200 },
 
+    {
+      // Who voided it (sent by the server as voided_by: { by, role, at, reason }).
+      field: 'voidedBy',
+      headerName: 'Voided by',
+      width: 240,
+      valueGetter: (params) => params.row.voided_by?.by || '',
+      renderCell: (params) => {
+        const v = params.row.voided_by;
+        if (!v?.by) return <span style={{ color: '#9ca3af' }}>Not recorded</span>;
+        const role = v.role === 'owner' ? 'sender' : v.role === 'signer' ? 'signer' : '';
+        return (
+          <span title={v.reason ? `Reason: ${v.reason}` : undefined} style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {v.by}{role && <span style={{ color: '#6D7386' }}> · {role}</span>}
+          </span>
+        );
+      },
+    },
+
     { field: 'guid', headerName: 'Guid', width: 300 },
 
 
@@ -144,7 +163,7 @@ function Voided(props) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ecf4fc', padding: '5px 5px' }}>
           <div className='row '>
             <h6 className='text-dark col-lg-12 col-md-12 col-sm-12 p-1 mx-3' style={{ fontSize: '12.8px' }}>
-              <FaCircle className="dot text-secondary shadow-lg mx-2" aria-hidden="true" size={13} color={ICON_COLOR} />
+              <StatusDot color={DOT_COLORS.voided} size={12} style={{ margin: '0 8px' }} />
               Voided <span style={{ fontSize: '13.5px' }}>({props.voided ? <>{props.voided.length}</> : <></>})</span>
             </h6>
           </div>

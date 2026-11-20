@@ -5,12 +5,13 @@ import { FaDownload, FaFilter, FaInfoCircle } from 'react-icons/fa';
 import AuthContext from '../../context/Authcontext';
 import { PILL_COMPACT } from '../common/pillButton';
 import { downloadCsv, getOtpLogs, reportError } from '../../api/reports';
+import { formatDateTime, localDateISO } from '../../utils/datetime';
 
 // Read-only OTP audit trail. Organisation admins see their own organisation;
 // super admins (showOrganization) see every organisation. Codes are never
 // stored or shown, and phone numbers come masked from the server.
 
-const isoDay = (d) => d.toISOString().slice(0, 10);
+const isoDay = (d) => localDateISO(d); // the user's calendar day, not the UTC one
 const defaultRange = () => {
   const end = new Date();
   const start = new Date();
@@ -73,7 +74,7 @@ export default function OtpLogs({ showOrganization = false }) {
     {
       field: 'time', headerName: 'Time', flex: 1, minWidth: 150, type: 'dateTime',
       valueGetter: (p) => (p.row.time ? new Date(p.row.time) : null),
-      renderCell: (p) => (p.value ? p.value.toLocaleString() : ''),
+      renderCell: (p) => (p.value ? formatDateTime(p.value) : ''),
     },
     {
       field: 'event_label', headerName: 'Event', flex: 1, minWidth: 140,
@@ -107,7 +108,7 @@ export default function OtpLogs({ showOrganization = false }) {
     `otp_activity_${filters.start_date}_to_${filters.end_date}.csv`,
     ['Time', 'Event', 'Signer', 'Phone', 'Document', ...(showOrganization ? ['Organisation'] : []), 'IP address', 'Details', 'Document ID'],
     rows.map((r) => [
-      r.time ? new Date(r.time).toLocaleString() : '', r.event_label, r.signer, r.phone, r.document_title,
+      r.time ? formatDateTime(r.time) : '', r.event_label, r.signer, r.phone, r.document_title,
       ...(showOrganization ? [r.organization] : []), r.ip, r.details, r.document_guid,
     ]),
   );

@@ -18,6 +18,7 @@ import AddSignersDialogMerged from '../../components/dialogs/AddSignersDialogMer
 import { readDraft } from '../../utils/addSignersDraft';
 import CommentsDialog from '../../components/dialogs/CommentsDialog.jsx';
 import ProfileDialog from '../../components/dialogs/ProfileDialog.jsx';
+import { effectiveTimeZone } from '../../utils/datetime';
 import PreviewerDialog from '../../components/dialogs/PreviewerDialog.jsx';
 import FileUpload from '../../components/FileUpload.jsx';
 import Complete from '../../components/dashboard/Complete'
@@ -119,7 +120,7 @@ function Dashboard() {
     const containerRef = useRef(null)
     const navigate = useNavigate()
     const location = useLocation()
-    const { authTokens, logoutUser, user } = useContext(AuthContext)
+    const { authTokens, logoutUser, user, updateTimezones } = useContext(AuthContext)
     const fullName = user.first_name && user.last_name
         ? `${user.first_name} ${user.last_name}`
         : user.first_name || user.last_name || user.username
@@ -288,10 +289,13 @@ function Dashboard() {
         if (e.target.last_name.value) data.append('last_name', e.target.last_name.value)
         if (e.target.phone.value) data.append('phone', e.target.phone.value)
         data.append('mailtoall', checked)
+        const timezone = e.target.timezone?.value ?? (user?.user_timezone || '')
+        data.append('timezone', timezone)
         axios.patch(`${constants.devApiBaseUrl}/api/user/${user.id}`, data, {
             headers: { 'Authorization': `Bearer ${authTokens.access} ` }
         }).then(res => {
             setAvatar(res.data['avatar'])
+            updateTimezones?.({ user_timezone: timezone, timezone: effectiveTimeZone(timezone, user) })
             setOpenAlert(true)
             setAlertMsg('Profile updated, effective on next login')
             setAlertSeverity('success')

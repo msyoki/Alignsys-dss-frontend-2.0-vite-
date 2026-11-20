@@ -1,4 +1,6 @@
-// Utility function for formatting dates
+import { formatDateOnly } from './datetime';
+
+// Locale date in the user's time zone.
 export function formatDate(date) {
-  return new Date(date).toLocaleDateString();
+  return formatDateOnly(date);
 }

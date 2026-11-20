@@ -1,14 +1,6 @@
-import React from 'react';
-import moment from 'moment/moment';
+import { formatPattern } from '../utils/datetime';
 
-const HumanizedDate = ({ dateStr }) => {
-    // const humanizedDate = moment(dateStr).format('DD.MMMM.YYYY : h:mm A');
-    // const humanizedDate = moment(dateStr).format('DD/MMMM/YYYY: h:mm A');
-    const humanizedDate = moment(dateStr).format('DD/MMM/YYYY :HH:mm');
-
-    
-    
-  return humanizedDate;
-};
+// Date and time in the user's time zone, e.g. "20/Nov/2026 :11:15" (same format as before).
+const HumanizedDate = ({ dateStr }) => formatPattern(dateStr, 'DD/MMM/YYYY :HH:mm');
 
 export default HumanizedDate;

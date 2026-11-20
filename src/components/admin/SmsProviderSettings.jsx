@@ -6,6 +6,7 @@ import {
 import { FaCheckCircle, FaChevronDown, FaChevronRight, FaExclamationTriangle, FaInfoCircle, FaPaperPlane, FaSave } from 'react-icons/fa';
 import AuthContext from '../../context/Authcontext';
 import { getOtpConfig, otpError, saveOtpConfig, testOtpConfig } from '../../api/otp';
+import { formatDateTime } from '../../utils/datetime';
 
 // Company-admin form for the organisation's own SMS provider.
 // The fields come from the backend (GET /api/otp/config/ -> providers), so a new
@@ -420,7 +421,7 @@ export default function SmsProviderSettings({ onSaved }) {
               {testToken && <p className="text-success mt-2 mb-0" style={small}><FaCheckCircle className="me-1" />Test passed. You can now enable and save.</p>}
               {config?.last_tested_at && !testToken && config?.provider === provider && (
                 <p className="text-muted mt-2 mb-0" style={{ fontSize: 12 }}>
-                  Last test: {config.last_test_ok ? 'passed' : 'failed'} on {new Date(config.last_tested_at).toLocaleString()}
+                  Last test: {config.last_test_ok ? 'passed' : 'failed'} on {formatDateTime(config.last_tested_at)}
                 </p>
               )}
             </>

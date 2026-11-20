@@ -9,6 +9,7 @@ import {
   GridToolbarQuickFilter,
   GridToolbarContainer,
 } from '@mui/x-data-grid';
+import { formatDateTime } from '../utils/datetime';
 
 
 function ActivityLogs(props) {
@@ -20,7 +21,7 @@ function ActivityLogs(props) {
       field: 'created_at', headerName: 'Time', width: 160, type: 'dateTime',
       valueGetter: (params) => (params.row.created_at ? new Date(params.row.created_at) : null),
       renderCell: (params) => (params.value instanceof Date && !isNaN(params.value)
-        ? params.value.toLocaleString()
+        ? formatDateTime(params.value)
         : (params.row.created || '')),
     },
     { field: 'user', headerName: 'User', width: 200 },

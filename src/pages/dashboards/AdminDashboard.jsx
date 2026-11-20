@@ -13,7 +13,7 @@ import OtpLogs from '../../components/admin/OtpLogs'
 import ReportsOverview from '../../components/admin/ReportsOverview'
 import useProfileEditor from '../../hooks/useProfileEditor'
 import { TiArrowBack } from 'react-icons/ti'
-import { FaShieldAlt, FaChartLine } from 'react-icons/fa'
+import { FaShieldAlt, FaChartLine, FaGlobeAfrica } from 'react-icons/fa'
 import { companyLogoUrl } from '../../utils/companyLogo'
 import AppShell from '../../components/layout/AppShell'
 import BrandLogo from '../../components/common/BrandLogo'
@@ -37,6 +37,7 @@ import LoadingMini from '../../components/loaders/LoadingMini';
 import TimedAlert from '../../components/TimedAlert';
 import { jsonPhoneCodesData } from '../../data/country-phone-codes';
 import SmsProviderSettings from '../../components/admin/SmsProviderSettings';
+import TimeZoneSettings from '../../components/admin/TimeZoneSettings';
 import useOtpAvailability from '../../hooks/useOtpAvailability';
 import { otpError } from '../../api/otp';
 import { PILL } from '../../components/common/pillButton';
@@ -628,6 +629,7 @@ function AdminDashboard() {
         },
         {
             key: 'settings', label: 'Settings', tabs: [
+                { index: 8, label: 'Time zone', Icon: FaGlobeAfrica },
                 { index: 3, label: 'Email (SMTP)', Icon: FaCog },
                 { index: 5, label: 'SMS / OTP Provider', Icon: FaMobile },
             ],
@@ -739,6 +741,7 @@ function AdminDashboard() {
                         profile.resetPasswordItem,
                         ...(user.is_admin === "True" ? [
                             { key: 'logo', label: 'Organization logo', icon: <FaImages size={14} />, onClick: () => setOpenDialogCompanyEdits(true) },
+                            { key: 'timezone', label: 'Time zone', icon: <FaGlobeAfrica size={14} />, onClick: () => openAdminTab(8) },
                         ] : []),
                         // Super admins only: the platform-wide dashboard.
                         ...(user.is_superuser === 'True' ? [
@@ -751,6 +754,7 @@ function AdminDashboard() {
                         else if (key === 'home') navigate('/')
                         else if (key === 'new-user') setOpenDialogNewUser(true)
                         else if (key === 'logo') setOpenDialogCompanyEdits(true)
+                        else if (key === 'timezone') openAdminTab(8)
                     }}
                     open={sidebarOpen}
                     onOpenChange={setSidebarOpen}
@@ -963,6 +967,13 @@ function AdminDashboard() {
                                             </div>
                                         </form>
                                     </div>
+                                </div>
+                            </CustomTabPanel>
+                            {/* --- Time zone Tab --- */}
+                            <CustomTabPanel value={value} index={8} className='admin-tabpanel'>
+                                <PanelHeader title="Time zone" subtitle="The time zone used for your organisation's dates, reports and signature stamps." />
+                                <div className='admin-card'>
+                                    {value === 8 && <TimeZoneSettings />}
                                 </div>
                             </CustomTabPanel>
                             {/* --- SMS / OTP Provider Tab --- */}

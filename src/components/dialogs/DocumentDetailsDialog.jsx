@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import moment from 'moment';
 import { Box, Button, Dialog, DialogContent, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import {
   FaBan, FaCheck, FaClock, FaEnvelopeOpenText, FaExclamationCircle, FaFileAlt, FaMobileAlt, FaPaperPlane, FaSearch, FaShieldAlt,
@@ -17,6 +16,7 @@ import { PILL_COMPACT, PILL_OUTLINE } from '../common/pillButton';
 import {
   ConfirmDialog, DialogFooter, DialogHeader, PrimaryButton, PropertyRow, PropertyValue, SecondaryButton, StatusChip, fieldSx,
 } from '../common/dialogKit';
+import { formatPattern } from '../../utils/datetime';
 
 // Document details, shared by the dashboard tabs (Inbox, Outbox, Completed, ...) and the
 // admin document log. People who manage the document (its originator; in the admin log,
@@ -36,8 +36,8 @@ export const maskPhone = (phone) => {
   const digits = String(phone || '').replace(/\D/g, '');
   return digits.length >= 3 ? `••• ${digits.slice(-3)}` : '';
 };
-const fmt = (value) => (value && moment(value).isValid() ? moment(value).format('DD/MMM/YYYY · HH:mm') : '');
-const fmtShort = (value) => (value && moment(value).isValid() ? moment(value).format('DD/MMM HH:mm') : '');
+const fmt = (value) => formatPattern(value, 'DD/MMM/YYYY · HH:mm');
+const fmtShort = (value) => formatPattern(value, 'DD/MMM HH:mm');
 const isTrue = (v) => v === true || v === 'True';
 const errorText = (err, fallback) => err?.response?.data?.msg || err?.response?.data?.error || fallback;
 

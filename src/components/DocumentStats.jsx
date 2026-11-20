@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Button } from "@mui/material";
 import * as constants from "./constants/constants";
+import { localDateISO } from '../utils/datetime';
 
 const OrganizationDocChart = () => {
     const [data, setData] = useState([]);
@@ -40,7 +41,7 @@ const OrganizationDocChart = () => {
             [headers, ...rows].map((e) => e.join(",")).join("\n");
 
         // Get today's date in YYYY-MM-DD format
-        const today = new Date().toISOString().split("T")[0];
+        const today = localDateISO();
 
         const link = document.createElement("a");
         link.setAttribute("href", encodeURI(csvContent));

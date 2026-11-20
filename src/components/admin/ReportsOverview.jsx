@@ -8,6 +8,7 @@ import { FaDownload, FaInfoCircle, FaSyncAlt } from 'react-icons/fa';
 import AuthContext from '../../context/Authcontext';
 import { PILL_COMPACT } from '../common/pillButton';
 import { downloadCsv, getReportsOverview, reportError } from '../../api/reports';
+import { localDateISO } from '../../utils/datetime';
 
 // Super admin reports. Colours: the first three slots of the validated
 // categorical palette (distinct for colour-blind viewers in every pairing);
@@ -126,7 +127,7 @@ export default function ReportsOverview() {
 
   // File names say what was exported (organisation + period).
   const slug = (scope.company_name || 'all_organisations').replace(/[^a-z0-9]+/gi, '_').toLowerCase();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateISO();
 
   const exportOrgs = () => downloadCsv(
     `${bySender ? 'senders' : 'organisations'}_${slug}_${months}m_${today}.csv`,

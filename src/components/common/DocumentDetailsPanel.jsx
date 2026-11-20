@@ -7,6 +7,7 @@ import HumanizedDate from '../HumanizeDate';
 import { StatusChip } from './dialogKit';
 import { PILL } from './pillButton';
 import alignsysLogo from '../../images/ZFBLU.webp';
+import { formatDateTime } from '../../utils/datetime';
 
 // "Document details" side panel, shared by the dashboard preview and the signing pages, in the
 // same layout as "Who signs where?" (place signature boxes). Display only.
@@ -111,9 +112,9 @@ export default function DocumentDetailsPanel({
               {visible.map(({ s, index }) => {
                 const st = signerState(s);
                 const active = s.current_signer === 'True' && s.signed !== 'True' && !isDecliner(s);
-                const signedTip = s.signed === 'True' && s.signed_time_stamp ? `Signed ${new Date(s.signed_time_stamp).toLocaleString()}` : undefined;
+                const signedTip = s.signed === 'True' && s.signed_time_stamp ? `Signed ${formatDateTime(s.signed_time_stamp)}` : undefined;
                 const smsTip = s.otp_verified && s.otp_verified_at
-                  ? `Phone verified by SMS code on ${new Date(s.otp_verified_at).toLocaleString()}`
+                  ? `Phone verified by SMS code on ${formatDateTime(s.otp_verified_at)}`
                   : 'Must verify their phone with an SMS code before signing';
                 return (
                   <Box

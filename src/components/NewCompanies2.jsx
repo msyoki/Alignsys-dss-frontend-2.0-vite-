@@ -1,118 +1,80 @@
-import TableIconButton from './common/TableIconButton';
-import mergeActionColumns from './common/mergeActionColumns';
 import autoSizeColumns from './common/autoSizeColumns';
-import { FaCheckToSlot } from 'react-icons/fa6';
-import React , {useState} from 'react';
+import React, { useState } from 'react';
 import Box from '@mui/material/Box';
-
-import { 
-  DataGrid, 
+import {
+  DataGrid,
   GridToolbarFilterButton,
-  GridToolbarExport, 
+  GridToolbarExport,
   GridToolbarQuickFilter,
-  GridToolbarContainer, 
+  GridToolbarContainer,
 } from '@mui/x-data-grid';
+import HumanizedDate from './HumanizeDate.jsx';
+import { ADMIN_GRID_PROPS, Pill, RowButton } from './admin/AdminTableKit';
 
-
+/** Super admin: organisations waiting for approval. */
 function NewCompanies2(props) {
-    const[opendialogdocdetails,setOpenDialogDocDetails]=useState(false)
-    const[document,setDocument]=useState({})
-    const[documentsigners,setDocumentSigners]=useState([])
-   
-    let approveAccount=(id,email)=>{
-        props.setOpenDialogApproveCompany(true)
-        props.setCompany4Approval(id)
-        props.setCompany4ApprovalEmail(email)
-        // alert(`${id} - ${email}`)
-    }
+  const approveAccount = (id, email) => {
+    props.setOpenDialogApproveCompany(true);
+    props.setCompany4Approval(id);
+    props.setCompany4ApprovalEmail(email);
+  };
 
-     
-
-const columns= [
-    { field: 'name', headerName: 'Company Name', width: 200  },
-
-      { field: 'email', headerName: 'Admin Email', width: 250},
-  
-      { field: 'registered_date', headerName: 'Registered', width: 250 },
-      {
-        field: 'action2',
-        headerName: 'Approve Company',
-        width: 200,
-        renderCell: (params) => {
-          const handleClick = () => {
-            approveAccount(
-                params.row.id,
-                params.row.email,
-            )
-          
-          };
-    
-          return (
-         <TableIconButton title="Approve company" onClick={handleClick} color="#2e7d32"><FaCheckToSlot /></TableIconButton>
-            );
-        },
-        filterable: false
-      },
-   
+  const columns = [
+    { field: 'name', headerName: 'Company Name', width: 200 },
+    { field: 'email', headerName: 'Admin Email', width: 250 },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 170,
+      valueGetter: () => 'Waiting for approval',
+      renderCell: () => <Pill tone="warning">Waiting for approval</Pill>,
+    },
+    {
+      field: 'registered_date',
+      headerName: 'Registered',
+      width: 150,
+      renderCell: (params) => (params.row.registered_date ? <HumanizedDate dateStr={params.row.registered_date} /> : ''),
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      align: 'right',
+      headerAlign: 'right',
+      width: 120,
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      disableExport: true,
+      renderCell: (params) => (
+        <RowButton aria-label={`Approve ${params.row.name || 'organisation'}`} onClick={() => approveAccount(params.row.id, params.row.email)}>
+          Approve
+        </RowButton>
+      ),
+    },
   ];
-  const visibleColumns = columns.filter((column) => column.field !== 'owner'); 
- 
 
-  let  CustomToolbar=()=> {
-    return (
-      <GridToolbarContainer>
-        <GridToolbarQuickFilter
-  
-        />
-        <GridToolbarFilterButton
+  const CustomToolbar = () => (
+    <GridToolbarContainer>
+      <GridToolbarQuickFilter />
+      <GridToolbarFilterButton />
+      <GridToolbarExport />
+    </GridToolbarContainer>
+  );
 
-        />
-        {/* <GridToolbarDensitySelector /> */}
-        <GridToolbarExport />
-      </GridToolbarContainer>
-    );
-  }
-  let viewDocDetails=(document,signers)=>{
-    setOpenDialogDocDetails(true)
-    setDocument(document)
-    setDocumentSigners(signers)
-}
-
-const getRowId = (row) => row.id;
-
+  const rows = props.newcompanies || [];
 
   return (
-  <>
-  
-
-  <Box sx={{ flex: 1, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', fontSize: '10px' }}>
-          <DataGrid
-              rows={props.newcompanies}
-              columns={autoSizeColumns(mergeActionColumns(columns), props.newcompanies)}
-              density='compact'
-              components={{
-                  Toolbar: CustomToolbar,
-              }}
-              initialState={{
-              pagination: {
-                  paginationModel: {
-                  pageSize: 15,
-                  },
-              },
-              }}
-              pageSizeOptions={[5,15,20,100]}
-              // checkboxSelection
-              disableRowSelectionOnClick
-            
-              getRowId={getRowId} 
-              style={{ fontSize: '12px', flex: 1, minHeight: 0 }}
-              className='app-table'
-     
-      
-          />
-      </Box>
-    
-  </>
+    <Box sx={{ flex: 1, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%' }}>
+      <DataGrid
+        {...ADMIN_GRID_PROPS}
+        rows={rows}
+        columns={autoSizeColumns(columns, rows)}
+        components={{ Toolbar: CustomToolbar }}
+        localeText={{ noRowsLabel: 'No organisations waiting for approval' }}
+        getRowId={(row) => row.id}
+        style={{ flex: 1, minHeight: 0 }}
+      />
+    </Box>
   );
 }
 

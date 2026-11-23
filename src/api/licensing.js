@@ -34,3 +34,8 @@ export const licenseFieldErrors = (err) => err?.response?.data?.fields || {};
 // dsscall's licence is left as it is. -> { company_id, suspended, active, licence_expires }
 export const setCompanySuspended = (token, companyId, suspended) =>
   axios.post(url(`company/${companyId}/suspend/`), { suspended }, auth(token)).then((r) => r.data);
+
+// Super admins: licence usage of every approved organisation, one dsscall request each (in parallel).
+// -> [{ company_id, has_license, users, allocated, remaining, expires, active, error }]
+export const getCompaniesLicenceUsage = (token) =>
+  axios.get(url('companies/'), auth(token)).then((r) => r.data);

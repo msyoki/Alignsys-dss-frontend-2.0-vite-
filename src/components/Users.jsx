@@ -2,14 +2,15 @@ import TableIconButton from './common/TableIconButton';
 import mergeActionColumns from './common/mergeActionColumns';
 import autoSizeColumns from './common/autoSizeColumns';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Switch, Tooltip } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Tooltip } from '@mui/material';
+import { ADMIN_GRID_PROPS, AdminSwitch, Pill, StatusText } from './admin/AdminTableKit';
 import { FaPen, FaUserPlus, FaUserSlash } from 'react-icons/fa';
 import { PILL_COMPACT } from './common/pillButton';
 import { accountError, deleteUser, setUserRole } from '../api/accounts';
 import { FaFileImport, FaTrashAlt, FaUserShield } from 'react-icons/fa';
 import ImportUsersDialog from './admin/ImportUsersDialog';
 import AuthContext from '../context/Authcontext';
-import { ConfirmDialog, PropertyRow, PropertyValue, StatusChip } from './common/dialogKit';
+import { ConfirmDialog, PropertyRow, PropertyValue } from './common/dialogKit';
 import { assignUserLicense, getCompanyLicense, licenseError, withdrawUserLicense } from '../api/licensing';
 import { daysUntil } from './admin/licenseFormat';
 import LicenceSummaryBar from './admin/LicenceSummaryBar';
@@ -148,93 +149,62 @@ function Users(props) {
   }
 
 
+  const showSignIn = users.some((u) => u.has_signed_in !== undefined);
+
   const columns = [
     { field: 'first_name', headerName: 'First', width: 150 },
-
     { field: 'last_name', headerName: 'Last', width: 150 },
-    { field: 'email', headerName: 'Email', width: 200 },
-
-    { field: 'phone', headerName: 'Phone', width: 200 },
+    { field: 'email', headerName: 'Email', width: 220 },
+    { field: 'phone', headerName: 'Phone', width: 140 },
     {
-      // Who can manage the organisation (add users, licences, settings) and who can't.
+      // Who can manage the organisation (add users, licences, settings): on = admin. Either way asks first.
       field: 'is_admin',
-      headerName: 'Role',
-      width: 170,
-      minWidth: 150,
+      headerName: 'Admin',
+      width: 120,
+      minWidth: 110,
       valueGetter: (params) => (isAdminRow(params.row) ? 'Admin' : 'Member'),
-      // Same pattern as the Licence switch: on = Admin. Either way asks first.
       renderCell: (params) => {
         const row = params.row;
         const admin = isAdminRow(row);
         const you = isMe(row) && <span style={{ fontSize: 12, color: '#6b7280' }}>(you)</span>;
         if (!props.canManageRoles) {
           return (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              {admin ? <StatusChip tone="info">Admin</StatusChip> : <StatusChip tone="neutral">Member</StatusChip>}{you}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              {admin ? <Pill tone="info">Admin</Pill> : <Pill>Member</Pill>}{you}
             </span>
           );
         }
         if (roleBusy && roleChange?.row?.id === row.id) {
-          return <CircularProgress size={14} aria-label={`Updating ${fullName(row) || row.email}'s role`} />;
+          return <CircularProgress size={16} aria-label={`Updating ${fullName(row) || row.email}'s role`} />;
         }
         // Never leave the organisation without an admin.
         const lastAdmin = admin && activeAdminCount <= 1;
         const reason = lastAdmin ? "The organisation's only admin. Make someone else an admin first."
-          : (!admin && row.is_active === 'False' ? 'This account is deactivated.' : '');
+          : (!admin && row.is_active === 'False' ? 'This account is deactivated.' : (admin ? 'Admin' : 'Member'));
         return (
           <Tooltip title={reason}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Switch
-                size="small"
+            {/* span: tooltips need an enabled element to attach to */}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <AdminSwitch
                 checked={admin}
-                disabled={Boolean(reason)}
+                disabled={lastAdmin || (!admin && row.is_active === 'False')}
                 onChange={(e) => setRoleChange({ row, makeAdmin: e.target.checked })}
                 inputProps={{ 'aria-label': `${admin ? 'Remove admin rights from' : 'Make admin:'} ${fullName(row) || row.email}` }}
               />
-              <span style={{ fontSize: 12.5, color: admin ? '#1a3a7a' : '#6b7280', fontWeight: admin ? 600 : 400 }}>{admin ? 'Admin' : 'Member'}</span>
               {you}
             </span>
           </Tooltip>
         );
       },
     },
-    // { field: 'is_active', headerName: 'Active', width: 200 },
-    {
-      field: 'action2',
-      headerName: 'Edit User',
-      width: 130,
-      renderCell: (params) => {
-        const handleClick = () => {
-          ontableclick(params.row)
-          // alert(`ID: ${params.row.signers}`);
-        };
-
-        return (
-          <TableIconButton title="Edit user" onClick={handleClick}><FaPen /></TableIconButton>
-        );
-      },
-      filterable: false
-    },
-    ...(props.canDelete ? [
-      {
-        field: 'action5',
-        headerName: 'Delete user',
-        width: 60,
-        filterable: false,
-        renderCell: (params) => (isMe(params.row) ? null : (
-          <TableIconButton title="Delete user" color="#b42318" onClick={() => setDeleting(params.row)}><FaTrashAlt /></TableIconButton>
-        )),
-      },
-    ] : []),
     ...(props.licensing ? [
       {
-        // One control for state and action (same pattern as the organisations' Active switch):
-        // on = licensed. Turning it on assigns at once; turning it off asks first.
+        // On = holds one of the organisation's licences. Turning it on assigns at once; off asks first.
         field: 'is_licensed',
         headerName: 'Licence',
-        width: 150,
-        minWidth: 140,
-        valueGetter: (params) => (isLicensed(params.row) ? 'Licensed' : 'Not licensed'),
+        width: 170,
+        minWidth: 160,
+        valueGetter: (params) => (isLicensed(params.row) ? 'Licensed' : 'No licence'),
         renderCell: (params) => {
           const row = params.row;
           const on = isLicensed(row);
@@ -242,35 +212,59 @@ function Users(props) {
           if (licenceBusy === row.id) {
             return (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <CircularProgress size={14} aria-label={`Updating ${name}'s licence`} />
-                <span style={{ fontSize: 12.5, color: '#6b7280' }}>{on ? 'Withdrawing…' : 'Assigning…'}</span>
+                <CircularProgress size={16} aria-label={`Updating ${name}'s licence`} />
+                <StatusText>{on ? 'Withdrawing…' : 'Assigning…'}</StatusText>
               </span>
             );
           }
           const reason = lockReason(row);
           return (
             <Tooltip title={reason}>
-              {/* span: tooltips need an enabled element to attach to */}
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <Switch
-                  size="small"
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                <AdminSwitch
                   checked={on}
                   disabled={Boolean(reason)}
                   onChange={(e) => (e.target.checked ? changeLicence(row, true) : setWithdrawing(row))}
                   inputProps={{ 'aria-label': `${on ? 'Withdraw licence from' : 'Assign licence to'} ${name}` }}
                 />
-                <span style={{ fontSize: 12.5, color: on ? '#2e7d32' : '#6b7280' }}>{on ? 'Licensed' : 'Not licensed'}</span>
+                <StatusText tone={on ? 'success' : 'neutral'}>{on ? 'Licensed' : 'No licence'}</StatusText>
               </span>
             </Tooltip>
           );
         },
       },
     ] : []),
+    ...(showSignIn ? [
+      {
+        // Never signed in: the welcome link wasn't used yet (their email can still be corrected).
+        field: 'has_signed_in',
+        headerName: 'Sign-in',
+        width: 150,
+        valueGetter: (params) => (params.row.has_signed_in ? 'Signed in' : 'Never signed in'),
+        renderCell: (params) => (params.row.has_signed_in
+          ? <Pill>Signed in</Pill>
+          : <Pill tone="warning">Never signed in</Pill>),
+      },
+    ] : []),
+    {
+      field: 'action2',
+      headerName: 'Edit user',
+      renderCell: (params) => (
+        <TableIconButton title="Edit user" onClick={() => ontableclick(params.row)}><FaPen /></TableIconButton>
+      ),
+      filterable: false,
+    },
+    ...(props.canDelete ? [
+      {
+        field: 'action5',
+        headerName: 'Delete user',
+        filterable: false,
+        renderCell: (params) => (isMe(params.row) ? null : (
+          <TableIconButton title="Delete user" color="#b42318" onClick={() => setDeleting(params.row)}><FaTrashAlt /></TableIconButton>
+        )),
+      },
+    ] : []),
   ];
-  const visibleColumns = columns.filter((column) => column.field !== 'owner');
-  // Actions (edit, delete) in the last column, after Role and Licence.
-  const isAction = (c) => /^action\d*$/.test(c.field);
-  const actionsLast = [...columns.filter((c) => !isAction(c)), ...columns.filter(isAction)];
 
 
   let CustomToolbar = () => {
@@ -419,24 +413,13 @@ function Users(props) {
     
             <DataGrid
               rows={rows}
-              columns={autoSizeColumns(mergeActionColumns(actionsLast), rows)}
-              density='compact'
+              {...ADMIN_GRID_PROPS}
+              columns={autoSizeColumns(mergeActionColumns(columns, { last: true }), rows)}
               components={{
                 Toolbar: CustomToolbar,
               }}
-              initialState={{
-                pagination: {
-                  paginationModel: {
-                    pageSize: 15,
-                  },
-                },
-              }}
-              pageSizeOptions={[5, 15, 20, 100]}
-              // checkboxSelection
-              disableRowSelectionOnClick
-              style={{ fontSize: '13px', fontWeight: "lighter", flex: 1, minHeight: 0, height: '100%' }}
+              style={{ flex: 1, minHeight: 0, height: '100%' }}
               getRowId={getRowId}
-              className='app-table'
             />
           </>
         )}

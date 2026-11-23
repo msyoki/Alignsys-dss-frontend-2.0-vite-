@@ -14,7 +14,8 @@ import {
 } from '@mui/x-data-grid';
 import AuthContext from '../context/Authcontext';
 import HumanizedDate from './HumanizeDate.jsx';
-import { ConfirmDialog, PropertyRow, PropertyValue, StatusChip } from './common/dialogKit';
+import { ConfirmDialog, PropertyRow, PropertyValue } from './common/dialogKit';
+import { ADMIN_GRID_PROPS, Pill } from './admin/AdminTableKit';
 import { accountError, approveIndividual, rejectIndividual } from '../api/accounts';
 
 const fullName = (row) => `${row?.first_name || ''} ${row?.last_name || ''}`.trim();
@@ -60,22 +61,21 @@ function IndividualAccounts(props) {
       width: 170,
       valueGetter: (p) => (p.row.pending_approval ? 'Waiting for approval' : p.row.is_licensed ? 'Licensed' : 'No licence'),
       renderCell: (p) => (
-        <StatusChip tone={p.row.pending_approval ? 'warning' : p.row.is_licensed ? 'success' : 'neutral'}>{p.value}</StatusChip>
+        <Pill tone={p.row.pending_approval ? 'warning' : p.row.is_licensed ? 'success' : 'neutral'}>{p.value}</Pill>
       ),
     },
     {
       field: 'registered',
       headerName: 'Registered',
-      width: 140,
+      width: 150,
       renderCell: (p) => (p.row.registered ? <HumanizedDate dateStr={p.row.registered} /> : ''),
     },
     {
       field: 'action1',
       headerName: 'Approve',
-      width: 60,
       filterable: false,
       renderCell: (p) => (p.row.pending_approval ? (
-        <TableIconButton title="Approve and assign a licence" color="#2e7d32" onClick={() => setPending({ row: p.row, approve: true })}>
+        <TableIconButton title='Approve and assign a licence' color='#2e7d32' onClick={() => setPending({ row: p.row, approve: true })}>
           <FaCheckCircle />
         </TableIconButton>
       ) : null),
@@ -83,10 +83,9 @@ function IndividualAccounts(props) {
     {
       field: 'action2',
       headerName: 'Reject',
-      width: 60,
       filterable: false,
       renderCell: (p) => (p.row.pending_approval ? (
-        <TableIconButton title="Reject request" color="#b42318" onClick={() => setPending({ row: p.row, approve: false })}>
+        <TableIconButton title='Reject request' color='#b42318' onClick={() => setPending({ row: p.row, approve: false })}>
           <FaTimesCircle />
         </TableIconButton>
       ) : null),
@@ -131,16 +130,12 @@ function IndividualAccounts(props) {
         )}
         {msg && <Alert severity={msg.severity} onClose={() => setMsg(null)} sx={{ mb: 1, fontSize: 12.5, py: 0, flexShrink: 0 }}>{msg.text}</Alert>}
         <DataGrid
+          {...ADMIN_GRID_PROPS}
           rows={rows}
-          columns={autoSizeColumns(mergeActionColumns(columns), rows)}
-          density='compact'
+          columns={autoSizeColumns(mergeActionColumns(columns, { last: true }), rows)}
           components={{ Toolbar: CustomToolbar }}
-          initialState={{ pagination: { paginationModel: { pageSize: 15 } } }}
-          pageSizeOptions={[5, 15, 20, 100]}
-          disableRowSelectionOnClick
-          style={{ fontSize: '12px', fontWeight: 'lighter', flex: 1, minHeight: 0 }}
+          style={{ flex: 1, minHeight: 0 }}
           getRowId={(row) => row.id}
-          className='app-table'
         />
       </Box>
     </>

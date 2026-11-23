@@ -246,3 +246,43 @@
   margin-bottom: 6px !important;
   align-items: center;
 }
+
+/* --- Admin tables (admin + super admin dashboards) ---
+   Add "admin-table" next to "app-table" (components/admin/AdminTableKit.jsx,
+   ADMIN_GRID_PROPS). Taller rows with a name + email cell, a rounded card,
+   slightly larger header labels and a soft blue row hover. */
+.app-table.admin-table.MuiDataGrid-root {
+  border-radius: 12px;
+  overflow: hidden;
+  color: #374151;
+}
+
+.app-table.admin-table .MuiDataGrid-columnHeaders {
+  background-color: #f9fafb;
+  border-bottom-color: #e5e7eb;
+}
+
+.app-table.admin-table .MuiDataGrid-columnHeaderTitle {
+  font-size: 12px !important;
+  color: #4b5563;
+  letter-spacing: 0.04em;
+}
+
+.app-table.admin-table .MuiDataGrid-cell {
+  border-bottom-color: #eef0f4;
+  color: #374151;
+}
+
+.app-table.admin-table .MuiDataGrid-row:hover {
+  background-color: #f8faff;
+}
+
+/* Right-aligned actions column: the buttons line up with the table edge. */
+.app-table.admin-table .MuiDataGrid-cell--textRight > span {
+  justify-content: flex-end;
+}
+
+.app-table.admin-table .MuiDataGrid-footerContainer {
+  border-top: 1px solid #e5e7eb;
+  min-height: 48px;
+}

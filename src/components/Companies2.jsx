@@ -1,11 +1,12 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import autoSizeColumns from './common/autoSizeColumns';
 import Box from '@mui/material/Box';
 import { FaToggleOn, FaToggleOff, FaIdCard } from 'react-icons/fa';
 import TableIconButton from './common/TableIconButton';
+import { ADMIN_GRID_PROPS, SeatsCell } from './admin/AdminTableKit';
 import CompanyLicenseDialog from './admin/CompanyLicenseDialog';
 import { formatCalendarDate } from './admin/licenseFormat';
-import { licenseError, setCompanySuspended } from '../api/licensing';
+import { getCompaniesLicenceUsage, licenseError, setCompanySuspended } from '../api/licensing';
 import Switch from '@mui/material/Switch';
 
 import {
@@ -21,7 +22,7 @@ import axios from 'axios';
 import * as constants from './constants/constants.js';
 
 
-import { ConfirmDialog, PropertyRow, PropertyValue, StatusChip } from './common/dialogKit';
+import { ConfirmDialog, PropertyRow, PropertyValue } from './common/dialogKit';
 function Companies2(props) {
   let { authTokens } = useContext(AuthContext);
   const isTrue = (v) => v === 'True' || v === true || v === 'true';
@@ -43,6 +44,20 @@ function Companies2(props) {
       .catch((err) => alertUser(licenseError(err, 'The change could not be saved.'), 'error', 5000))
       .finally(() => { setBusy(false); setPending(null); });
   };
+  // Seats used per organisation (from dsscall), keyed by company id. Reloaded with the list.
+  const [usage, setUsage] = useState({});
+  const [usageLoading, setUsageLoading] = useState(false);
+  useEffect(() => {
+    if (!authTokens?.access || !(props.companies || []).length) return;
+    let cancelled = false;
+    setUsageLoading(true);
+    getCompaniesLicenceUsage(authTokens.access)
+      .then((rows) => { if (!cancelled) setUsage(Object.fromEntries(rows.map((r) => [r.company_id, r]))); })
+      .catch(() => { if (!cancelled) setUsage({}); })
+      .finally(() => { if (!cancelled) setUsageLoading(false); });
+    return () => { cancelled = true; };
+  }, [props.companies, authTokens?.access]);
+
   // Organisation whose licence dialog is open: { id, name }
   const [licenceFor, setLicenceFor] = useState(null);
 
@@ -56,19 +71,7 @@ function Companies2(props) {
 
   const columns = [
     { field: 'name', headerName: 'Company Name', width: 200 },
-
     { field: 'email', headerName: 'Admin Email', width: 250 },
-
-
-
-    {
-      field: 'approved',
-      headerName: 'Approved',
-      width: 110,
-      renderCell: (params) => (isTrue(params.row.approved)
-        ? <StatusChip tone="success">Approved</StatusChip>
-        : <StatusChip tone="warning">Pending</StatusChip>),
-    },
     {
       // Licence switch (same pattern as the users' Licence switch): on = licensed and not suspended.
       // On: restores a suspended organisation, or opens "issue licence" if it has none / it expired.
@@ -110,19 +113,41 @@ function Companies2(props) {
       filterable: true,
     },
     {
-      field: 'registered_date',
-      headerName: 'Registered',
-      width: 140,
-      renderCell: (params) => <HumanizedDate dateStr={params.row.registered_date || params.row.docdate} />,
-      filterable: true,
-      sortable: true,
+      field: 'seats',
+      headerName: 'Seats used',
+      width: 160,
+      minWidth: 150,
+      type: 'number',
+      align: 'left',
+      headerAlign: 'left',
+      // Sorts by how full the licence is.
+      valueGetter: (params) => {
+        const u = usage[params.row.id];
+        return u && u.users ? (Number(u.allocated) || 0) / Number(u.users) : null;
+      },
+      renderCell: (params) => <SeatsCell usage={usage[params.row.id]} loading={usageLoading} />,
     },
     {
-      field: 'licence',
-      headerName: 'Licence details',
-      width: 110,
+      field: 'timezone',
+      headerName: 'Time zone',
+      width: 150,
+      valueGetter: (params) => params.row.timezone || '',
+    },
+    {
+      field: 'registered_date',
+      headerName: 'Registered',
+      width: 150,
+      renderCell: (params) => <HumanizedDate dateStr={params.row.registered_date || params.row.docdate} />,
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      align: 'right',
+      headerAlign: 'right',
+      width: 90,
       sortable: false,
       filterable: false,
+      disableColumnMenu: true,
       disableExport: true,
       // Approved organisations only: approval issues the first licence.
       renderCell: (params) => (isTrue(params.row.approved) ? (
@@ -131,10 +156,7 @@ function Companies2(props) {
         </TableIconButton>
       ) : null),
     },
-
-
   ];
-  const visibleColumns = columns.filter((column) => column.field !== 'owner');
 
 
   let CustomToolbar = () => {
@@ -185,26 +207,14 @@ function Companies2(props) {
 
       <Box sx={{ flex: 1, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', fontSize: '10px' }}>
         <DataGrid
+          {...ADMIN_GRID_PROPS}
           rows={props.companies}
           columns={autoSizeColumns(columns, props.companies)}
-          density='compact'
           components={{
             Toolbar: CustomToolbar,
           }}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: 15,
-              },
-            },
-          }}
-          pageSizeOptions={[5, 15, 20, 100]}
-          // checkboxSelection
-          disableRowSelectionOnClick
-          style={{ fontSize: '12px', fontWeight: "lighter", flex: 1, minHeight: 0 }}
+          style={{ flex: 1, minHeight: 0 }}
           getRowId={getRowId}
-          className='app-table'
-
         />
       </Box>
 

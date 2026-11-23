@@ -6,6 +6,7 @@ import AuthContext from '../../context/Authcontext';
 import { PILL_COMPACT } from '../common/pillButton';
 import { downloadCsv, getOtpLogs, reportError } from '../../api/reports';
 import { formatDateTime, localDateISO } from '../../utils/datetime';
+import { ADMIN_GRID_PROPS } from './AdminTableKit';
 
 // Read-only OTP audit trail. Organisation admins see their own organisation;
 // super admins (showOrganization) see every organisation. Codes are never
@@ -81,7 +82,7 @@ export default function OtpLogs({ showOrganization = false }) {
       renderCell: (p) => {
         const t = EVENT_TONE[p.row.event] || EVENT_TONE['otp blocked'];
         return (
-          <Box component="span" sx={{ px: 1, py: '2px', borderRadius: 999, fontSize: 11.5, fontWeight: 500, color: t.fg, bgcolor: t.bg }}>
+          <Box component="span" sx={{ px: 1.25, py: '2px', borderRadius: 999, fontSize: 12, fontWeight: 600, color: t.fg, bgcolor: t.bg }}>
             {p.value}
           </Box>
         );
@@ -171,19 +172,18 @@ export default function OtpLogs({ showOrganization = false }) {
           </Box>
         ) : (
           <DataGrid
+            {...ADMIN_GRID_PROPS}
             rows={rows}
             columns={columns}
             columnVisibilityModel={columnVisibilityModel}
             loading={loading}
-            density="compact"
-            disableRowSelectionOnClick
             initialState={{
               pagination: { paginationModel: { pageSize: 25 } },
               sorting: { sortModel: [{ field: 'time', sort: 'desc' }] },
             }}
             pageSizeOptions={[25, 50, 100]}
             localeText={{ noRowsLabel: 'No OTP activity in this period' }}
-            sx={{ fontSize: 12.5, bgcolor: '#fff' }}
+            style={{ height: '100%' }}
           />
         )}
       </Box>

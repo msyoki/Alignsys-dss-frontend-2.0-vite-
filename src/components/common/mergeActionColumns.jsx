@@ -12,8 +12,10 @@ const GAP = 10; // space between action buttons
  * tooltip named after its old column ("Sign", "Preview", …).
  *
  *   <DataGrid columns={autoSizeColumns(mergeActionColumns(columns), rows)} />
+ *
+ * `{ last: true }` (admin tables) puts the column at the far right, right-aligned.
  */
-export default function mergeActionColumns(columns) {
+export default function mergeActionColumns(columns, { last = false } = {}) {
   const actions = columns.filter((c) => ACTION_FIELD.test(c.field) && c.renderCell);
   if (actions.length === 0) return columns;
 
@@ -38,6 +40,7 @@ export default function mergeActionColumns(columns) {
     disableColumnMenu: true,
     disableExport: true,
     minWidth: actions.length * ICON_BUTTON + (actions.length - 1) * GAP + 32,
+    ...(last ? { align: 'right', headerAlign: 'right' } : {}),
     renderCell: (params) => (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: GAP }}>
         {actions.map((col) => (
@@ -49,6 +52,6 @@ export default function mergeActionColumns(columns) {
 
   const firstIndex = columns.findIndex((c) => actions.includes(c));
   const rest = columns.filter((c) => !actions.includes(c));
-  rest.splice(firstIndex, 0, merged);
+  rest.splice(last ? rest.length : firstIndex, 0, merged);
   return rest;
 }

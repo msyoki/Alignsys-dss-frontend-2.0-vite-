@@ -36,6 +36,7 @@ import { TfiLayoutSidebarLeft } from "react-icons/tfi";
 import { TfiLayoutSidebarNone } from "react-icons/tfi";
 import ThumbnailOverlay from "./ThumbnailOverlay";
 import ViewerToolbar from './ViewerToolbar';
+import { localDateISO } from '../../utils/datetime';
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
@@ -1106,7 +1107,7 @@ const PDFViewerSigning = (props) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `document-with-annotations-${new Date().toISOString().slice(0, 10)}.pdf`;
+      link.download = `document-with-annotations-${localDateISO()}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

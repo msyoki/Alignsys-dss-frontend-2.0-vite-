@@ -5,6 +5,7 @@ import { useNavigate  } from "react-router-dom";
 import Loading from '../components/loaders/LoadingDialog';
 import axios from "axios"
 import * as constants from '../components/constants/constants'
+import { setDisplayTimeZone } from '../utils/datetime'
 const Authcontext= createContext()
 
 export default Authcontext;
@@ -24,6 +25,13 @@ const secondsLeft = (tokens) => {
     const claims = decodeAccess(tokens)
     return claims?.exp ? claims.exp - Date.now() / 1000 : 0
 }
+// Time zone changes saved in this session. The login token carries the time
+// zone claims and token refresh copies them, so without this a change would
+// only show after the next login. Cleared on login and logout.
+const TZ_OVERRIDE_KEY = 'timezoneOverride'
+const readTzOverride = () => {
+    try { return JSON.parse(sessionStorage.getItem(TZ_OVERRIDE_KEY)) || null } catch { return null }
+}
 // Only one refresh at a time, shared by every caller (module level, so it
 // survives StrictMode's double mount).
 let refreshInFlight = null
@@ -35,6 +43,7 @@ export const AuthProvider = ({children}) => {
     // which only worked by accident).
     let[user, setUser]= useState(()=>decodeAccess(readTokens()))
     let[loading,setLoading]= useState(true)
+    let[tzOverride, setTzOverride]= useState(()=>readTzOverride())
     let navigate = useNavigate()
     let [miniLoader, setMiniLoader] = useState(false);
     let[openalert,setOpenAlert]=useState(false)
@@ -57,6 +66,8 @@ export const AuthProvider = ({children}) => {
                 setAuthtokens(data);
                 setUser(jwt_decode(data.access))
                 sessionStorage.setItem('authTokens',JSON.stringify(data))
+                sessionStorage.removeItem(TZ_OVERRIDE_KEY)
+                setTzOverride(null)
            
                 // if(jwt_decode(response.data.access).is_superuser === 'True'){
                    
@@ -180,6 +191,8 @@ export const AuthProvider = ({children}) => {
         setAuthtokens(null)
         setUser(null) 
         sessionStorage.removeItem('authTokens')
+        sessionStorage.removeItem(TZ_OVERRIDE_KEY)
+        setTzOverride(null)
     }
 
     // Update token
@@ -292,9 +305,22 @@ export const AuthProvider = ({children}) => {
 
     }
 
+    // Record time zone settings saved in this session, e.g.
+    // updateTimezones({ timezone: 'Europe/London', user_timezone: 'Europe/London' }).
+    const updateTimezones = (changes) => {
+        const next = { ...(tzOverride || {}), ...changes }
+        try { sessionStorage.setItem(TZ_OVERRIDE_KEY, JSON.stringify(next)) } catch { /* private mode */ }
+        setTzOverride(next)
+    }
+    const effectiveUser = user && tzOverride ? { ...user, ...tzOverride } : user
+    // Every date on screen uses this zone (see utils/datetime.js). Set while
+    // rendering, so children render with the right zone straight away.
+    setDisplayTimeZone(effectiveUser?.timezone)
+
     let contextData={
         miniLoader:miniLoader,
-        user:user,
+        user:effectiveUser,
+        updateTimezones:updateTimezones,
         updateToken:updateToken,
         authTokens:authTokens,
         loginUser:loginUser,

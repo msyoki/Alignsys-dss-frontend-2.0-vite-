@@ -5,6 +5,8 @@ import {
 } from '@mui/material';
 import { FaCamera, FaPhone, FaUser, FaUserCircle } from 'react-icons/fa';
 import { BRAND, NEUTRAL_COLORS } from '../layout/shellTheme';
+import TimeZoneSelect from '../common/TimeZoneSelect';
+import { browserTimeZone } from '../../utils/datetime';
 
 const fieldSx = {
   '& .MuiInputBase-input': { fontSize: 13 },
@@ -17,16 +19,22 @@ const initials = (first = '', last = '') => `${first[0] ?? ''}${last[0] ?? ''}`.
  * Edit my profile. The form keeps the field names the dashboard's
  * `onSubmit` handler reads (first_name, last_name, phone); blank fields are
  * left unchanged. The photo goes through `onAvatarChange` as before.
+ * The time zone is sent as `timezone` ('' = use the organisation's).
  */
 const ProfileDialog = ({ open, onClose, user, avatarSrc, onSubmit, onAvatarChange }) => {
   const fileRef = useRef(null);
   const [preview, setPreview] = useState('');
   const [fileName, setFileName] = useState('');
+  const [timezone, setTimezone] = useState(user?.user_timezone || '');
 
   // Start clean each time the dialog opens.
   useEffect(() => {
-    if (open) { setPreview(''); setFileName(''); }
-  }, [open]);
+    if (open) { setPreview(''); setFileName(''); setTimezone(user?.user_timezone || ''); }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const defaultZone = user?.company_timezone || (user?.user_timezone ? '' : user?.timezone) || 'Africa/Nairobi';
+  const browserZone = browserTimeZone();
+  const shownZone = timezone || defaultZone;
 
   // Free the preview URL when it is replaced or the dialog unmounts.
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
@@ -127,6 +135,16 @@ const ProfileDialog = ({ open, onClose, user, avatarSrc, onSubmit, onAvatarChang
                 fullWidth
                 sx={fieldSx}
                 InputProps={{ startAdornment: <InputAdornment position="start"><FaPhone size={12} color={NEUTRAL_COLORS.muted} /></InputAdornment> }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TimeZoneSelect
+                value={timezone}
+                onChange={setTimezone}
+                emptyLabel={`${user?.company_timezone ? 'Organisation default' : 'Default'} (${defaultZone.replace(/_/g, ' ')})`}
+                helperText={shownZone !== browserZone
+                  ? `Dates and signature stamps use this zone. Your device is set to ${browserZone.replace(/_/g, ' ')}.`
+                  : 'Dates and signature stamps on your documents use this zone.'}
               />
             </Grid>
           </Grid>

@@ -3,11 +3,13 @@ import { FaEnvelope, FaPen, FaPhone, FaUser } from 'react-icons/fa';
 import { Box, Dialog, DialogContent, Switch, TextField, Typography } from '@mui/material';
 import axios from 'axios';
 import * as constants from '../constants/constants';
+import AuthContext from '../../context/Authcontext.jsx';
 import { DialogFooter, DialogHeader, PrimaryButton, PropertyRow, SecondaryButton, StatusChip, fieldIcon, fieldSx } from '../common/dialogKit';
 import '../../styles/App.css';
 
 const UserUpdateDialog = (props) => {
   const [busy, setBusy] = React.useState(false);
+  const { authTokens } = React.useContext(AuthContext);
 
   const findUserById = (users, id) => {
     return users?.find(user => String(user.id) === String(id)) || null;
@@ -36,7 +38,10 @@ const UserUpdateDialog = (props) => {
     if (e.target.is_active.value) data.append('is_active', e.target.is_active.value);
 
     setBusy(true);
-    axios.patch(`${constants.devApiBaseUrl}/api/user/${selectedUser.id}`, data)
+    // Signed-in request: /api/user/<id> no longer accepts anonymous changes.
+    axios.patch(`${constants.devApiBaseUrl}/api/user/${selectedUser.id}`, data, {
+      headers: { Authorization: `Bearer ${authTokens?.access}` },
+    })
       .then(() => {
         props.setAlertMsg('Updated successfully!');
         props.setAlertSeverity('success');
@@ -46,7 +51,7 @@ const UserUpdateDialog = (props) => {
         document.getElementById('user-update-form').reset();
       })
       .catch(error => {
-        props.setAlertMsg(error.response?.data?.message || 'Update failed.');
+        props.setAlertMsg(error.response?.data?.message || error.response?.data?.detail || 'Update failed.');
         props.setAlertSeverity('error');
         props.setOpenAlert(true);
         props.setOpenDialogUpdateUser(false);

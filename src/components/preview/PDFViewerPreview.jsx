@@ -14,6 +14,8 @@ import { FaBarsStaggered, FaMagnifyingGlassMinus, FaMagnifyingGlassPlus, FaRotat
 import { FaThList } from "react-icons/fa";
 import { TfiLayoutSidebarLeft } from "react-icons/tfi";
 import { TfiLayoutSidebarNone } from "react-icons/tfi";
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import ViewerToolbar from './ViewerToolbar';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
@@ -291,150 +293,34 @@ const PDFViewerPreview = ({ title, complete, document, height, handleClose, fill
     <FillWrapper {...fillWrapperProps}>
       {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
 
-      <div className="controls bg-white shadow-lg text-dark p-2 shadow-sm" style={fill ? { flexShrink: 0 } : undefined}>
-        <div className="d-flex flex-wrap flex-md-nowrap align-items-center justify-content-between w-100 gap-2">
-          {/* Toggle Button */}
-          <div className="d-flex align-items-center" style={{ minWidth: '150px' }}>
-            <span onClick={toggleAside} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-           <Tooltip title={isAsideOpen ? "Hide page navigation" : "Show page navigation"}>
-            <Box
-              onClick={toggleAside}
-              className='shadow-lg'
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.75,
-                px: 1,
-                height: 32,
-                borderRadius: 1.5,
-                cursor: "pointer",
-                userSelect: "none",
-                bgcolor: isAsideOpen ? "#EEF4FF" : "transparent",
-                color: isAsideOpen ? "#1C4690" : "text.secondary",
-                transition: "all .2s ease",
-
-                "&:hover": {
-                  bgcolor: "#F5F8FD",
-                },
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  transition: "transform .2s ease",
-                  // transform: isAsideOpen ? "rotate(0deg)" : "rotate(180deg)",
-                }}
-              >
-               
-                {isAsideOpen?   <TfiLayoutSidebarLeft size={15} />: <TfiLayoutSidebarNone  size={15} />}
-              </Box>
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  flexGrow: 1,
-                }}
-              >
-                {isAsideOpen ? "Close" : "Open"} Pages Navigation
-              </Typography>
-
-
-            </Box>
+      {/* Shared toolbar (same actions as before, restyled) */}
+      <ViewerToolbar
+        asideOpen={isAsideOpen}
+        onToggleAside={toggleAside}
+        asideIcon={isAsideOpen ? <TfiLayoutSidebarLeft size={14} /> : <TfiLayoutSidebarNone size={14} />}
+        pageNumber={pageNumber}
+        numPages={numPages}
+        onPageInput={handlePageInputChange}
+        // Previous / next scroll the document; the scroll tracking updates the page number.
+        onPrev={() => pageNumber > 1 && mainContainerRef.current?.querySelector(`#page_${pageNumber - 1}`)?.scrollIntoView({ behavior: 'smooth' })}
+        onNext={() => numPages && pageNumber < numPages && mainContainerRef.current?.querySelector(`#page_${pageNumber + 1}`)?.scrollIntoView({ behavior: 'smooth' })}
+        prevIcon={<FaChevronLeft size={12} />}
+        nextIcon={<FaChevronRight size={12} />}
+        zoom={zoom}
+        setZoom={setZoom}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onResetZoom={resetZoom}
+      >
+        {/* Download PDF */}
+        {complete ? (
+          <Tooltip title="Download PDF">
+            <Button className="btn btn-sm" onClick={handleDownload} aria-label="Download PDF">
+              <FaDownload style={{ fontSize: isMobile ? '16px' : '18px', color: '#1C4690' }} />
+            </Button>
           </Tooltip>
-
-            </span>
-          </div>
-
-          {/* Page Input */}
-          <div className="d-flex align-items-center" style={{ fontSize: '11px' }}>
-            Page
-            <input
-              type="number"
-              value={pageNumber}
-              onChange={handlePageInputChange}
-              className="mx-2 form-control form-control-sm"
-              style={{ width: '50px', padding: '2px 6px', fontSize: '11px' }}
-            />
-            / {numPages}
-          </div>
-
-          {/* Zoom Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FaMagnifyingGlassMinus
-              onClick={zoomOut}
-              style={{ fontSize: '18px', color: '#2757aa', cursor: 'pointer' }}
-            />
-
-            <Slider
-              size="small"
-              value={zoom * 100} // controlled by zoom state (e.g., 1 = 100%)
-              onChange={(_, newValue) => setZoom(newValue / 100)} // convert back to scale
-              min={25}
-              max={200}
-              aria-label="Zoom"
-              sx={{ width: 120 }}
-            />
-
-            <FaMagnifyingGlassPlus
-              onClick={zoomIn}
-              className="mx-2"
-              style={{ fontSize: '18px', color: '#2757aa', cursor: 'pointer' }}
-            />
-
-            <span
-              style={{ minWidth: '40px', textAlign: 'center', fontSize: '12.8px', color: '#333' }}
-            >
-              {Math.round(zoom * 100)}%
-            </span>
-
-            <Tooltip title="Reset Zoom">
-              <span>
-                <FaRotateRight
-                  onClick={resetZoom}
-                  className="mx-2"
-                  style={{ fontSize: '18px', color: '#2757aa', cursor: 'pointer' }}
-                />
-              </span>
-            </Tooltip>
-            {/* <div>
-              <Button
-                variant="contained"
-                className='mx-3'
-                startIcon={<FaTimes className="mx-1" />}
-                onClick={handleClose}
-                sx={{
-                  backgroundColor: '#ffda75',
-                  fontWeight: 'normal',
-                  color: '#30343f',
-                  borderColor: '#ffda75',
-                  fontFamily: 'inherit',
-                  textAlign: 'center',
-                  fontSize: '12px',
-                  borderRadius: '30px', // rounded corners
-                  padding: '6px 14px', // adjust padding for size
-                  '&:hover': {
-                    backgroundColor: '#ffda75', // optional hover color
-                    borderColor: '#ffda75',
-                  },
-                  textTransform: 'none',
-                }}
-              >
-                Close Preview
-              </Button>
-            </div> */}
-          </div>
-
-          {/* Download PDF */}
-          {complete && (
-            <Tooltip title="Download PDF">
-              <Button className="btn btn-sm" onClick={handleDownload}>
-                <FaDownload style={{ fontSize: isMobile ? '16px' : '20px', color: '#1C4690' }} />
-              </Button>
-            </Tooltip>
-          )}
-        </div>
-      </div>
+        ) : null}
+      </ViewerToolbar>
 
 
       <div className={`pdf-viewer-container `} style={fill ? { flex: 1, minHeight: 0, height: 'auto' } : undefined}>

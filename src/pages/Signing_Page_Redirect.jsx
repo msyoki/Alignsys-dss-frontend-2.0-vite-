@@ -7,6 +7,7 @@ import Authcontext from '../context/Authcontext';
 import Loading from '../components/loaders/Loading';
 import logo from '../images/ZFBLU.webp';
 import BrandLogo from '../components/common/BrandLogo';
+import DocumentDetailsPanel from '../components/common/DocumentDetailsPanel';
 import ConfirmVoid from '../components/ConfirmVoid';
 import { getComponent } from '@syncfusion/ej2-base';
 import HelpBubble from '../components/HelpBubble';
@@ -428,7 +429,7 @@ function Signing_Page_Redirect() {
           <LoadingDialog opendialogloading={opendialogloading} />
           <HelpBubble content='' base64={sampleURL} filename={docname} />
           <div className="row bg-white signing-layout">
-            <div className="col-lg-9 col-md-12 col-sm-12 order-lg-1 order-sm-1 bg-white">
+            <div className="col-lg-9 col-md-12 col-sm-12 order-lg-1 order-sm-1 bg-white signing-viewer-col">
               {sampleURL ? (
                 <PDFViewerSigningLoader
                   onOtpVerified={(at) => setSigners((prev) => prev.map((s) => (
@@ -520,132 +521,26 @@ function Signing_Page_Redirect() {
                 </div>
               )}
             </div>
-            <div className="bg-white col-lg-3 col-md-12 col-sm-12 text-center shadow-lg order-lg-2 order-sm-2 d-flex flex-column signing-details">
-              {/* Logo Section */}
-              <div
-                className="d-flex flex-column justify-content-center align-items-center"
-                style={{
-                  height: "60px",
-                  minHeight: "61px",
-                  maxHeight: "61px",
-                  overflow: "hidden",
-                }}
-              >
-                <BrandLogo
-                  src={companylogo}
-                  fallback={logo}
-                  alt="Organization logo"
-                  className="logo"
-                  style={{
-                    width: "auto",
-                    maxWidth: "80%",
-                    maxHeight: "48px",
-                    objectFit: "contain",
-                  }}
-                />
-              </div>
-
-              {/* Document Details Section - This will grow to fill available space */}
-              <div className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
-                <p className="text-white p-2" style={{ fontSize: '11px', backgroundColor: '#1C4690' }}>Document Details</p>
-                <ul className="list-unstyled m-0 p-0 flex-grow-1 signing-details-list" style={{ overflowY: 'auto' }}>
-                  <li className="mb-2" style={{ fontSize: "12px", fontWeight: 450, color: "#1C4690" }}>Title</li>
-                  <li className="mt-2 mb-2" style={{ fontSize: "12px", fontWeight: 440 }}>{docname}</li>
-                  <li className="mt-2 mb-2" style={{ fontSize: "12px", color: "#1C4690" }}>
-                    Owner: <span style={{ fontSize: "12px", color: "#595959" }}>{docowner}</span>
-                  </li>
-                  {/* Signers List */}
-                  <li className="mt-2 mb-2" style={{ fontSize: "12px", fontWeight: 440 }}>Signers ({signers.length}):</li>
-                  {signers.length > 0 && (
-                    <div className="border rounded p-2" style={{ maxHeight: "20vh", overflowY: "auto", backgroundColor: '#ecf4fc' }}>
-                      {signers.map((s, index) => (
-                        <div
-                          key={index}
-                          className={`d-flex justify-content-between align-items-center ${signers.length > 1 && index !== signers.length - 1 ? "border-bottom" : ""}`}
-                          style={{ fontSize: "12px", padding: "5px 0" }}
-                        >
-                          <span style={{ minWidth: 0 }}>
-                            {s.email}
-                            {/* Only when the server reports it (older backends don't send otp_verified). */}
-                            {s.otp && typeof s.otp_verified === 'boolean' && (
-                              <span
-                                className="d-flex align-items-center"
-                                style={{ fontSize: '10.5px', marginTop: 2, color: s.otp_verified ? '#2e7d32' : '#8a6100' }}
-                                title={s.otp_verified && s.otp_verified_at
-                                  ? `Phone verified by SMS code on ${new Date(s.otp_verified_at).toLocaleString()}`
-                                  : 'This signer must verify their phone with an SMS code before signing'}
-                              >
-                                {s.otp_verified ? (
-                                  <>
-                                    <FaShieldAlt className="me-1" aria-hidden />
-                                    Verified by SMS
-                                    {s.otp_verified_at && <>&nbsp;·&nbsp;<HumanizedDate dateStr={s.otp_verified_at} /></>}
-                                  </>
-                                ) : (
-                                  <>
-                                    <FaMobileAlt className="me-1" aria-hidden />
-                                    SMS verification required
-                                  </>
-                                )}
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-muted">
-                            {s.signed === "True" ? (
-                              <>
-                                Signed <FaCheckCircle className="text-success mx-1" />
-                              </>
-                            ) : (
-                              <>
-                                {s.current_signer === "True" ? "Signing" : "Queued"}
-                                {s.current_signer === "True" ? (
-                                  <FaEnvelopeOpenText className="text-danger mx-1" />
-                                ) : (
-                                  <FaEnvelope className="text-warning mx-1" />
-                                )}
-                              </>
-                            )}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <li className="mt-2 mb-2" style={{ fontSize: '12px', color: '#1C4690' }}>
-                    Created: <span style={{ fontSize: '12px', color: '#595959' }}>
-                      <HumanizedDate dateStr={doccreated} />
-                    </span>
-                  </li>
-                  {docoassignmentdescription && (
-                    <li className="m-3" style={{ fontSize: '12px', color: '#1C4690' }}>
-                      Instructions: <br />
-                      <span style={{ fontSize: '12px', color: '#595959', height: '10vh', overflowY: 'scroll' }}>{docoassignmentdescription}</span>
-                    </li>
-                  )}
-                </ul>
-              </div>
-
-              {/* Footer - Always at bottom */}
-              <div className='footer bottom-buttons mt-auto'>
-                <div className="container">
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleComments}
-                    disabled={false}
-                    startIcon={<FaComment size={13} />}
-                    sx={{
-                      ...PILL,
-                    }}
-                  >
-                    Comments ({comments.length})
-                  </Button>
-                </div>
-                <div className="mt-3 p-1 bg-white">
-                  <a className="my-4" href="https://alignsys.tech" target="_blank" rel="noopener noreferrer">
-                    <img src={logo} alt="Alignsys" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'inline-block' }} />
-                  </a>
-                </div>
-              </div>
+            <div className="bg-white col-lg-3 col-md-12 col-sm-12 shadow-lg order-lg-2 order-sm-2 d-flex flex-column signing-details p-0">
+              {/* Document details: same panel as the dashboard preview */}
+              <DocumentDetailsPanel
+                topLogo={(
+                  <BrandLogo
+                    src={companylogo}
+                    fallback={logo}
+                    alt="Organization logo"
+                    className="logo"
+                    style={{ width: "auto", maxWidth: "80%", maxHeight: "48px", objectFit: "contain" }}
+                  />
+                )}
+                title={docname}
+                owner={docowner}
+                created={doccreated}
+                signers={signers}
+                instructions={docoassignmentdescription}
+                commentsCount={comments.length}
+                onComments={handleComments}
+              />
             </div>
           </div>
         </>

@@ -39,6 +39,44 @@
   height: 100dvh;
 }
 
+/* The document column fills its space edge to edge: no Bootstrap gutter between the
+   viewer and the screen edge / the Document Details panel. */
+.signing-layout > .signing-viewer-col {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Desktop: toolbars keep their height and the document area fills the rest of the
+   column, so the viewer reaches the bottom of the screen (it was a fixed 85vh). */
+@media (min-width: 992px) {
+  .signing-layout > .signing-viewer-col {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+  }
+  /* The self-sign page wraps the viewer in one more element; it passes the height on. */
+  .signing-layout > .signing-viewer-col > .signing-viewer-stack {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .signing-layout > .signing-viewer-col .signing-toolbar,
+  .signing-layout > .signing-viewer-col .sa-toolbar {
+    flex-shrink: 0;
+  }
+  .signing-layout > .signing-viewer-col .pdf-viewer-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+  }
+  .signing-layout > .signing-viewer-col .pdf-thumbnail-panel {
+    height: 100%;
+  }
+}
+
 /* Below Bootstrap's lg breakpoint the columns stack: scroll the whole area so
    the Document Details (signers, instructions, comments) can be reached. */
 @media (max-width: 991.98px) {
@@ -52,7 +90,9 @@
   .signing-layout > .signing-details {
     height: auto;
     min-height: 50vh;
-    padding-bottom: 24px;
+    /* Room to scroll the last items (Show all, Comments) clear of the floating help
+       buttons at the bottom-left of the screen. */
+    padding-bottom: 112px !important;
   }
 
   /* Let the details list grow with its content instead of scrolling inside. */

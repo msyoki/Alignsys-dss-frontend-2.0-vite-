@@ -85,7 +85,7 @@ const getRowId = (row) => row.id;
   <>
   
 
-  <Box sx={{ height: 'max(400px, calc(100dvh - 230px))', width: '100%' ,fontSize:'10px'}}>
+  <Box sx={{ flex: 1, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', fontSize: '10px' }}>
           <DataGrid
               rows={props.newcompanies}
               columns={autoSizeColumns(mergeActionColumns(columns), props.newcompanies)}
@@ -105,7 +105,7 @@ const getRowId = (row) => row.id;
               disableRowSelectionOnClick
             
               getRowId={getRowId} 
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '12px', flex: 1, minHeight: 0 }}
               className='app-table'
      
       

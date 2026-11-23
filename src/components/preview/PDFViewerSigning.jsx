@@ -35,6 +35,7 @@ import { GoSidebarExpand } from "react-icons/go";
 import { TfiLayoutSidebarLeft } from "react-icons/tfi";
 import { TfiLayoutSidebarNone } from "react-icons/tfi";
 import ThumbnailOverlay from "./ThumbnailOverlay";
+import ViewerToolbar from './ViewerToolbar';
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
@@ -1128,222 +1129,67 @@ const PDFViewerSigning = (props) => {
       <MultipageInfoDialog open={openMultipageInfoDialog} setOpen={setOpenMultipageInfoDialog} stamp={props.isStamp} addMultipageAnnotation={addMultipageAnnotation} />
       <DeleteAnnotationDialog findAnnotationById={id => props.annotations.find(a => a.id === id)} deleteAnnotation={deleteAnnotation} selectedAnnotationId={selectedAnnotationId} setDeleteAnnotationDialog={setDeleteAnnotationDialog} deleteAnnotationDialog={deleteAnnotationDialog} />
 
-      {/* Controls Section */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          flexWrap: "wrap",
-          alignItems: { xs: "stretch", sm: "center" },
-          justifyContent: "space-between",
-          gap: { xs: 0.75, sm: 0.5 },      // Reduced
-          px: { xs: 1, sm: 1.25 },         // Horizontal padding only
-          py: 0.5,                         // Smaller vertical padding
-          minHeight: 44,                   // Compact toolbar height
-          bgcolor: "white",
-          boxShadow: 2,                    // Slightly lighter shadow
-          width: "100%",
-          overflow: "hidden",
-          zIndex: 10,
-          mb: 0.75,
-        }}
+      {/* Controls Section: shared toolbar (same actions as before, restyled) */}
+      <ViewerToolbar
+        asideOpen={isAsideOpen}
+        onToggleAside={toggleAside}
+        asideIcon={isAsideOpen ? <TfiLayoutSidebarLeft size={14} /> : <TfiLayoutSidebarNone size={14} />}
+        pageNumber={pageNumber}
+        numPages={numPages}
+        onPageInput={handlePageInputChange}
+        // Previous / next go through the same handler as typing a page number.
+        onPrev={() => pageNumber > 1 && handlePageInputChange({ target: { value: String(pageNumber - 1) } })}
+        onNext={() => numPages && pageNumber < numPages && handlePageInputChange({ target: { value: String(pageNumber + 1) } })}
+        prevIcon={<FaChevronLeft size={12} />}
+        nextIcon={<FaChevronRight size={12} />}
+        zoom={zoom}
+        setZoom={setZoom}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onResetZoom={resetZoom}
       >
-        {/* LEFT */}
-        <Box sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.75,
-        }}>
-          <Tooltip title={isAsideOpen ? "Hide page navigation" : "Show page navigation"}>
-            <Box
-              onClick={toggleAside}
-              className='shadow-lg'
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.75,
-                px: 1,
-                height: 32,
-                borderRadius: 1.5,
-                cursor: "pointer",
-                userSelect: "none",
-                bgcolor: isAsideOpen ? "#EEF4FF" : "transparent",
-                color: isAsideOpen ? "#1C4690" : "text.secondary",
-                transition: "all .2s ease",
-
-                "&:hover": {
-                  bgcolor: "#F5F8FD",
-                },
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  transition: "transform .2s ease",
-                  // transform: isAsideOpen ? "rotate(0deg)" : "rotate(180deg)",
-                }}
+        {/* Multipage */}
+        {props.pendingMultipage && (
+          <>
+            <Tooltip title={props.isStamp ? "Stamp all pages" : "Sign all pages"}>
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={props.isStamp ? <FaStamp /> : <FaSignature />}
+                onClick={addMultipageAnnotation}
+                sx={PILL_COMPACT}
               >
-               
-                {isAsideOpen?   <TfiLayoutSidebarLeft size={15} />: <TfiLayoutSidebarNone  size={15} />}
-              </Box>
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  flexGrow: 1,
-                }}
+                {props.isStamp ? "Stamp All" : "Sign All"}
+              </Button>
+            </Tooltip>
+            <Tooltip title="Abort Multi-page Annotation">
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleAbortMultipageAnnotation}
+                sx={PILL_COMPACT}
               >
-                {isAsideOpen ? "Close" : "Open"} Pages Navigation
-              </Typography>
+                Abort
+              </Button>
+            </Tooltip>
+          </>
+        )}
 
-
-            </Box>
-          </Tooltip>
-          {/* Page selector moved next to thumbnail toggle */}
-          <Typography sx={{ fontSize: "12px", whiteSpace: "nowrap", ml: 2 }}>
-            Page{" "}
-            <input
-              type="number"
-              value={pageNumber}
-              onChange={handlePageInputChange}
-              style={{
-                width: 45,
-                border: "1px solid #ccc",
-                borderRadius: 4,
-                padding: "2px 4px",
-                marginLeft: 4,
-              }}
-            />{" "}
-            / {numPages}
-          </Typography>
-        </Box>
-
-        {/* CENTER (Zoom bar moved here) */}
-        <Box
-          sx={{
-            display: "flex",
-            flexGrow: 1,
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 1,
-            minWidth: 0,
-            justifyContent: { xs: "flex-start", sm: "center" },
-          }}
-        >
-          {/* Zoom controls now centered */}
-          <FaMagnifyingGlassMinus
-            onClick={zoomOut}
-            style={{ fontSize: 16, color: "#2757aa", cursor: "pointer" }}
-          />
-
-          <Slider
+        <Tooltip title="Add Text">
+          <Button
+            variant="outlined"
             size="small"
-            value={zoom * 100}
-            onChange={(_, v) => setZoom(v / 100)}
-            min={25}
-            max={200}
-            sx={{ width: { xs: 90, sm: 120 } }}
-          />
+            startIcon={<FaKeyboard />}
+            onClick={() => props.setSelectedTool("text")}
+            sx={{ ...PILL_COMPACT, display: "flex", alignItems: "center", gap: 0.75 }}
+          >
+            Add Text
+            <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color }} />
+          </Button>
+        </Tooltip>
 
-          <FaMagnifyingGlassPlus
-            onClick={zoomIn}
-            style={{ fontSize: 16, color: "#2757aa", cursor: "pointer" }}
-          />
-
-          <Tooltip title="Reset Zoom">
-            <span style={{ display: 'inline-flex' }}><FaRotateRight
-              onClick={resetZoom}
-              style={{ fontSize: 16, color: "#2757aa", cursor: "pointer" }}
-            /></span>
-          </Tooltip>
-
-          <Typography sx={{ fontSize: "12px", minWidth: 40, textAlign: "center" }}>
-            {Math.round(zoom * 100)}%
-          </Typography>
-
-          {/* Multipage */}
-          {props.pendingMultipage && (
-            <Box
-              sx={{
-                display: "flex",
-                gap: 1,
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip title={props.isStamp ? "Stamp all pages" : "Sign all pages"}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={
-                    props.isStamp ? (
-                      <FaStamp />
-                    ) : (
-                      <FaSignature />
-                    )
-                  }
-                  onClick={addMultipageAnnotation}
-                  sx={PILL_COMPACT}
-                >
-                  {props.isStamp ? "Stamp All" : "Sign All"}
-                </Button>
-              </Tooltip>
-
-              <Tooltip title="Abort Multi-page Annotation">
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={handleAbortMultipageAnnotation}
-                  sx={PILL_COMPACT}
-                >
-                  Abort
-                </Button>
-              </Tooltip>
-            </Box>
-          )}
-        </Box>
-
-        {/* RIGHT */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            flexWrap: "nowrap",
-            justifyContent: { xs: "flex-start", sm: "flex-end" },
-            width: { xs: "100%", sm: "auto" },
-          }}
-        >
-          {/* Add Text and ColorPicker remain on right */}
-          <Tooltip title="Add Text">
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<FaKeyboard />}
-              onClick={() => props.setSelectedTool("text")}
-              sx={{
-                ...PILL_COMPACT,
-                display: "flex",
-                alignItems: "center",
-                gap: 0.75,
-              }}
-            >
-              Add Text
-              <Box
-                sx={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: "50%",
-                  bgcolor: color,
-                }}
-              />
-            </Button>
-          </Tooltip>
-
-          <ColorPicker color={color} setColor={setColor} />
-        </Box>
-      </Box>
+        <ColorPicker color={color} setColor={setColor} />
+      </ViewerToolbar>
 
       <div className="pdf-viewer-container">
         {/* Sidebar Thumbnails */}

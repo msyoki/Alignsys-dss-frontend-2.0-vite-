@@ -102,10 +102,10 @@ function QRPreview() {
                 </Box>
 
                 <CustomTabPanel value={value} index={0}>
-                    <PDFViewerPreviewLoader title={"props.filepreviewtitle"} complete={true} height={isMobile ? '70vh' : '85vh'} document={`${guid}.pdf`} />
+                    <PDFViewerPreviewLoader title={"props.filepreviewtitle"} complete={true} height={isMobile ? '70vh' : '85vh'} document={`${guid}.pdf`} publicOnly />
                 </CustomTabPanel>
                 <CustomTabPanel value={value} index={1}>
-                    <PDFViewerPreviewLoader title={`summary_${'props.filepreviewtitle'}`} complete={true} height={isMobile ? '70vh' : '85vh'} document={`${guid}_Report.pdf`} />
+                    <PDFViewerPreviewLoader title={`summary_${'props.filepreviewtitle'}`} complete={true} height={isMobile ? '70vh' : '85vh'} document={`${guid}_Report.pdf`} publicOnly />
                 </CustomTabPanel>
             </Box>
 

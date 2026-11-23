@@ -6,12 +6,14 @@ import axios from 'axios';
 import AuthContext from '../context/Authcontext';
 
 import AddSignersDialogMerged from '../components/dialogs/AddSignersDialogMerged';
+import { readDraftFor } from '../utils/addSignersDraft';
 import PreviewerDialog2 from '../components/dialogs/PreviewerDialog2';
 import Loading from '../components/loaders/Loading';
 import PDFViewerPreviewLoader from '../components/preview/PDFViewerPreviewLoader';
 
 import logo from '../images/ZFBLU.webp';
 import * as constants from '../components/constants/constants';
+import { downloadDocument } from '../api/documentFiles';
 import { PILL } from '../components/common/pillButton';
 
 /* ---------------- PILL BUTTON STYLE ---------------- */
@@ -48,11 +50,17 @@ function SelfSignOtherAction() {
   const [workflows, setWorkflows] = useState([]);
   const [organizationWorkflows, setOrganizationWorkflows] = useState([]);
   const [opendialogaddsigners, setOpenDialogAddSigners] = useState(false);
+
+  // After a reload of this tab, reopen "Send for signing" where it was (see addSignersDraft).
+  useEffect(() => {
+    if (readDraftFor(docguid)?.origin === 'selfsign') setOpenDialogAddSigners(true);
+  }, [docguid]);
   const [openpreviewerdialog, setOpenPreviewerDialog] = useState(false);
 
   const pdfPath = `${docguid}.pdf`;
   const download = () =>
-    window.open(`${constants.devApi2BaseUrl}/api/Doc/FileDownload/${docguid}`);
+    downloadDocument(docguid, { token: authTokens?.access, title: doctitle })
+      .catch((err) => console.error('Download failed', err));
 
   const handleSendSuccess = () => {
     if (location.pathname === '/selfsign/otheractions') {
@@ -129,11 +137,11 @@ function SelfSignOtherAction() {
         filepreviewurl={pdfPath}
       />
 
-      {/* ---------------- MAIN UI ---------------- */}
-      {!opendialogaddsigners && (
-        // Exactly one screen tall and full width, so no background shows around the
-        // content. Phones/tablets (panels stacked) scroll inside it: body has
-        // overflow: hidden app-wide.
+      {/* ---------------- MAIN UI ----------------
+          Stays mounted while the Add signers dialog is open, so the document shows behind it.
+          Exactly one screen tall and full width, so no background shows around the
+          content. Phones/tablets (panels stacked) scroll inside it: body has
+          overflow: hidden app-wide. */}
         <Box sx={{ height: '100dvh', overflowY: { xs: 'auto', md: 'hidden' }, overflowX: 'hidden', bgcolor: '#fff' }}>
           <Box
             sx={{
@@ -267,7 +275,6 @@ function SelfSignOtherAction() {
             </Paper>
           </Box>
         </Box>
-      )}
     </>
   );
 }

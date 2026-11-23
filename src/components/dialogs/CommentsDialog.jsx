@@ -16,8 +16,12 @@ const CommentsDialog = (props) => {
     props.setOpenDialogComments(false);
   };
 
+  // Comments are posted as one of the document's signers; people who only sent or manage
+  // the document (no signer id) can read them but not add one.
+  const readOnly = props.canComment === false;
+
   const handleSubmit = () => {
-    if (!localText.trim()) return;
+    if (readOnly || !localText.trim()) return;
     props.addComment(localText, props.signerguid);
     setLocalText('');
     setTouched(false);
@@ -131,8 +135,9 @@ const CommentsDialog = (props) => {
               id="textarea"
               rows={2}
               className="form-control"
-              placeholder="Write your comment here..."
+              placeholder={readOnly ? 'Only signers of this document can add comments.' : 'Write your comment here...'}
               aria-label="Comment"
+              disabled={readOnly}
               value={localText}
               onChange={(e) => { setLocalText(e.target.value); setTouched(true); }}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
@@ -150,7 +155,7 @@ const CommentsDialog = (props) => {
               <span style={{ display: 'flex' }}>
                 <IconButton
                   aria-label="Send comment"
-                  disabled={isEmpty}
+                  disabled={isEmpty || readOnly}
                   onClick={handleSubmit}
                   sx={{
                     // Plain icon, no button background: just the paper plane beside the input.

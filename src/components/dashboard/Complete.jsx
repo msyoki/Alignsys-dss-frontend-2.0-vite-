@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
+import AuthContext from '../../context/Authcontext.jsx';
+import { getDocumentBase64 } from '../../api/documentFiles';
 import mergeActionColumns from '../common/mergeActionColumns';
 import autoSizeColumns from '../common/autoSizeColumns';
 import CollapsibleFilters from '../common/CollapsibleFilters';
@@ -23,6 +25,7 @@ import { FaFilter } from 'react-icons/fa';
 import { Button } from '@mui/material';
 
 function Complete(props) {
+  const { authTokens } = useContext(AuthContext) || {};
   const [opendialogdocdetails, setOpenDialogDocDetails] = useState(false);
   const [document, setDocument] = useState({});
   const [documentsigners, setDocumentSigners] = useState([]);
@@ -36,11 +39,8 @@ function Complete(props) {
   };
 
   const handleDownload = async (document) => {
-    alert(`${constants.devApiBaseUrl}/api/base64/${document.guid}.pdf/`)
-    alert(`${document.title}.pdf`)
     try {
-      const response = await axios.get(`${constants.devApiBaseUrl}/api/base64/${document.guid}.pdf/`);
-      let bas64 = response.data.base64_uri;
+      let bas64 = await getDocumentBase64(`${document.guid}.pdf`, { token: authTokens?.access });
 
       if (typeof window !== 'undefined') {
         const link = window.document.createElement('a');

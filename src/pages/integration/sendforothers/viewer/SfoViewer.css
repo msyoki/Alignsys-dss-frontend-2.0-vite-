@@ -30,7 +30,9 @@
   position: relative;
   overflow-x: hidden; /* thumbnails are drawn at the panel width */
   height: 100%;
-  width: 20%;
+  width: 176px;
+  /* Always keep room for the scrollbar (see the DSS viewer's stylesheet). */
+  scrollbar-gutter: stable;
   background-color: #666666;
   color: black;
   z-index: 1000;

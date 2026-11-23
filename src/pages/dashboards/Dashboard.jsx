@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef, useCallback, useContext } from 'rea
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as constants from "../../components/constants/constants"
-import { FaCircle, FaBan, FaSave, FaTrashAlt, FaUserShield, FaKey } from 'react-icons/fa';
+import { FaSave, FaTrashAlt, FaUserShield, FaKey } from 'react-icons/fa';
+import StatusDot, { DOT_COLORS } from '../../components/common/StatusDot';
 import AppShell from '../../components/layout/AppShell';
 import Button from '@mui/material/Button'
 import Tabs from '@mui/material/Tabs'
@@ -14,6 +15,7 @@ import Trashed from '../../components/dashboard/Trashed.jsx';
 import LicenseStatus from '../../components/dialogs/LicenseStatusDialog.jsx';
 import TimedAlert from '../../components/TimedAlert.jsx';
 import AddSignersDialogMerged from '../../components/dialogs/AddSignersDialogMerged';
+import { readDraft } from '../../utils/addSignersDraft';
 import CommentsDialog from '../../components/dialogs/CommentsDialog.jsx';
 import ProfileDialog from '../../components/dialogs/ProfileDialog.jsx';
 import PreviewerDialog from '../../components/dialogs/PreviewerDialog.jsx';
@@ -92,6 +94,8 @@ function Dashboard() {
     const [ccdoctitle, setCCDocTitle] = useState('')
     const [uploadedfileurl, setUploadedFileUrl] = useState('')
     const [signers, setSigners] = useState([])
+    // Status and "voided by" for the document in the preview panel.
+    const [docinfo, setDocInfo] = useState(null)
     const [doccreated, setDocCreated] = useState('')
     const [docowner, setDocOwner] = useState('')
     const [assdescription, setDocAssdescription] = useState('')
@@ -318,6 +322,8 @@ function Dashboard() {
     }
 
     const getSignerUid = async (documentguid) => {
+        // Clear the previous document's details so they never show for this one.
+        setSignerUid(null); setSigners([]); setDocCreated(''); setDocOwner(''); setDocAssdescription(''); setDocInfo(null)
         try {
             const res = await axios.post(`${constants.devApiBaseUrl}/api/signer/selfsign/`, { docguid: documentguid }, {
                 headers: {
@@ -330,6 +336,7 @@ function Dashboard() {
             setDocCreated(res.data.created)
             setDocAssdescription(res.data.assignmentd)
             setDocOwner(res.data.owner)
+            setDocInfo({ status: res.data.status || null, voidedBy: res.data.voided_by || null })
             getComments(documentguid)
         } catch { }
     }
@@ -615,6 +622,12 @@ function Dashboard() {
         setOpenDialogAddSigners(true)
     }
 
+    // After a reload of this tab, reopen "Send for signing" where it was (see addSignersDraft).
+    useEffect(() => {
+        const draft = readDraft()
+        if (draft?.origin === 'dashboard' && draft.file) sendUploadForSigning(draft.file)
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
     // --- Data Refresh ---
     const refreshdata = () => {
         let dateRange = getDateRange()
@@ -723,16 +736,17 @@ function Dashboard() {
                         filepreviewurl={filepreviewurl}
                         filepreviewtitle={filepreviewtitle}
                         signeruid={signeruid}
+                        docinfo={docinfo}
                         previewComplete={previewComplete}
                     />
                         <AppShell
                             caption={SECTION_CAPTIONS[value] ?? 'Dashboard'}
                             orgName={user.company}
                             sections={[
-                                { key: 0, label: 'Inbox', hint: 'Waiting for me', count: inbox.length, icon: <FaCircle className="text-danger" /> },
-                                { key: 1, label: 'Outbox', hint: 'Waiting for others', count: outbox.length, icon: <FaCircle className="text-warning" /> },
-                                { key: 2, label: 'Completed', hint: 'Signed', count: complete.length, icon: <FaCircle className="text-success" /> },
-                                { key: 3, label: 'Voided', count: voided.length, icon: <FaBan /> },
+                                { key: 0, label: 'Inbox', hint: 'Waiting for me', count: inbox.length, icon: <StatusDot color={DOT_COLORS.inbox} size={11} ring={false} /> },
+                                { key: 1, label: 'Outbox', hint: 'Waiting for others', count: outbox.length, icon: <StatusDot color={DOT_COLORS.outbox} size={11} ring={false} /> },
+                                { key: 2, label: 'Completed', hint: 'Signed', count: complete.length, icon: <StatusDot color={DOT_COLORS.complete} size={11} ring={false} /> },
+                                { key: 3, label: 'Voided', count: voided.length, icon: <StatusDot color={DOT_COLORS.voided} size={11} ring={false} /> },
                                 { key: 4, label: 'Saved for later', hint: 'Unsigned', count: myuploads.length, icon: <FaSave /> },
                                 { key: 5, label: 'Trashed', hint: 'Deleted items', count: trashed.length, icon: <FaTrashAlt /> },
                             ]}

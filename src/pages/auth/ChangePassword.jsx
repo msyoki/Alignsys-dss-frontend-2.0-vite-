@@ -1,132 +1,93 @@
+import React, { useContext, useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import Authcontext from '../../context/Authcontext.jsx';
+import * as constants from '../../components/constants/constants';
+import {
+  AuthLayout, Checklist, Field, Heading, StrengthMeter, rulesMet,
+} from '../../components/auth/AuthUi';
 
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import axiosInstance from '../../components/axiosConfig';  // Import the Axios instance
-import { TextField, Button, Container, Typography, Box, CircularProgress, InputLabel } from '@mui/material';
-import Logo from '../../images/techedge.png'
-
-
+/**
+ * Choose your own password. Required after signing in with a temporary (emailed)
+ * password: the app and the server allow nothing else until it's done. Also
+ * usable any time to change your password.
+ */
 const ChangePassword = () => {
-    const { uid, token } = useParams();
-    const navigate = useNavigate();
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [resetSuccessful, setResetSuccessful] = useState(false);
+  const { user, authTokens, logoutUser, updateClaims } = useContext(Authcontext);
+  const navigate = useNavigate();
+  const [current, setCurrent] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
-    const validatePasswords = () => {
-        if (newPassword !== confirmPassword) {
-            setError('Passwords do not match');
-            return false;
-        }
-        if (newPassword.length < 8) {
-            setError('Password must be at least 8 characters long');
-            return false;
-        }
-        setError('');
-        return true;
-    };
+  if (!user) return <Navigate to="/login" replace />;
+  const forced = Boolean(user.must_change_password);
+  const ready = current && rulesMet(password, confirm);
+  const mismatch = confirm.length > 0 && password !== confirm && confirm.length >= password.length;
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!validatePasswords()) return;
-        setLoading(true);
-        try {
-            const response = await axiosInstance.post('/api/password_reset_confirm/', {
-                uidb64: uid,
-                token,
-                new_password: newPassword,
-            });
-            setMessage(response.data.message);
-            setResetSuccessful(true);
-            setLoading(false);
-        } catch (error) {
-            setMessage(error.response?.data?.error || 'An error occurred');
-            setLoading(false);
-        }
-    };
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!ready) return;
+    setBusy(true);
+    setError('');
+    setFieldErrors({});
+    try {
+      await axios.post(`${constants.devApiBaseUrl}/api/password/change/`,
+        { current_password: current, new_password: password },
+        { headers: { Authorization: `Bearer ${authTokens?.access}` } });
+      updateClaims?.({ must_change_password: false, first_login: false });
+      navigate('/', { replace: true, state: { openalert: true, alertmsg: 'Your password has been changed.', alertseverity: 'success' } });
+    } catch (err) {
+      const data = err.response?.data || {};
+      setFieldErrors(data.fields || {});
+      setError(data.fields ? '' : (data.detail || data.error || 'Your password could not be changed. Please try again.'));
+    } finally {
+      setBusy(false);
+    }
+  };
 
-    const handleRedirect = () => {
-        navigate('/login');
-    };
-
-    return (
-        <Container maxWidth="sm" className='text-center'>
-            <Box style={{ marginTop: '10%' }} className='shadow-lg p-4'>
-                <div >
-                    <img src={Logo} alt="Sample image" style={{ width: '260px' }} />
-                    <Typography variant="p" component="p" gutterBottom className='my-3 text-secondary' >
-                        Reset Your Password
-                    </Typography>
-
-
-
-                </div>
-
-                <form onSubmit={handleSubmit} >
-                    {!resetSuccessful && (
-                        <>
-                            <InputLabel htmlFor="password" ><small>Please enter new pasword and confirm below</small></InputLabel>
-                            <TextField
-                                label="New Password"
-                                type="password"
-                                fullWidth
-                                margin="normal"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                required
-                                size='small'
-                                autoComplete="new-password"
-                                style={{ width: '350px' }}
-                            />
-                            <TextField
-                                label="Confirm Password"
-                                type="password"
-                                autof
-                                fullWidth
-                                margin="small"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
-                                size='small'
-                                autoComplete="new-password"
-                                style={{ width: '350px' }}
-                            />
-                        </>
-                    )}
-
-                    {error && (
-                        <Typography color="error" variant="body2">
-                            {error}
-                        </Typography>
-                    )}
-                    {!resetSuccessful && (
-                        <Box mt={2}>
-                            <Button type="submit" variant="contained" color="primary" fullWidth disabled={loading} style={{ width: '250px' }}>
-                                {loading ? <CircularProgress size={24} /> : 'Reset Password'}
-                            </Button>
-                        </Box>
-                    )}
-                </form>
-                {message && (
-                    <Box mt={2}>
-                        <Typography variant="body1" color="textSecondary">
-                            <small>{message}</small>
-                        </Typography>
-                    </Box>
-                )}
-
-                <Box mt={2}>
-                    <Button variant="contained" color="warning" fullWidth onClick={handleRedirect} style={{ width: '250px' }}>
-                        {resetSuccessful ? <>Go to Login</> : <>Cancel</>}
-                    </Button>
-                </Box>
-
-            </Box>
-        </Container>
-    );
+  const firstName = (user.first_name && user.first_name !== 'None') ? user.first_name : '';
+  return (
+    <AuthLayout
+      headline={forced ? `Welcome to Alignsys${firstName ? `, ${firstName}` : ''}.` : undefined}
+      sub={forced ? `Your administrator${user.company ? ` at ${user.company}` : ''} created this account. Choose a password to finish setting it up.` : undefined}
+    >
+      <form className="auth-card" onSubmit={submit} noValidate>
+        <Heading title={forced ? 'Choose your password' : 'Change password'}>
+          {forced
+            ? 'You signed in with the temporary password from your email. Choose your own to continue; the temporary one then stops working.'
+            : 'Enter your current password, then choose a new one.'}
+        </Heading>
+        {error && <div className="auth-alert error" role="alert">{error}</div>}
+        <Field
+          label={forced ? 'Temporary password' : 'Current password'} password autoComplete="current-password" autoFocus
+          value={current} onChange={(e) => setCurrent(e.target.value)} disabled={busy} error={fieldErrors.current_password}
+          hint={forced ? 'The one from your email. Already filled in if your browser saved it when you signed in.' : undefined}
+        />
+        <Field
+          label="New password" password autoComplete="new-password" value={password}
+          onChange={(e) => setPassword(e.target.value)} disabled={busy} error={fieldErrors.new_password}
+          after={<StrengthMeter password={password} />}
+        />
+        <Field
+          label="Confirm new password" password autoComplete="new-password" value={confirm}
+          onChange={(e) => setConfirm(e.target.value)} disabled={busy}
+          error={mismatch ? "The passwords don't match yet." : ''}
+        />
+        <Checklist password={password} confirm={confirm} />
+        <button type="submit" className="auth-btn" disabled={!ready || busy}>
+          {busy ? 'Saving…' : forced ? 'Save and continue' : 'Change password'}
+        </button>
+        {forced ? (
+          <button type="button" className="auth-link" onClick={logoutUser}>Sign out</button>
+        ) : (
+          <button type="button" className="auth-link" onClick={() => navigate(-1)}>Cancel</button>
+        )}
+      </form>
+    </AuthLayout>
+  );
 };
 
 export default ChangePassword;

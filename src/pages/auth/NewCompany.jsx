@@ -12,6 +12,7 @@ import RegistrationCompleteDialog from '../../components/dialogs/RegistrationCom
 import { registerLicense } from '@syncfusion/ej2-base';
 import { Button } from '@mui/material';
 import * as constants from '../../components/constants/constants'
+import { isValidEmail } from '../../utils/email'
 import logo from '../../images/ZFWHITE.webp'
 import logo2 from '../../images/ZFBLU.webp'
 
@@ -42,6 +43,12 @@ const NewCompany = () => {
 
   let register_company = (e) => {
     e.preventDefault()
+    if (!isValidEmail(e.target.email.value.trim())) {
+      setAlertMsg('Enter a valid email address, e.g. name@company.com.')
+      setAlertSeverity('error')
+      setOpenAlert(true)
+      return
+    }
     var user_email = "useridhere@sitename.com"
     var user_ind = user_email.indexOf("@");
     var admin_domain = user_email.slice((user_ind + 1), user_email.length);
@@ -49,7 +56,7 @@ const NewCompany = () => {
 
     var data = JSON.stringify({
       "name": e.target.name.value,
-      "email": e.target.email.value
+      "email": e.target.email.value.trim()
     });
 
     var config = {
@@ -68,9 +75,12 @@ const NewCompany = () => {
         setCompanyRegCompleteDialog(true)
       })
       .catch(function (error) {
-        console.log(error);
+        // The server says what's wrong (name or email taken, email couldn't be sent, ...).
+        const data = error.response?.data || {}
         setOpenAlert(true)
-        setAlertMsg("company with this name/email already registered.")
+        setAlertMsg(error.response
+          ? (data.error || Object.values(data.fields || {}).join(' ') || 'Registration failed. Please try again.')
+          : "We couldn't reach the server. Check your connection and try again.")
         setAlertSeverity("error")
         setTimeout(
           function () {

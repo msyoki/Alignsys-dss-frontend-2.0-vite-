@@ -609,7 +609,7 @@ function Dashboard() {
     // --- Misc ---
     const showProfile = () => setOpenProfile(true)
     const adminPage = () => navigate('/admin/dashboard')
-    const changePassword = () => window.open(`/password-reset`, '_blank')
+    const changePassword = () => { window.location.href = '/change-password' }
     const selfSignSaved = (saveddocguid, savedfilename) => {
         axios.post(`${constants.devApiBaseUrl}/api/saved/selfsign/`, { documentid: saveddocguid }, {
             headers: {
@@ -772,7 +772,7 @@ function Dashboard() {
                             onOpenProfile={showProfile}
                             onLogout={logoutUser}
                             accountMenuItems={[
-                                { key: 'reset', label: 'Reset password', icon: <FaKey size={14} />, onClick: () => { window.location.href = '/password-reset' } },
+                                { key: 'reset', label: 'Change password', icon: <FaKey size={14} />, onClick: () => { window.location.href = '/change-password' } },
                                 // Super admins only: the platform-wide dashboard (kept out of the sidebar).
                                 ...(user.is_superuser === 'True' ? [
                                     { key: 'sadmin', label: 'Super Admin Dashboard', icon: <FaUserShield size={14} />, onClick: () => navigate('/super/admin/dashboard') },

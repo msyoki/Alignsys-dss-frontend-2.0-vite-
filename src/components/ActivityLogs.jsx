@@ -10,6 +10,7 @@ import {
   GridToolbarContainer,
 } from '@mui/x-data-grid';
 import { formatDateTime } from '../utils/datetime';
+import { ADMIN_GRID_PROPS } from './admin/AdminTableKit';
 
 
 function ActivityLogs(props) {
@@ -76,23 +77,12 @@ function ActivityLogs(props) {
           <DateRangeFilter filters={props.filters} onChange={handleFilterChange} onApply={props.getLogs} />
           <DataGrid
             rows={props.logs}
+            {...ADMIN_GRID_PROPS}
             columns={autoSizeColumns(columns, props.logs)}
-            density='compact'
             components={{
               Toolbar: CustomToolbar,
             }}
-            initialState={{
-              pagination: {
-                paginationModel: {
-                  pageSize: 15,
-                },
-              },
-            }}
-            pageSizeOptions={[5, 15, 20, 100]}
-            // checkboxSelection
-            disableRowSelectionOnClick
-            style={{ fontSize: '12px', flex: 1, minHeight: 0, height: '100%' }}
-            className='app-table'
+            style={{ flex: 1, minHeight: 0, height: '100%' }}
           />
         </>
       )}

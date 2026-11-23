@@ -25,7 +25,7 @@ export default function UserAvatarMenu(props) {
 
   const handlePasswordReset = () => {
     handleCloseMenu();
-    window.location.href = "/password-reset"; // redirect to password reset page
+    window.location.href = "/change-password"; // signed in: change it directly
   };
 
   const fullName =

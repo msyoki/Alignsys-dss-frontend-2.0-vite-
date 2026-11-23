@@ -3,6 +3,7 @@ import { FaEnvelope, FaPhone, FaUser, FaUserPlus } from 'react-icons/fa';
 import { Dialog, DialogContent, TextField, Typography } from '@mui/material';
 import * as constants from './constants/constants.js';
 import Alerts from './Alert.jsx';
+import { isValidEmail } from '../utils/email';
 import { DialogFooter, DialogHeader, PrimaryButton, PropertyRow, SecondaryButton, fieldIcon, fieldSx } from './common/dialogKit';
 import '../styles/App.css';
 
@@ -12,10 +13,17 @@ const NewUserDialog = (props) => {
   const registerUser = async (e) => {
     e.preventDefault();
 
-    const adminDomain = props.user.email.split('@')[1];
-    const userEmail = e.target.email.value;
-    const userDomain = userEmail.split('@')[1];
+    const adminDomain = (props.user.email.split('@')[1] || '').toLowerCase();
+    const userEmail = e.target.email.value.trim();
+    const userDomain = (userEmail.split('@')[1] || '').toLowerCase();
 
+    if (!isValidEmail(userEmail)) {
+      props.setAlertMsg('Enter a valid email address, e.g. name@company.com.');
+      props.setAlertSeverity('error');
+      props.setOpenAlert(true);
+      setTimeout(() => props.setOpenAlert(false), 5000);
+      return;
+    }
     if (userDomain !== adminDomain) {
       props.setAlertMsg(`Invalid domain. Use "${adminDomain}"`);
       props.setAlertSeverity('error');
@@ -43,16 +51,20 @@ const NewUserDialog = (props) => {
         body: raw,
       });
 
+      const result = await response.json().catch(() => ({}));
       if (response.status === 201) {
-        props.setAlertMsg('Account created successfully!');
-        props.setAlertSeverity('success');
+        // If the welcome email doesn't arrive, they use "Forgot password" on the sign-in page.
+        props.setAlertMsg(result.email_sent === false
+          ? `Account created, but the welcome email to ${result.email || 'the user'} could not be sent. Ask them to use "Forgot password" on the sign-in page to set their password.`
+          : `Account created. ${result.email || 'The user'} will get an email with a link to set their password. If it doesn't arrive, they can use "Forgot password" on the sign-in page.`);
+        props.setAlertSeverity(result.email_sent === false ? 'warning' : 'success');
         props.setOpenAlert(true);
         props.setOpenDialogNewUser(false);
         props.getusers();
         document.getElementById('new-user-form').reset();
-        setTimeout(() => props.setOpenAlert(false), 4000);
+        setTimeout(() => props.setOpenAlert(false), 8000);
       } else if (response.status === 400) {
-        props.setAlertMsg('Account with email already exists!');
+        props.setAlertMsg(result.error || 'Account with email already exists!');
         props.setAlertSeverity('error');
         props.setOpenAlert(true);
         setTimeout(() => props.setOpenAlert(false), 5000);

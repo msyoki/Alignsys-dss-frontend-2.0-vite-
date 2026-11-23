@@ -62,9 +62,9 @@ export default function useProfileEditor({ user, authTokens, avatar, setAvatar, 
     ),
     resetPasswordItem: {
       key: 'reset',
-      label: 'Reset password',
+      label: 'Change password',
       icon: <FaKey size={14} />,
-      onClick: () => { window.location.href = '/password-reset'; },
+      onClick: () => { window.location.href = '/change-password'; },
     },
   };
 }

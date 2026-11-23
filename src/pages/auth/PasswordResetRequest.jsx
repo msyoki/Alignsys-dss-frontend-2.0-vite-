@@ -1,167 +1,97 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { TextField, Container, Typography, Box, CircularProgress, InputLabel } from '@mui/material';
-import Logo from '../../images/ZFBLU.webp';
-import Button from '@mui/material/Button';
-import "../../styles/App.css";
-import * as constants from '../../components/constants/constants'
-import axios from 'axios'
-import TimedAlert from '../../components/TimedAlert';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+import * as constants from '../../components/constants/constants';
+import { isValidEmail } from '../../utils/email';
+import { AuthLayout, Badge, Field, Heading, Icons } from '../../components/auth/AuthUi';
+
+const RESEND_WAIT = 45; // seconds before "Resend email" is available again
+
+const requestReset = (email) =>
+  axios.post(`${constants.devApiBaseUrl}/api/password_reset/`, { email }, { headers: { 'Content-Type': 'application/json' } });
+
+/** Forgot password: ask for the email, then "Check your email" with a timed resend. */
 const PasswordResetRequest = () => {
   const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [linksent, setLinkSent] = useState(false);
-  const navigate = useNavigate();
+  const [touched, setTouched] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [wait, setWait] = useState(0);
 
-  const [alertOpen, setOpenAlert] = useState(false);
-  const [alertSeverity, setAlertSeverity] = useState('');
-  const [alertMsg, setAlertMsg] = useState('');
+  useEffect(() => {
+    if (wait <= 0) return undefined;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
 
-  const handleTryAgain = () => {
-      setMessage('');
-      setEmail('');
-      setLinkSent(false);
+  const trimmed = email.trim();
+  const emailError = touched && trimmed && !isValidEmail(trimmed) ? 'Enter a valid email address, e.g. name@company.com.' : '';
+
+  const send = async (e) => {
+    e?.preventDefault?.();
+    setTouched(true);
+    if (!isValidEmail(trimmed)) return;
+    setBusy(true);
+    setError('');
+    try {
+      await requestReset(trimmed);
+      setSent(true);
+      setWait(RESEND_WAIT);
+    } catch (err) {
+      setError(err.response?.data?.error || 'We could not send the email right now. Please try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleSubmit = async (e) => {
-      e.preventDefault();
-      setLoading(true);
+  const startOver = () => { setSent(false); setError(''); setTouched(false); };
+  const mmss = `${Math.floor(wait / 60)}:${String(wait % 60).padStart(2, '0')}`;
+  const back = <Link to="/login" className="auth-link">{Icons.back(16)} Back to sign in</Link>;
 
-      try {
-          const response = await axios.post(`${constants.devApiBaseUrl}/api/password_reset/`,
-              { email },
-              { headers: { 'Content-Type': 'application/json' } }
-          );
-          setMessage(response.data.message);
-          setLinkSent(true);
-      } catch (error) {
-          setOpenAlert(true);
-          setAlertSeverity('error');
-
-          // Extract meaningful error message
-          const errorMsg = error.response?.data?.error || error.message || 'An error occurred';
-
-          setAlertMsg(errorMsg); // Ensure it's a string
-          console.error('Error sending password reset request:', error);
-          setMessage(errorMsg);
-          setLinkSent(false);
-      } finally {
-          setLoading(false);
-      }
-  };
-
-
-  const handleRedirect = () => {
-      navigate('/login');
-  };
+  if (sent) {
+    return (
+      <AuthLayout>
+        <section className="auth-card" aria-live="polite">
+          <Badge tone="green">{Icons.mail()}</Badge>
+          <Heading title="Check your email">
+            If an account exists for <strong>{trimmed}</strong>, we&apos;ve sent a link to choose a new password. The link works once.
+          </Heading>
+          <div className="auth-info">
+            <span style={{ color: '#2757aa', flexShrink: 0, marginTop: 2 }}>{Icons.info(18)}</span>
+            <span>Not there after a few minutes? Check your spam or junk folder, and make sure this is the address you registered with.</span>
+          </div>
+          {error && <div className="auth-alert error" role="alert">{error}</div>}
+          <button type="button" className="auth-btn secondary" onClick={send} disabled={busy || wait > 0}>
+            {busy ? 'Sending…' : wait > 0 ? `Resend email in ${mmss}` : 'Resend email'}
+          </button>
+          <div className="auth-links">
+            {back}
+            <button type="button" className="auth-link" onClick={startOver}>Use a different email</button>
+          </div>
+        </section>
+      </AuthLayout>
+    );
+  }
 
   return (
-
-      <>
-          <TimedAlert
-              open={alertOpen}
-              onClose={setOpenAlert}
-              severity={alertSeverity}
-              message={alertMsg}
-              setSeverity={setAlertSeverity}
-              setMessage={setAlertMsg}
-          />
-          <Box
-              sx={{
-                  height: '100vh',
-                  width: '100vw',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  backgroundColor: '#2757aa', // Full page background color
-                  padding: 2,
-              }}
-          >
-              <Box
-                  className="shadow-lg p-4 bg-white text-center"
-                  sx={{
-                      borderRadius: 2,
-                      textAlign: 'center',
-                      backgroundColor: 'white',
-                      padding: 4,
-                      boxShadow: 3,
-                      maxWidth: 400,
-                      width: '90%',
-                  }}
-              >
-
-                  <img src={Logo} alt="Techedge Logo" style={{ width: '200px', margin: '0 auto', display: 'block' }} />
-
-
-
-                  {!linksent ? (
-                      <form onSubmit={handleSubmit}>
-                          <Box mb={2}>
-                              <p style={{ backgroundColor: '#fff', color: '#555', margin: '10px ' }} >
-                                  Password Reset
-                              </p>
-                              <InputLabel htmlFor="email">
-                                  <small>NB: Please enter your registered email address below</small>
-                              </InputLabel>
-                              <TextField
-                                  size="small"
-                                  label="Email address"
-                                  type="email"
-                                  fullWidth
-                                  margin="normal"
-                                  value={email}
-                                  onChange={(e) => setEmail(e.target.value)}
-                                  required
-                              />
-                          </Box>
-                          <Button
-                              type="submit"
-                              variant="contained"
-                              color="success"
-                              className='p-2'
-                              style={{ textTransform: 'none', width: '40%', padding: '10px' }}
-                              disabled={loading}
-                          >
-                              {loading ? <CircularProgress size={12} className="text-white " /> : 'Send Reset Link'}
-                          </Button>
-                      </form>
-                  ) : (
-                      <Box mt={2}>
-                          <Typography variant="body1" color="textSecondary">
-                              <small style={{ fontSize: '13px' }}>{message}</small>
-                          </Typography>
-                          <Typography variant="body1" color="textDark" className="my-2">
-                              OR
-                          </Typography>
-                          <Button
-                              variant="contained"
-                              color="inherit"
-                              className="mb-2 p-2"
-                              style={{ textTransform: 'none', width: '40%', padding: '10px' }}
-                              onClick={handleTryAgain}
-                          >
-                              Try Again
-                          </Button>
-                      </Box>
-                  )}
-
-                  <Box mt={2}>
-                      <Button
-                          type="button"
-                          variant="contained"
-                          color={linksent ? 'primary' : 'warning'}
-                          className="mb-3 m-2 p-2"
-                          style={{ textTransform: 'none', width: '40%', padding: '10px' }}
-                          onClick={handleRedirect}
-                      >
-                          {linksent ? 'Go to Login' : 'Cancel Reset'}
-                      </Button>
-                  </Box>
-              </Box>
-          </Box>
-      </>
-
+    <AuthLayout below="No longer have access to this email? Ask your organisation's administrator.">
+      <form className="auth-card" onSubmit={send} noValidate>
+        <Badge>{Icons.key()}</Badge>
+        <Heading title="Forgot your password?">
+          Enter the email you sign in with. We&apos;ll send you a link to choose a new password.
+        </Heading>
+        {error && <div className="auth-alert error" role="alert">{error}</div>}
+        <Field
+          label="Email" type="email" autoComplete="email" autoFocus value={email}
+          onChange={(e) => setEmail(e.target.value)} onBlur={() => setTouched(true)} error={emailError} disabled={busy}
+        />
+        <button type="submit" className="auth-btn" disabled={busy || !trimmed}>
+          {busy ? 'Sending…' : 'Send reset link'}
+        </button>
+        {back}
+      </form>
+    </AuthLayout>
   );
 };
 

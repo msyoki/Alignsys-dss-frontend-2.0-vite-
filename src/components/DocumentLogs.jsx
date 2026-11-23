@@ -17,7 +17,7 @@ import DocDetailsDialog from './dialogs/DocDetailsDialog';
 
 import TableIconButton from './common/TableIconButton';
 import DateRangeFilter from './common/DateRangeFilter';
-import { StatusChip } from './common/dialogKit';
+import { ADMIN_GRID_PROPS, Pill } from './admin/AdminTableKit';
 
 // Document stages, as on the dashboard tabs. The server sends `stage`; the fallback
 // works it out from the flags for an older backend (which doesn't send `trashed`).
@@ -82,7 +82,7 @@ function DocumentLogs(props) {
       valueGetter: (params) => STAGES.find((x) => x.value === docStage(params.row))?.label || '',
       renderCell: (params) => {
         const st = STAGES.find((x) => x.value === docStage(params.row));
-        return st ? <StatusChip tone={st.tone}>{st.label}</StatusChip> : null;
+        return st ? <Pill tone={st.tone}>{st.label}</Pill> : null;
       },
     },
     { field: 'docdate', headerName: 'Created', width: 200 },
@@ -192,24 +192,13 @@ function DocumentLogs(props) {
             </DateRangeFilter>
             <DataGrid
               rows={sortedCompanydocs}
-              columns={autoSizeColumns(mergeActionColumns(columns), sortedCompanydocs)}
-              density='compact'
+                            {...ADMIN_GRID_PROPS}
+              columns={autoSizeColumns(mergeActionColumns(columns, { last: true }), sortedCompanydocs)}
               components={{
                 Toolbar: CustomToolbar,
               }}
-              initialState={{
-                pagination: {
-                  paginationModel: {
-                    pageSize: 15,
-                  },
-                },
-              }}
-              pageSizeOptions={[5, 15, 20, 100]}
-              // checkboxSelection
-              disableRowSelectionOnClick
-              style={{ fontSize: '13px', fontWeight: "lighter", flex: 1, minHeight: 0, height: '100%' }}
+              style={{ flex: 1, minHeight: 0, height: '100%' }}
               getRowId={getRowId}
-              className='app-table'
             />
           </>
         )}

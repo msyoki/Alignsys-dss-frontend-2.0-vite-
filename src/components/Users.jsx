@@ -1,9 +1,19 @@
 import TableIconButton from './common/TableIconButton';
 import mergeActionColumns from './common/mergeActionColumns';
 import autoSizeColumns from './common/autoSizeColumns';
-import React, { useState } from 'react';
-import { Box, CircularProgress } from '@mui/material';
-import { FaPen } from 'react-icons/fa';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { Alert, Box, Button, CircularProgress, Tooltip } from '@mui/material';
+import { ADMIN_GRID_PROPS, AdminSwitch, Pill, StatusText } from './admin/AdminTableKit';
+import { FaPen, FaUserPlus, FaUserSlash } from 'react-icons/fa';
+import { PILL_COMPACT } from './common/pillButton';
+import { accountError, deleteUser, setUserRole } from '../api/accounts';
+import { FaFileImport, FaTrashAlt, FaUserShield } from 'react-icons/fa';
+import ImportUsersDialog from './admin/ImportUsersDialog';
+import AuthContext from '../context/Authcontext';
+import { ConfirmDialog, PropertyRow, PropertyValue } from './common/dialogKit';
+import { assignUserLicense, getCompanyLicense, licenseError, withdrawUserLicense } from '../api/licensing';
+import { daysUntil } from './admin/licenseFormat';
+import LicenceSummaryBar from './admin/LicenceSummaryBar';
 
 import {
   DataGrid,
@@ -14,7 +24,113 @@ import {
 } from '@mui/x-data-grid';
 
 
+const fullName = (row) => `${row?.first_name || ''} ${row?.last_name || ''}`.trim();
+
+/**
+ * Organisation users table. With `licensing` (organisation admin dashboard) it also
+ * shows the organisation's licence usage above the table and a Licence switch per user:
+ * on = holds one of the organisation's licences. Turning it off asks first.
+ */
 function Users(props) {
+  const { authTokens, user: me } = useContext(AuthContext);
+  const [licence, setLicence] = useState(null); // { has_license, status } for the organisation
+  const [licenceOverrides, setLicenceOverrides] = useState({}); // user id -> is_licensed after a change
+  const [licenceBusy, setLicenceBusy] = useState(null); // user id being changed
+  const [licenceMsg, setLicenceMsg] = useState(null); // { severity, text }
+  const [withdrawing, setWithdrawing] = useState(null); // user row waiting for confirmation
+  const [onlyUnlicensed, setOnlyUnlicensed] = useState(false);
+  const [roleChange, setRoleChange] = useState(null); // { row, makeAdmin } waiting for confirmation
+  const [roleBusy, setRoleBusy] = useState(false);
+  const [roleOverrides, setRoleOverrides] = useState({}); // user id -> is_admin after a change
+  useEffect(() => { setRoleOverrides({}); }, [props.users]);
+  const isAdminRow = (row) => (row.id in roleOverrides ? roleOverrides[row.id] : (String(row.is_admin) === 'True' || row.is_admin === true));
+  const activeAdminCount = (props.users || []).filter((u) => isAdminRow(u) && u.is_active !== 'False').length;
+
+  const changeRole = () => {
+    const { row, makeAdmin } = roleChange;
+    const name = fullName(row) || row.email;
+    setRoleBusy(true);
+    setUserRole(authTokens?.access, row.id, makeAdmin)
+      .then((res) => {
+        setRoleOverrides((o) => ({ ...o, [row.id]: res.is_admin }));
+        setLicenceMsg({
+          severity: 'success',
+          text: makeAdmin
+            ? `${name} is now an admin. It applies from their next sign-in.`
+            : `${name} is no longer an admin. It applies from their next sign-in.`,
+        });
+      })
+      .catch((err) => setLicenceMsg({ severity: 'error', text: accountError(err) }))
+      .finally(() => { setRoleBusy(false); setRoleChange(null); });
+  };
+  const [importOpen, setImportOpen] = useState(false);
+  const [deleting, setDeleting] = useState(null); // user row waiting for "Delete user" confirmation
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const removeUser = () => {
+    const row = deleting;
+    setDeleteBusy(true);
+    deleteUser(authTokens?.access, row.id)
+      .then(() => {
+        setLicenceMsg({ severity: 'success', text: `${fullName(row) || row.email} was deleted.` });
+        props.onUsersChanged?.();
+        loadLicence(); // a licence may have been freed
+      })
+      // 409: they've sent documents; the message says to withdraw their licence instead.
+      .catch((err) => setLicenceMsg({ severity: err?.response?.status === 409 ? 'warning' : 'error', text: accountError(err) }))
+      .finally(() => { setDeleteBusy(false); setDeleting(null); });
+  };
+
+
+  const loadLicence = useCallback(() => {
+    if (!props.licensing || !props.companyid) return;
+    getCompanyLicense(authTokens?.access, props.companyid)
+      .then(setLicence)
+      .catch((err) => setLicenceMsg({ severity: 'warning', text: licenseError(err, 'Licence details could not be loaded.') }));
+  }, [props.licensing, props.companyid, authTokens?.access]);
+
+  useEffect(() => { loadLicence(); }, [loadLicence]);
+  useEffect(() => { setLicenceOverrides({}); }, [props.users]); // fresh list from the server
+
+  const isLicensed = (row) => (row.id in licenceOverrides ? licenceOverrides[row.id] : Boolean(row.is_licensed));
+  const status = licence?.status;
+  const noneLeft = status ? Number(status.remaining) <= 0 : false;
+  const expired = status ? (daysUntil(status.expiryDate) ?? 0) < 0 : false;
+  const isMe = (row) => row && me && String(row.id) === String(me.id);
+  const users = props.users || [];
+  const unlicensedCount = props.licensing ? users.filter((u) => !isLicensed(u)).length : 0;
+  const rows = props.licensing && onlyUnlicensed ? users.filter((u) => !isLicensed(u)) : users;
+
+  // Why a user's switch can't be used right now (shown on hover), or '' if it can.
+  const lockReason = (row) => {
+    if (!licence) return 'Loading licence details…';
+    if (!licence.has_license) return 'Your organisation has no licence yet.';
+    if (expired) return "The organisation's licence has expired. Licences can't be changed until it's renewed.";
+    if (!isLicensed(row) && noneLeft) return 'No licences left. Withdraw one from someone else, or request more.';
+    return '';
+  };
+
+  const changeLicence = (row, assign) => {
+    const name = fullName(row) || row.email;
+    const reason = lockReason(row);
+    if (reason) {
+      setLicenceMsg({ severity: 'error', text: reason });
+      return;
+    }
+    setLicenceBusy(row.id);
+    setLicenceMsg(null);
+    (assign ? assignUserLicense : withdrawUserLicense)(authTokens?.access, row.id)
+      .then((res) => {
+        setLicenceOverrides((o) => ({ ...o, [row.id]: res.is_licensed }));
+        if (res.company_status) setLicence((l) => ({ ...(l || {}), has_license: true, status: res.company_status }));
+        else loadLicence();
+        setLicenceMsg({ severity: 'success', text: assign ? `Licence assigned to ${name}.` : `Licence withdrawn from ${name}.` });
+        props.onLicenceChange?.();
+      })
+      .catch((err) => setLicenceMsg({ severity: 'error', text: licenseError(err) }))
+      .finally(() => { setLicenceBusy(null); setWithdrawing(null); });
+  };
+
   const [opendialogdocdetails, setOpenDialogDocDetails] = useState(false)
   const [document, setDocument] = useState({})
   const [documentsigners, setDocumentSigners] = useState([])
@@ -33,41 +149,127 @@ function Users(props) {
   }
 
 
+  const showSignIn = users.some((u) => u.has_signed_in !== undefined);
+
   const columns = [
     { field: 'first_name', headerName: 'First', width: 150 },
-
     { field: 'last_name', headerName: 'Last', width: 150 },
-    { field: 'email', headerName: 'Email', width: 200 },
-
-    { field: 'phone', headerName: 'Phone', width: 200 },
-    // { field: 'is_active', headerName: 'Active', width: 200 },
+    { field: 'email', headerName: 'Email', width: 220 },
+    { field: 'phone', headerName: 'Phone', width: 140 },
     {
-      field: 'action2',
-      headerName: 'Edit User',
-      width: 130,
+      // Who can manage the organisation (add users, licences, settings): on = admin. Either way asks first.
+      field: 'is_admin',
+      headerName: 'Admin',
+      width: 120,
+      minWidth: 110,
+      valueGetter: (params) => (isAdminRow(params.row) ? 'Admin' : 'Member'),
       renderCell: (params) => {
-        const handleClick = () => {
-          ontableclick(params.row)
-          // alert(`ID: ${params.row.signers}`);
-        };
-
+        const row = params.row;
+        const admin = isAdminRow(row);
+        const you = isMe(row) && <span style={{ fontSize: 12, color: '#6b7280' }}>(you)</span>;
+        if (!props.canManageRoles) {
+          return (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              {admin ? <Pill tone="info">Admin</Pill> : <Pill>Member</Pill>}{you}
+            </span>
+          );
+        }
+        if (roleBusy && roleChange?.row?.id === row.id) {
+          return <CircularProgress size={16} aria-label={`Updating ${fullName(row) || row.email}'s role`} />;
+        }
+        // Never leave the organisation without an admin.
+        const lastAdmin = admin && activeAdminCount <= 1;
+        const reason = lastAdmin ? "The organisation's only admin. Make someone else an admin first."
+          : (!admin && row.is_active === 'False' ? 'This account is deactivated.' : (admin ? 'Admin' : 'Member'));
         return (
-          <TableIconButton title="Edit user" onClick={handleClick}><FaPen /></TableIconButton>
+          <Tooltip title={reason}>
+            {/* span: tooltips need an enabled element to attach to */}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <AdminSwitch
+                checked={admin}
+                disabled={lastAdmin || (!admin && row.is_active === 'False')}
+                onChange={(e) => setRoleChange({ row, makeAdmin: e.target.checked })}
+                inputProps={{ 'aria-label': `${admin ? 'Remove admin rights from' : 'Make admin:'} ${fullName(row) || row.email}` }}
+              />
+              {you}
+            </span>
+          </Tooltip>
         );
       },
-      filterable: false
     },
-
-
-
-
+    ...(props.licensing ? [
+      {
+        // On = holds one of the organisation's licences. Turning it on assigns at once; off asks first.
+        field: 'is_licensed',
+        headerName: 'Licence',
+        width: 170,
+        minWidth: 160,
+        valueGetter: (params) => (isLicensed(params.row) ? 'Licensed' : 'No licence'),
+        renderCell: (params) => {
+          const row = params.row;
+          const on = isLicensed(row);
+          const name = fullName(row) || row.email;
+          if (licenceBusy === row.id) {
+            return (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <CircularProgress size={16} aria-label={`Updating ${name}'s licence`} />
+                <StatusText>{on ? 'Withdrawing…' : 'Assigning…'}</StatusText>
+              </span>
+            );
+          }
+          const reason = lockReason(row);
+          return (
+            <Tooltip title={reason}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                <AdminSwitch
+                  checked={on}
+                  disabled={Boolean(reason)}
+                  onChange={(e) => (e.target.checked ? changeLicence(row, true) : setWithdrawing(row))}
+                  inputProps={{ 'aria-label': `${on ? 'Withdraw licence from' : 'Assign licence to'} ${name}` }}
+                />
+                <StatusText tone={on ? 'success' : 'neutral'}>{on ? 'Licensed' : 'No licence'}</StatusText>
+              </span>
+            </Tooltip>
+          );
+        },
+      },
+    ] : []),
+    ...(showSignIn ? [
+      {
+        // Never signed in: the welcome link wasn't used yet (their email can still be corrected).
+        field: 'has_signed_in',
+        headerName: 'Sign-in',
+        width: 150,
+        valueGetter: (params) => (params.row.has_signed_in ? 'Signed in' : 'Never signed in'),
+        renderCell: (params) => (params.row.has_signed_in
+          ? <Pill>Signed in</Pill>
+          : <Pill tone="warning">Never signed in</Pill>),
+      },
+    ] : []),
+    {
+      field: 'action2',
+      headerName: 'Edit user',
+      renderCell: (params) => (
+        <TableIconButton title="Edit user" onClick={() => ontableclick(params.row)}><FaPen /></TableIconButton>
+      ),
+      filterable: false,
+    },
+    ...(props.canDelete ? [
+      {
+        field: 'action5',
+        headerName: 'Delete user',
+        filterable: false,
+        renderCell: (params) => (isMe(params.row) ? null : (
+          <TableIconButton title="Delete user" color="#b42318" onClick={() => setDeleting(params.row)}><FaTrashAlt /></TableIconButton>
+        )),
+      },
+    ] : []),
   ];
-  const visibleColumns = columns.filter((column) => column.field !== 'owner');
 
 
   let CustomToolbar = () => {
     return (
-      <GridToolbarContainer>
+      <GridToolbarContainer sx={{ flexWrap: 'wrap', gap: 1 }}>
         <GridToolbarQuickFilter
 
         />
@@ -76,6 +278,21 @@ function Users(props) {
         />
         {/* <GridToolbarDensitySelector /> */}
         <GridToolbarExport />
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {props.canImport && (
+            <Button onClick={() => setImportOpen(true)} startIcon={<FaFileImport size={13} />} variant="outlined"
+              sx={{ ...PILL_COMPACT }}>
+              Import users
+            </Button>
+          )}
+          {props.newUser && (
+            // Same dialog as the sidebar's "Add new user".
+            <Button onClick={props.newUser} startIcon={<FaUserPlus size={13} />} variant="contained" disableElevation
+              sx={{ ...PILL_COMPACT, bgcolor: '#2757aa', color: '#fff', '&:hover': { bgcolor: '#1a3a7a' } }}>
+              Add user
+            </Button>
+          )}
+        </Box>
       </GridToolbarContainer>
     );
   }
@@ -99,7 +316,85 @@ function Users(props) {
   return (
     <>
 
+      <ConfirmDialog
+        open={Boolean(withdrawing)}
+        icon={<FaUserSlash />}
+        title="Withdraw licence"
+        tone="danger"
+        busy={Boolean(withdrawing) && licenceBusy === withdrawing?.id}
+        message={isMe(withdrawing)
+          ? <>This is <strong>your own</strong> licence. Without it you may lose access to features that need one. You can assign it back while licences are left.</>
+          : "This person will no longer hold one of your organisation's licences. You can then assign it to someone else."}
+        confirmLabel="Withdraw"
+        onConfirm={() => changeLicence(withdrawing, false)}
+        onCancel={() => setWithdrawing(null)}
+      >
+        <PropertyRow label="User"><PropertyValue>{fullName(withdrawing)}</PropertyValue></PropertyRow>
+        <PropertyRow label="Email"><PropertyValue>{withdrawing?.email}</PropertyValue></PropertyRow>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={Boolean(roleChange)}
+        icon={<FaUserShield />}
+        title={roleChange?.makeAdmin ? 'Make admin' : 'Remove admin rights'}
+        tone={roleChange?.makeAdmin ? 'primary' : 'danger'}
+        busy={roleBusy}
+        message={roleChange?.makeAdmin
+          ? 'Admins can add and delete users, assign licences and change organisation settings.'
+          : (isMe(roleChange?.row)
+            ? <>You&apos;re removing <strong>your own</strong> admin rights. After your next sign-in you won&apos;t see the admin dashboard.</>
+            : 'They keep their account and documents, but can no longer manage the organisation.')}
+        confirmLabel={roleChange?.makeAdmin ? 'Make admin' : 'Remove admin rights'}
+        onConfirm={changeRole}
+        onCancel={() => setRoleChange(null)}
+      >
+        <PropertyRow label="User"><PropertyValue>{fullName(roleChange?.row)}</PropertyValue></PropertyRow>
+        <PropertyRow label="Email"><PropertyValue>{roleChange?.row?.email}</PropertyValue></PropertyRow>
+      </ConfirmDialog>
+
+      {props.canImport && (
+        <ImportUsersDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onImported={() => props.onUsersChanged?.()}
+          company={props.importCompany}
+          companyName={props.companyName}
+        />
+      )}
+
+      <ConfirmDialog
+        open={Boolean(deleting)}
+        icon={<FaTrashAlt />}
+        title="Delete user"
+        tone="danger"
+        busy={deleteBusy}
+        message={<>
+          This permanently removes the account and frees their licence. It only works for people who haven&apos;t sent any documents.
+          To keep someone&apos;s documents and signatures but stop them signing in, <strong>withdraw their licence</strong> instead (the Licence switch).
+        </>}
+        confirmLabel="Delete"
+        onConfirm={removeUser}
+        onCancel={() => setDeleting(null)}
+      >
+        <PropertyRow label="User"><PropertyValue>{fullName(deleting)}</PropertyValue></PropertyRow>
+        <PropertyRow label="Email"><PropertyValue>{deleting?.email}</PropertyValue></PropertyRow>
+      </ConfirmDialog>
+
       <Box sx={{ height: '100%', minHeight: 0, width: '100%', fontSize: '13px', display: 'flex', flexDirection: 'column' }} >
+        {(props.licensing || props.canManageRoles || props.canDelete) && (
+          <Box sx={{ mb: 1, flexShrink: 0 }}>
+            <LicenceSummaryBar
+              licence={licence}
+              companyName={props.companyName || me?.company}
+              unlicensedCount={unlicensedCount}
+              onlyUnlicensed={onlyUnlicensed}
+              onToggleUnlicensed={() => setOnlyUnlicensed((v) => !v)}
+            />
+            {licenceMsg && (
+              <Alert severity={licenceMsg.severity} onClose={() => setLicenceMsg(null)} sx={{ mt: 1, fontSize: 12.5, py: 0 }}>{licenceMsg.text}</Alert>
+            )}
+          </Box>
+        )}
         {/* Loading state check */}
         {props.loading ? (
           <div style={{
@@ -117,25 +412,14 @@ function Users(props) {
           <>
     
             <DataGrid
-              rows={props.users}
-              columns={autoSizeColumns(mergeActionColumns(columns), props.users)}
-              density='compact'
+              rows={rows}
+              {...ADMIN_GRID_PROPS}
+              columns={autoSizeColumns(mergeActionColumns(columns, { last: true }), rows)}
               components={{
                 Toolbar: CustomToolbar,
               }}
-              initialState={{
-                pagination: {
-                  paginationModel: {
-                    pageSize: 15,
-                  },
-                },
-              }}
-              pageSizeOptions={[5, 15, 20, 100]}
-              // checkboxSelection
-              disableRowSelectionOnClick
-              style={{ fontSize: '13px', fontWeight: "lighter", flex: 1, minHeight: 0, height: '100%' }}
+              style={{ flex: 1, minHeight: 0, height: '100%' }}
               getRowId={getRowId}
-              className='app-table'
             />
           </>
         )}

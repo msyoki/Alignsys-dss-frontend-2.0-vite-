@@ -6,6 +6,7 @@ import Loading from '../components/loaders/LoadingDialog';
 import axios from "axios"
 import * as constants from '../components/constants/constants'
 import { setDisplayTimeZone } from '../utils/datetime'
+import { isValidEmail } from '../utils/email'
 const Authcontext= createContext()
 
 export default Authcontext;
@@ -54,10 +55,16 @@ export const AuthProvider = ({children}) => {
     // login request
     let loginUser = async(e)=>{
         e.preventDefault()
+        if (!isValidEmail(e.target.email.value.trim())) {
+            setAlertMsg('Enter a valid email address, e.g. name@company.com.')
+            setAlertSeverity('error')
+            setOpenAlert(true)
+            return
+        }
         setMiniLoader(true)
         try {
             const response = await axios.post(`${constants.devApiBaseUrl}/api/token/`,{
-                email: e.target.email.value,
+                email: e.target.email.value.trim(),
                 password: e.target.password.value
             });
             if(response.status === 200){
@@ -79,7 +86,9 @@ export const AuthProvider = ({children}) => {
                     
                 // }
                 // else{
-                    if(jwt_decode(response.data.access).first_login  === 'True'){
+                    // Temporary (emailed) password: choose your own before anything else.
+                    // (first_login was compared with the string 'True' but is a boolean, so it never matched.)
+                    if(jwt_decode(response.data.access).must_change_password){
                         navigate('/change-password')
                     }
                     else{
@@ -134,13 +143,17 @@ export const AuthProvider = ({children}) => {
             // console.log(error);
             });
         
+            // The server says why when the password was right but access isn't allowed
+            // (waiting for approval, no licence, organisation's licence missing or expired).
+            const reason = error?.response?.data
+            const known = ['pending_approval', 'no_licence', 'organisation_unlicensed', 'organisation_suspended'].includes(reason?.code)
             setOpenAlert(true)
-            setAlertMsg('Invalid username or password !!!')
-            setAlertSeverity('error')
+            setAlertMsg(known ? reason.detail : 'Invalid email or password.')
+            setAlertSeverity(known ? 'warning' : 'error')
             setTimeout(
               function() {
               setOpenAlert(false);
-            }, 5000)
+            }, known ? 10000 : 5000)
         }
     }
 
@@ -321,6 +334,8 @@ export const AuthProvider = ({children}) => {
         miniLoader:miniLoader,
         user:effectiveUser,
         updateTimezones:updateTimezones,
+        // Same store, for other claims changed in this session (e.g. must_change_password).
+        updateClaims:updateTimezones,
         updateToken:updateToken,
         authTokens:authTokens,
         loginUser:loginUser,
@@ -337,6 +352,32 @@ export const AuthProvider = ({children}) => {
 
 
     // Keep the session alive. Instead of a blind 3-minute timer, refresh when the
+    // Any request refused because the password must be changed first sends the
+    // user to the change-password page (the server allows nothing else until then).
+    useEffect(()=>{
+        const id = axios.interceptors.response.use(
+            (res) => res,
+            (err) => {
+                const code = err?.response?.status === 403 ? err.response.data?.code : null
+                if (code === 'password_change_required' && window.location.pathname !== '/change-password') {
+                    navigate('/change-password')
+                }
+                // Licence withdrawn or expired while signed in: sign out and say why.
+                if (['no_licence', 'organisation_unlicensed', 'organisation_suspended', 'pending_approval'].includes(code)) {
+                    setAuthtokens(null)
+                    setUser(null)
+                    sessionStorage.removeItem('authTokens')
+                    navigate('/login')
+                    setAlertMsg(err.response.data.detail)
+                    setAlertSeverity('warning')
+                    setOpenAlert(true)
+                }
+                return Promise.reject(err)
+            }
+        )
+        return () => axios.interceptors.response.eject(id)
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
     // access token is about to expire: checked every 30 s and whenever the tab
     // becomes visible again (browsers slow timers in background tabs and stop
     // them while a laptop sleeps).

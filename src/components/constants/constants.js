@@ -8,6 +8,8 @@ export const boturl=import.meta.env.VITE_BOT_URL
 // Temporary public-link service (same as Alignsys EDMS: POST {url}/api/PublicLink -> { file_url }).
 // Used to preview Office files with Microsoft Office Online before upload. Unset = no Office preview.
 export const publicFileUrl=import.meta.env.VITE_PUBLIC_FILE_URL
+// Alignsys support address for "Request more licences" (optional; plain text is shown if unset).
+export const supportEmail=import.meta.env.VITE_SUPPORT_EMAIL || ''
 
 // export const devViewerServiceUrl="https://mfilesdsscorppreviewer.techedge.dev"
 // export const devApiBaseUrl="https://dssauthcorp.techedge.dev"

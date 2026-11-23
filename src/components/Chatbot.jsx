@@ -374,7 +374,7 @@ const Chatbot = memo((props) => {
                                 '100%': { boxShadow: '0 0 0 0 rgba(39, 87, 170, 0)' },
                             },
                             '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-                            '&:hover': { backgroundColor: '#1C4690' },
+                            '&:hover': { backgroundColor: '#1a3a7a' },
                         }}
                         onClick={handleOpen}
                     >

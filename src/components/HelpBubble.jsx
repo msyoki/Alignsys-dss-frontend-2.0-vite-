@@ -49,7 +49,7 @@ const HelpBubble = ({ content, base64, filename }) => {
             borderRadius: '50%',
             width: '40px',
             height: '40px',
-            '&:hover': { backgroundColor: '#1C4690' }
+            '&:hover': { backgroundColor: '#1a3a7a' }
           }}
           onClick={handleOpenModal}
         >

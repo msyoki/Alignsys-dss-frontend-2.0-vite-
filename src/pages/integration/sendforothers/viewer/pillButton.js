@@ -83,7 +83,7 @@ export const SF_PILL = {
   warning: sfPill('#ffda75', '#30343f'),
   danger: sfPill('#ff6b6b', '#fff'),
   // White button: visible blue border (a white border would vanish on white).
-  light: sfPill('#ffffff', '#1C4690', '#2757aa'),
+  light: sfPill('#ffffff', '#2757aa', '#2757aa'),
 };
 
 export const PILL_LARGE = {

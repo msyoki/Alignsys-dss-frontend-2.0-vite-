@@ -297,7 +297,7 @@
   flex-shrink: 0;
   cursor: pointer;
 }
-.aia-send:hover:not(:disabled) { background: #1c4690; }
+.aia-send:hover:not(:disabled) { background: #1a3a7a; }
 .aia-send:disabled { background: #e5e9f0; color: #9aa3b2; cursor: default; }
 .aia-stop {
   height: 32px;

@@ -1,67 +1,78 @@
+// Shown once an organisation or individual registration is accepted:
+// what was received, where the confirmation went, and what happens next.
 import * as React from 'react';
-import { PILL_OUTLINE_NEUTRAL } from '../common/pillButton';
-import { useNavigate, Link } from 'react-router-dom'
-import Button from '@mui/material/Button';
+import { useNavigate } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
-
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
-import '../../styles/App.css'
 import useMediaQuery from '@mui/material/useMediaQuery';
-import companylogo from '../../images/ZFBLU.webp'
+import { Icons } from '../auth/AuthUi.jsx';
+import '../../styles/AuthPages.css';
 
-import { useTheme } from '@mui/material/styles';
+const COPY = {
+  organization: {
+    title: () => 'Registration received',
+    lead: (name, email) => (
+      <>We've received the registration for <strong>{name}</strong> and sent a confirmation to <strong>{email}</strong>.</>
+    ),
+    review: 'We review your organisation',
+    last: 'The admin gets a "Set your password" email',
+    lastSub: 'Sign in, then add your team',
+  },
+  individual: {
+    title: (name) => (name ? `Request received, ${name}` : 'Request received'),
+    lead: (_name, email) => <>We've sent a confirmation to <strong>{email}</strong>.</>,
+    review: 'We review your request',
+    last: 'You get a "Set your password" email',
+    lastSub: 'Choose a password, then sign in',
+  },
+};
 
-const RegistrationCompleteDialog = (props) => {
-  let navigate = useNavigate()
+const RegistrationCompleteDialog = ({ open, onClose, kind = 'organization', name, email }) => {
+  const navigate = useNavigate();
+  const phone = useMediaQuery('(max-width:480px)');
+  const copy = COPY[kind] || COPY.organization;
 
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
-
-  const [fullWidth, setFullWidth] = React.useState(true);
-
-
-  const handleClose = () => {
-    props.setCompanyRegCompleteDialog(false);
-    navigate('/login')
-
+  const backToSignIn = () => {
+    onClose?.();
+    navigate('/login');
   };
 
-
-
   return (
-    <div >
-      <Dialog
-        fullWidth={fullWidth}
-        fullScreen={fullScreen}
-        open={props.opendialogregcomplete}
-
-        keepMounted
-        onClose={handleClose}
-        aria-labelledby="responsive-dialog-title"
-
-      >
-        <DialogContent >
-          <DialogContentText id="alert-dialog-description" className='text-center'>
-            <div className='d-flex justify-content-center m-0 bg-white  ' >
-              <img src={companylogo} alt='Organization logo' width='50%' />
-
-            </div>
-            <p className='text-center text-dark my-3' style={{fontSize:'13px'}}>Thank you for completing the sign-up process. Your account is now awaiting approval, and you can anticipate receiving feedback via the email address you provided within the next 24 hours. Once again, we appreciate your registration !!!</p>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClose} sx={PILL_OUTLINE_NEUTRAL}>Close</Button>
-          {/* <Button onClick={updateCompany} autoFocus>
-            Agree
-          </Button> */}
-        </DialogActions>
-      </Dialog>
-    </div>
+    <Dialog
+      open={open}
+      onClose={backToSignIn}
+      fullWidth
+      maxWidth={false}
+      aria-labelledby="reg-complete-title"
+      PaperProps={{
+        className: 'reg-complete',
+        sx: { maxWidth: 440, m: phone ? 2 : 4, borderRadius: '16px' },
+      }}
+    >
+      <div className="reg-complete-badge">{Icons.check(28)}</div>
+      <div>
+        <h2 id="reg-complete-title" className="auth-title">{copy.title(name)}</h2>
+        <p className="auth-lead">{copy.lead(name, email)}</p>
+      </div>
+      <ol className="reg-steps" aria-label="What happens next">
+        <li className="done">
+          <span className="reg-step-dot">{Icons.check(14)}</span>
+          <span>Confirmation email sent</span>
+        </li>
+        <li>
+          <span className="reg-step-dot">2</span>
+          <span>{copy.review}<small>Usually within 24 hours</small></span>
+        </li>
+        <li>
+          <span className="reg-step-dot">3</span>
+          <span>{copy.last}<small>{copy.lastSub}</small></span>
+        </li>
+      </ol>
+      <p className="auth-hint" style={{ margin: 0 }}>No email in a few minutes? Check your spam or junk folder.</p>
+      <button type="button" className="auth-btn" onClick={backToSignIn} autoFocus>
+        Back to sign in
+      </button>
+    </Dialog>
   );
-}
+};
 
-
-export default RegistrationCompleteDialog
+export default RegistrationCompleteDialog;

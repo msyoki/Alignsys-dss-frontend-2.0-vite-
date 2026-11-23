@@ -6,15 +6,14 @@ import { useContext, useEffect } from 'react'
 import "../../styles/App.css";
 import "../../styles/Login.css";
 import Alerts from '../../components/Alert';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import axios from 'axios'
 import RegistrationCompleteDialog from '../../components/dialogs/RegistrationCompleteDialog';
 import { registerLicense } from '@syncfusion/ej2-base';
 import { Button } from '@mui/material';
 import * as constants from '../../components/constants/constants'
 import { isValidEmail } from '../../utils/email'
-import logo from '../../images/ZFWHITE.webp'
-import logo2 from '../../images/ZFBLU.webp'
+import LoginBanner from '../../components/auth/LoginBanner.jsx'
 
 import InputLabel from '@mui/material/InputLabel';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -31,6 +30,8 @@ import { PILL_LARGE } from '../../components/common/pillButton';
 const NewCompany = () => {
   registerLicense('Mgo+DSMBPh8sVXJ0S0J+XE9HflRDX3xKf0x/TGpQb19xflBPallYVBYiSV9jS31TckVnWHlbcXFWT2NbVA==');
   let [opendialogregcomplete, setCompanyRegCompleteDialog] = useState(false)
+  let [loading, setLoading] = useState(false)
+  let [registered, setRegistered] = useState({ name: '', email: '' })
   const location = useLocation()
 
 
@@ -54,9 +55,11 @@ const NewCompany = () => {
     var admin_domain = user_email.slice((user_ind + 1), user_email.length);
 
 
+    const orgName = e.target.name.value.trim()
+    const orgEmail = e.target.email.value.trim()
     var data = JSON.stringify({
-      "name": e.target.name.value,
-      "email": e.target.email.value.trim()
+      "name": orgName,
+      "email": orgEmail
     });
 
     var config = {
@@ -69,9 +72,12 @@ const NewCompany = () => {
       data: data
     };
 
+    setLoading(true)
     axios(config)
       .then(function (response) {
         console.log(JSON.stringify(response.data));
+        setOpenAlert(false)
+        setRegistered({ name: response.data?.name || orgName, email: orgEmail })
         setCompanyRegCompleteDialog(true)
       })
       .catch(function (error) {
@@ -86,7 +92,8 @@ const NewCompany = () => {
           function () {
             setOpenAlert(false);
           }, 6000)
-      });
+      })
+      .finally(() => setLoading(false));
 
   }
 
@@ -110,25 +117,23 @@ const NewCompany = () => {
   return (
     <>
       <RegistrationCompleteDialog
-        opendialogregcomplete={opendialogregcomplete}
-        setCompanyRegCompleteDialog={setCompanyRegCompleteDialog}
-        alertmsg={alertmsg}
+        open={opendialogregcomplete}
+        onClose={() => setCompanyRegCompleteDialog(false)}
+        kind="organization"
+        name={registered.name}
+        email={registered.email}
       />
       <div className="login-container d-flex flex-column flex-md-row" style={{ minHeight: '100vh' }}>
         {/* Left Side - Form */}
         <div className="left-side d-flex align-items-center justify-content-center w-100 w-md-50 bg-white p-4">
-          <form onSubmit={register_company} className=" text-center ">
+          <form onSubmit={register_company} className="text-center text-dark w-100" style={{ maxWidth: '320px' }}>
             
-             <Box className="d-block d-md-none text-center mb-3">
-              <img src={logo2} alt="Logo" style={{ width: '300px' }} />
-
-            </Box>
-            <div className="d-flex justify-content-center align-items-center mb-3">
-              <h5 className="mb-0">
+             <div className="d-flex justify-content-center align-items-center my-4" style={{ color: '#2757aa' }}>
+              <h5 className="mb-0 text-dark">
                 REGISTER
               </h5>
-              <span className="d-block d-md-none ms-2" style={{ fontSize: '14px'}}>
-                to <strong>DSS</strong> Digital Signing Service
+              <span className="d-block d-md-none ms-2" style={{ fontSize: '14px' }}>
+                to  Digital Signing Service
               </span>
             </div>
             <Alerts alertseverity={alertseverity} alertmsg={alertmsg} openalert={openalert} setOpenAlert={setOpenAlert} />
@@ -140,7 +145,7 @@ const NewCompany = () => {
                     Organization name*
                   </InputLabel>
                   <Input
-                    style={{ fontSize: '14px' }}
+                    style={{ fontSize: '13px' }}
                     id="name"
                     startAdornment={
                       <InputAdornment position="start">
@@ -164,7 +169,7 @@ const NewCompany = () => {
                     Email*
                   </InputLabel>
                   <Input
-                    style={{ fontSize: '14px' }}
+                    style={{ fontSize: '13px' }}
                     id="email"
                     startAdornment={
                       <InputAdornment position="start">
@@ -213,49 +218,62 @@ const NewCompany = () => {
 
               </div> */}
 
-              <div className="text-center text-lg-start mt-2  row">
+              <div className="text-center mt-3 row">
                 <div className='col-lg-3 col-md-3 col-sm-3'> </div>
                 <div className='col-lg-6 col-md-6 col-sm-6'>
 
                   {/* <ButtonComponent type="submit" cssClass='e-custom-primary' className='mb-4 m-2' style={{ textTransform: 'none', width: '100%', padding: '10px' }} disabled={false}> REGISTER</ButtonComponent>
                 */}
-                               <Button
-                                 type="submit"
-                                 variant="contained"
-                                 className="my-3"
-                                 sx={{
-                                   ...PILL_LARGE,
-                                   color: '#fff',
-                                   backgroundColor: '#2757aa',
-                                   width: '100%',
-                                 }}
-                               >
-                                 REGISTER
-                               </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    className="mb-3"
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
+                    sx={{
+                      ...PILL_LARGE,
+                      width: '100%',
+                      backgroundColor: loading ? '#ccc' : '#2757aa',
+                      color: '#fff',
+                      '&:hover': {
+                        backgroundColor: loading ? '#ccc' : '#1a3a7a',
+                      },
+                    }}
+                  >
+                    {loading ? 'Registering ...' : 'REGISTER'}
+                  </Button>
                 </div>
                 <div className='col-lg-3 col-md-3 col-sm-3'> </div>
 
 
                 <br />
-                <p className="  mt-2 pt-1 mb-0">Already have an account? <Link to={'/login'} style={{ textDecoration: 'none', color: '#1C4690' }}><span className='m-1'>Login to my account</span></Link></p>
+                <div className="mt-3 text-center">
+                  <small style={{ fontSize: '13px' }}>
+                    Already have an account?{' '}
+                    <Link to="/login" style={{ color: '#2757aa', textDecoration: 'none' }}>
+                      Login to my account
+                    </Link>
+                  </small>
+                </div>
+
+                <div className="mt-4">
+                  <a
+                    href="https://edms.alignsys.tech"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '13px', color: '#2757aa', textDecoration: 'none' }}
+                  >
+                    EDMS - Electronic Document Management System
+                  </a>
+                </div>
               </div>
             </div>
           </form>
         </div>
 
+
         {/* Right Side - Banner */}
-        <div
-          className="d-none d-md-flex right-side bg w-100 w-md-50 flex-column justify-content-center align-items-center"
-          style={{
-            backgroundColor: '#007bff',
-            padding: '20px',
-          }}
-        >
-          <img src={logo} alt="Logo" width="300px" />
-          <p className="text-white mt-4" style={{ fontSize: '15px' }}>
-            <strong>DSS</strong> Digital Signing Service
-          </p>
-        </div>
+        <LoginBanner />
       </div>
 
 

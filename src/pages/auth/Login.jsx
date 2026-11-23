@@ -17,8 +17,7 @@ import Authcontext from '../../context/Authcontext.jsx';
 import TermsAndConditionsDialog from '../../components/dialogs/TermsAndConditionsDialog.jsx';
 import TimedAlert from '../../components/TimedAlert.jsx';
 import { Visibility, VisibilityOff, Key, Person } from '@mui/icons-material';
-import logo from '../../images/ZFWHITE.png';
-import logo2 from '../../images/ZFBLU.png';
+import LoginBanner from '../../components/auth/LoginBanner.jsx';
 
 import '../../styles/App.css';
 import '../../styles/Login.css';
@@ -215,7 +214,7 @@ const Login = () => {
                     backgroundColor: miniLoader ? '#ccc' : '#2757aa',
                     color: '#fff',
                     '&:hover': {
-                      backgroundColor: miniLoader ? '#ccc' : '#1e4794',
+                      backgroundColor: miniLoader ? '#ccc' : '#1a3a7a',
                     },
                   }}
                 >
@@ -258,61 +257,9 @@ const Login = () => {
           </form>
         </div>
 
+
         {/* Right Side - Banner */}
-        <div
-          className="d-none d-md-flex right-side w-100 w-md-50 flex-column justify-content-center align-items-center"
-          style={{
-            backgroundColor: '#2757aa',
-            padding: '40px 20px',
-            textAlign: 'center',
-          }}
-        >
-          <img
-            src={logo}
-            alt="Banner Logo"
-            style={{
-              width: '300px',
-              maxWidth: '80%',
-              filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.25))',
-            }}
-          />
-
-          <p
-            className="text-white mt-4"
-            style={{
-              fontSize: '18px',
-              fontWeight: 500,
-              opacity: 0.9,
-              letterSpacing: '0.5px',
-            }}
-          >
-            <strong style={{ fontSize: '20px' }}>DSS</strong> Digital Signing Service
-          </p>
-
-          <div
-            style={{
-              width: '60px',
-              height: '4px',
-              backgroundColor: 'white',
-              opacity: 0.5,
-              borderRadius: '2px',
-              marginTop: '10px',
-            }}
-          ></div>
-
-          <p
-            className="text-white mt-4"
-            style={{
-              fontSize: '14px',
-              maxWidth: '340px',
-              lineHeight: '1.6',
-              opacity: 0.85,
-            }}
-          >
-            Sign and manage documents digitally with secure, seamless workflow automation.
-          </p>
-        </div>
-
+        <LoginBanner />
       </div>
 
     </>

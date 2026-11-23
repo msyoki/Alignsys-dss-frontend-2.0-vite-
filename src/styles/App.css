@@ -181,7 +181,7 @@ body{
 }
 
 .e-custom-primary:hover{
-  background-color: #2757aa;
+  background-color: #1a3a7a;
   color: #fff;
   border-color: #495057;
   font-family: inherit;
@@ -398,6 +398,20 @@ body{
   color: white;
 }
 
+/* Bootstrap blue buttons use the brand blue, like every other button. */
+.btn-primary {
+  --bs-btn-bg: #2757aa; --bs-btn-border-color: #2757aa;
+  --bs-btn-hover-bg: #1a3a7a; --bs-btn-hover-border-color: #1a3a7a;
+  --bs-btn-active-bg: #1a3a7a; --bs-btn-active-border-color: #1a3a7a;
+  --bs-btn-disabled-bg: #2757aa; --bs-btn-disabled-border-color: #2757aa;
+}
+.btn-outline-primary {
+  --bs-btn-color: #2757aa; --bs-btn-border-color: #2757aa;
+  --bs-btn-hover-bg: #2757aa; --bs-btn-hover-border-color: #2757aa;
+  --bs-btn-active-bg: #1a3a7a; --bs-btn-active-border-color: #1a3a7a;
+  --bs-btn-disabled-color: #2757aa; --bs-btn-disabled-border-color: #2757aa;
+}
+
 .App-previewer {
   
   margin-top: 7%;
@@ -537,7 +551,7 @@ body{
 .custom-label {
   position: relative; /* Position relative for pseudo-element */
   display: inline-block;
-  background-color: #007bff; /* Button background color */
+  background-color: #2757aa; /* Button background color */
   color: #fff; /* Text color */
   padding: 8px 16px; /* Padding for the button */
   border-radius: 25px 0 0 25px; /* Rounded corners on the left */
@@ -561,7 +575,7 @@ body{
   appearance: none; /* Remove default styles */
   -webkit-appearance: none;
   -moz-appearance: none;
-  background-color: #007bff; /* Button background color */
+  background-color: #2757aa; /* Button background color */
   color: #fff; /* Text color */
   padding: 8px 16px; /* Padding for the button */
   border: none;
@@ -571,14 +585,14 @@ body{
 
 /* Style select options */
 .custom-select option {
-  background-color: #007bff; /* Option background color */
+  background-color: #2757aa; /* Option background color */
   color: #fff; /* Text color */
 }
 
 /* Hover effect */
 .custom-label:hover,
 .custom-select:hover {
-  background-color: #0056b3; /* Darker color on hover */
+  background-color: #1a3a7a; /* Darker color on hover */
 }
 
 

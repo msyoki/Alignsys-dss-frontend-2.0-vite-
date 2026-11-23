@@ -87,7 +87,7 @@ function FileUpload(props) {
       // Visible brand-blue outline so it reads as a button in the stacked list on a
       // white card. Side padding is 1px less to absorb the 1px border, keeping its
       // icon in line with the filled buttons above and below.
-      sx: { backgroundColor: '#fff', color: '#1C4690', border: '1px solid #2757aa', px: '19px', '&:hover': { backgroundColor: '#ecf4fc', borderColor: '#1C4690' } },
+      sx: { backgroundColor: '#fff', color: '#2757aa', border: '1px solid #2757aa', px: '19px', '&:hover': { backgroundColor: '#ecf4fc', borderColor: '#1a3a7a' } },
     },
     'e-custom-warning': {
       variant: 'contained',

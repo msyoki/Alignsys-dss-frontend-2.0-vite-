@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from "react-router-dom";
 import Authcontext from '../../context/Authcontext'
-import logo from '../../images/ZFWHITE.webp'
-import logo2 from '../../images/ZFBLU.webp'
+import LoginBanner from '../../components/auth/LoginBanner.jsx'
 import { useContext, useEffect } from 'react'
 import "../../styles/App.css";
 import "../../styles/Login.css";
@@ -13,7 +12,7 @@ import { registerLicense } from '@syncfusion/ej2-base';
 
 import * as constants from '../../components/constants/constants'
 import { isValidEmail } from '../../utils/email'
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import { Button } from '@mui/material';
 
 import InputLabel from '@mui/material/InputLabel';
@@ -28,7 +27,6 @@ import { Phone as PhoneIcon } from '@mui/icons-material';
 import { AddCard as AddCardIcon } from '@mui/icons-material';
 import NativeSelect from '@mui/material/NativeSelect';
 import { useNavigate } from 'react-router-dom';
-import LoadingMini from '../../components/loaders/LoadingMini';
 import { PILL_LARGE } from '../../components/common/pillButton';
 
 const NewIndividual = () => {
@@ -36,6 +34,7 @@ const NewIndividual = () => {
   let [opendialogregcomplete, setCompanyRegCompleteDialog] = useState(false)
   let navigate = useNavigate()
   let [loading, setLoading] = useState(false)
+  let [registered, setRegistered] = useState({ name: '', email: '' })
   const location = useLocation()
 
   const loginlogo = {
@@ -67,6 +66,8 @@ const NewIndividual = () => {
     var myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
 
+    const email = e.target.email.value.trim()
+    const first_name = e.target.fname.value.trim()
     var raw = JSON.stringify({
       "email": e.target.email.value.trim(),
       "first_name": e.target.fname.value,
@@ -95,10 +96,9 @@ const NewIndividual = () => {
 
     if (response && response.status === 201) {
       // A request: a super admin approves it, then a "Set your password" email follows.
-      setOpenAlert(true)
-      setAlertMsg("Request received. We've emailed you a confirmation; once your account is approved you'll get a link to set your password.")
-      setAlertSeverity('success')
-      setTimeout(function () { setOpenAlert(false); navigate('/login') }, 12000)
+      setOpenAlert(false)
+      setRegistered({ name: data.first_name || first_name, email: data.email || email })
+      setCompanyRegCompleteDialog(true)
       return
     }
     setOpenAlert(true)
@@ -133,31 +133,29 @@ const NewIndividual = () => {
   return (
     <>
       <RegistrationCompleteDialog
-        opendialogregcomplete={opendialogregcomplete}
-        setCompanyRegCompleteDialog={setCompanyRegCompleteDialog}
-        alertmsg={alertmsg}
+        open={opendialogregcomplete}
+        onClose={() => setCompanyRegCompleteDialog(false)}
+        kind="individual"
+        name={registered.name}
+        email={registered.email}
       />
       <div className="login-container d-flex flex-column flex-md-row" style={{ minHeight: '100vh' }}>
         {/* Left Side - Form */}
         <div className="left-side d-flex align-items-center justify-content-center w-100 w-md-50 bg-white p-4">
-          <form onSubmit={registeruser} className=" text-center ">
+          <form onSubmit={registeruser} className="text-center text-dark w-100" style={{ maxWidth: '320px' }}>
 
 
-            <Box className="d-block d-md-none text-center mb-3">
-              <img src={logo2} alt="Logo" style={{ width: '300px' }} />
-
-            </Box>
-            <div className="d-flex justify-content-center align-items-center mb-3">
-              <h5 className="mb-0">
+            <div className="d-flex justify-content-center align-items-center my-4" style={{ color: '#2757aa' }}>
+              <h5 className="mb-0 text-dark">
                 REGISTER
               </h5>
-              <span className="d-block d-md-none ms-2" style={{ fontSize: '14px'}}>
-                to <strong>DSS</strong> Digital Signing Service
+              <span className="d-block d-md-none ms-2" style={{ fontSize: '14px' }}>
+                to  Digital Signing Service
               </span>
             </div>
             <Alerts alertseverity={alertseverity} alertmsg={alertmsg} openalert={openalert} setOpenAlert={setOpenAlert} />
             <div className='row'>
-              <div className="form-group my-2 col-md-6 col-sm-12">
+              <div className="form-group my-2 col-12">
 
                 <div className="input-group mt-2">
 
@@ -166,7 +164,7 @@ const NewIndividual = () => {
                       First Name*
                     </InputLabel>
                     <Input
-                      style={{ fontSize: '14px' }}
+                      style={{ fontSize: '13px' }}
                       id="fname"
                       startAdornment={
                         <InputAdornment position="start">
@@ -181,7 +179,7 @@ const NewIndividual = () => {
                   </FormControl>
                 </div>
               </div>
-              <div className="form-group my-2 col-md-6 col-sm-12">
+              <div className="form-group my-2 col-12">
 
                 <div className="input-group mt-2">
 
@@ -190,7 +188,7 @@ const NewIndividual = () => {
                       Last Name*
                     </InputLabel>
                     <Input
-                      style={{ fontSize: '14px' }}
+                      style={{ fontSize: '13px' }}
                       id="lname"
                       startAdornment={
                         <InputAdornment position="start">
@@ -207,7 +205,7 @@ const NewIndividual = () => {
               </div>
             </div>
             <div className='row'>
-              <div className="form-group my-2 col-md-6 col-sm-12">
+              <div className="form-group my-2 col-12">
 
                 <div className="input-group mt-2">
 
@@ -216,7 +214,7 @@ const NewIndividual = () => {
                       Phone*
                     </InputLabel>
                     <Input
-                      style={{ fontSize: '14px' }}
+                      style={{ fontSize: '13px' }}
                       id="phone"
                       startAdornment={
                         <InputAdornment position="start">
@@ -234,7 +232,7 @@ const NewIndividual = () => {
                   </FormControl>
                 </div>
               </div>
-              <div className="form-group my-2 col-md-5 col-sm-12">
+              <div className="form-group my-2 col-12">
 
                 <div className="input-group mt-2 mb-1">
 
@@ -244,7 +242,7 @@ const NewIndividual = () => {
                       Email*
                     </InputLabel>
                     <Input
-                      style={{ fontSize: '14px' }}
+                      style={{ fontSize: '13px' }}
                       id="email"
                       startAdornment={
                         <InputAdornment position="start">
@@ -264,7 +262,7 @@ const NewIndividual = () => {
               </div>
             </div>
 
-            {loading ? <LoadingMini /> :
+            {
               <div className="form-group ">
                 {/* 
                 <div className="input-group mt-2 mb-3">
@@ -294,7 +292,7 @@ const NewIndividual = () => {
                 </div> */}
 
 
-                <div className="text-center text-lg-start  pt-2 row">
+                <div className="text-center mt-3 row">
                   <div className='col-lg-3 col-md-3 col-sm-3'> </div>
 
                   <div className='col-lg-6 col-md-6 col-sm-6'>
@@ -303,21 +301,44 @@ const NewIndividual = () => {
                     <Button
                       type="submit"
                       variant="contained"
-                      className="my-3"
+                      className="mb-3"
+                      disabled={loading}
+                      startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
                       sx={{
                         ...PILL_LARGE,
-                        color: '#fff',
-                        backgroundColor: '#2757aa',
                         width: '100%',
+                        backgroundColor: loading ? '#ccc' : '#2757aa',
+                        color: '#fff',
+                        '&:hover': {
+                          backgroundColor: loading ? '#ccc' : '#1a3a7a',
+                        },
                       }}
                     >
-                      REGISTER
+                      {loading ? 'Registering ...' : 'REGISTER'}
                     </Button>
                   </div>
                   <div className='col-lg-3 col-md-3 col-sm-3'> </div>
 
                   <br />
-                  <p className="  mt-2 pt-1 mb-0">Already have an account? <Link to={'/login'} style={{ textDecoration: 'none', color: '#1C4690' }}><span className='m-1'>Login to my account</span></Link></p>
+                  <div className="mt-3 text-center">
+                    <small style={{ fontSize: '13px' }}>
+                      Already have an account?{' '}
+                      <Link to="/login" style={{ color: '#2757aa', textDecoration: 'none' }}>
+                        Login to my account
+                      </Link>
+                    </small>
+                  </div>
+
+                  <div className="mt-4">
+                    <a
+                      href="https://edms.alignsys.tech"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '13px', color: '#2757aa', textDecoration: 'none' }}
+                    >
+                      EDMS - Electronic Document Management System
+                    </a>
+                  </div>
                 </div>
               </div>
 
@@ -326,19 +347,9 @@ const NewIndividual = () => {
           </form>
         </div>
 
+
         {/* Right Side - Banner */}
-        <div
-          className="d-none d-md-flex right-side bg w-100 w-md-50 flex-column justify-content-center align-items-center"
-          style={{
-            backgroundColor: '#007bff',
-            padding: '20px',
-          }}
-        >
-          <img src={logo} alt="Logo" width="300px" />
-          <p className="text-white mt-4" style={{ fontSize: '15px' }}>
-            <strong>DSS</strong> Digital Signing Service
-          </p>
-        </div>
+        <LoginBanner />
       </div>
     </>
 

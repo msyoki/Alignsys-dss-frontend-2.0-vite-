@@ -35,7 +35,7 @@ export default function ViewerToolbar({
       }}
     >
       <Tooltip title={asideOpen ? 'Hide page list' : 'Show page list'}>
-        <button type="button" onClick={onToggleAside} aria-pressed={asideOpen} style={{ ...pillBtn, display: 'inline-flex', alignItems: 'center', gap: 6, background: asideOpen ? '#eef4ff' : '#fff', color: asideOpen ? '#1c4690' : '#4b5563' }}>
+        <button type="button" onClick={onToggleAside} aria-pressed={asideOpen} style={{ ...pillBtn, display: 'inline-flex', alignItems: 'center', gap: 6, background: asideOpen ? '#eef4ff' : '#fff', color: asideOpen ? '#2757aa' : '#4b5563' }}>
           {asideIcon}
           Pages
         </button>

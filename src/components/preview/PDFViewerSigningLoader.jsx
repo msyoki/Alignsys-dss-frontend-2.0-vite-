@@ -432,10 +432,10 @@ function PDFViewerSigningLoader(props) {
                                                         variant="outlined"
                                                         color="inherit"
                                                         onClick={placeSignatureAgain}
-                                                        startIcon={<FaMapMarkerAlt style={{ color: '#1C4690' }} size={iconSize} />}
+                                                        startIcon={<FaMapMarkerAlt style={{ color: '#2757aa' }} size={iconSize} />}
                                                         sx={pillBtn}
                                                     >
-                                                        <span style={{ color: '#1C4690' }}> Place {isStamp ? 'Stamp' : 'Signature'} Again</span>
+                                                        <span style={{ color: '#2757aa' }}> Place {isStamp ? 'Stamp' : 'Signature'} Again</span>
 
                                                     </Button>
                                                 </Tooltip>

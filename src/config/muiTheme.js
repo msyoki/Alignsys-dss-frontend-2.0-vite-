@@ -1,12 +1,17 @@
 import { createTheme } from '@mui/material/styles';
 
 /**
- * App-wide MUI theme. Only adds the modern switch from Alignsys EDMS; every
- * other component keeps MUI's defaults (same as having no theme provider).
+ * App-wide MUI theme: the brand blue as the primary colour (so default
+ * contained, outlined and text buttons are on-brand) and the modern switch
+ * from Alignsys EDMS. Everything else keeps MUI's defaults.
  */
 const BRAND = '#2757aa';
+const BRAND_DARK = '#1a3a7a';
 
 const muiTheme = createTheme({
+  palette: {
+    primary: { main: BRAND, dark: BRAND_DARK, contrastText: '#fff' },
+  },
   components: {
     // Modern pill switch: the thumb sits inside a filled track, slides smoothly,
     // no ripple, and shows a focus ring for keyboard users. size="small" is 34x20.

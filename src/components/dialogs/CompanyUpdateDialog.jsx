@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useContext } from 'react';
 import { FaBuilding } from 'react-icons/fa';
-import { Box, Dialog, DialogContent, Switch } from '@mui/material';
+import { Box, Dialog, DialogContent, Switch, Typography } from '@mui/material';
 import axios from 'axios';
 import Alerts from '../Alert.jsx';
 import AuthContext from '../../context/Authcontext.jsx';
@@ -85,16 +85,17 @@ const CompanyUpdateDialog = (props) => {
           <PropertyRow label="Company">
             <PropertyValue>{props.companyname}</PropertyValue>
           </PropertyRow>
-          <PropertyRow label="Account status" htmlFor="company-active">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Switch id="company-active" checked={isActive} onChange={handleToggle} color="primary" name="is_active" size="small" />
-              <StatusChip tone={isActive ? 'success' : 'neutral'}>{isActive ? 'Active' : 'Inactive'}</StatusChip>
+          <PropertyRow label="Account status" alignTop>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+              <StatusChip tone={isActive ? 'success' : 'neutral'}>{isActive ? 'Active (licensed)' : 'Inactive (no valid licence)'}</StatusChip>
             </Box>
+            <Typography sx={{ fontSize: 11.5, color: '#6b7280' }}>
+              An organisation is active while it has a licence that hasn&apos;t expired. Change it with the Licence button in the Organisations table.
+            </Typography>
           </PropertyRow>
         </DialogContent>
         <DialogFooter>
-          <SecondaryButton onClick={handleClose} disabled={busy}>Cancel</SecondaryButton>
-          <PrimaryButton type="submit" loading={busy}>{busy ? 'Saving…' : 'Save changes'}</PrimaryButton>
+          <SecondaryButton onClick={handleClose} disabled={busy}>Close</SecondaryButton>
         </DialogFooter>
       </form>
     </Dialog>

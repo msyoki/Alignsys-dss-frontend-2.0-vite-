@@ -15,6 +15,7 @@ import useProfileEditor from '../../hooks/useProfileEditor'
 import { TiArrowBack } from 'react-icons/ti'
 import { FaShieldAlt, FaChartLine, FaGlobeAfrica } from 'react-icons/fa'
 import { companyLogoUrl } from '../../utils/companyLogo'
+import { isValidEmail } from '../../utils/email'
 import AppShell from '../../components/layout/AppShell'
 import BrandLogo from '../../components/common/BrandLogo'
 import Users from '../../components/Users'
@@ -286,8 +287,7 @@ function AdminDashboard() {
     const handleTogglePassword = () => setShowPassword(prev => !prev)
 
     // --- Signer logic ---
-    const validateEmail = email =>
-        /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/.test(email)
+    const validateEmail = isValidEmail
 
     const removeSigner = useCallback((e, email) => {
         setSigners(prev => {
@@ -794,6 +794,9 @@ function AdminDashboard() {
                                         users={users}
                                         setSelectedUserId={setSelectedUserId}
                                         licensing
+                                        canManageRoles
+                                        canDelete
+                                        onUsersChanged={getusers}
                                         loading={loadingUsers}
                                         style={{ flex: 1, minHeight: 0, height: '100%' }}
                                     />

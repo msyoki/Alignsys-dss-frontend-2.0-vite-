@@ -12,6 +12,7 @@ import RegistrationCompleteDialog from '../../components/dialogs/RegistrationCom
 import { registerLicense } from '@syncfusion/ej2-base';
 
 import * as constants from '../../components/constants/constants'
+import { isValidEmail } from '../../utils/email'
 import { Box } from '@mui/material';
 import { Button } from '@mui/material';
 
@@ -54,6 +55,12 @@ const NewIndividual = () => {
 
   let registeruser = async (e) => {
     e.preventDefault()
+    if (!isValidEmail(e.target.email.value.trim())) {
+      setAlertMsg('Enter a valid email address, e.g. name@company.com.')
+      setAlertSeverity('error')
+      setOpenAlert(true)
+      return
+    }
 
 
 
@@ -61,7 +68,7 @@ const NewIndividual = () => {
     myHeaders.append("Content-Type", "application/json");
 
     var raw = JSON.stringify({
-      "email": e.target.email.value,
+      "email": e.target.email.value.trim(),
       "first_name": e.target.fname.value,
       "last_name": e.target.lname.value,
       "phone": e.target.phone.value,
@@ -74,39 +81,32 @@ const NewIndividual = () => {
       redirect: 'follow'
     };
 
-    let response = await fetch(`${constants.devApiBaseUrl}/api/individual/new/user/`, requestOptions)
-    if (response.status === 201) {
+    // Never left on "loading": every outcome, including no network, ends it.
+    let response = null
+    let data = {}
+    try {
+      response = await fetch(`${constants.devApiBaseUrl}/api/individual/new/user/`, requestOptions)
+      data = await response.json().catch(() => ({}))
+    } catch (err) {
+      response = null
+    } finally {
       setLoading(false)
-      setOpenAlert(true)
-      setAlertMsg('account created successfully, please check your email !!!')
-      setAlertSeverity('success')
-      setTimeout(
-        function () {
-          setOpenAlert(false);
+    }
 
-          navigate('/')
-        }, 12000)
-    }
-    else if (response.status === 400) {
-      setLoading(false)
+    if (response && response.status === 201) {
+      // A request: a super admin approves it, then a "Set your password" email follows.
       setOpenAlert(true)
-      setAlertMsg('Account with email already exists !!!')
-      setAlertSeverity('error')
-      setTimeout(
-        function () {
-          setOpenAlert(false);
-        }, 5000)
+      setAlertMsg("Request received. We've emailed you a confirmation; once your account is approved you'll get a link to set your password.")
+      setAlertSeverity('success')
+      setTimeout(function () { setOpenAlert(false); navigate('/login') }, 12000)
+      return
     }
-    else {
-      setLoading(false)
-      setOpenAlert(true)
-      setAlertMsg('Something went wrong, please try again later or contact admin')
-      setAlertSeverity('error')
-      setTimeout(
-        function () {
-          setOpenAlert(false);
-        }, 5000)
-    }
+    setOpenAlert(true)
+    setAlertMsg(!response
+      ? "We couldn't reach the server. Check your connection and try again."
+      : (data.error || Object.values(data.fields || {}).join(' ') || 'Registration failed. Please try again.'))
+    setAlertSeverity('error')
+    setTimeout(function () { setOpenAlert(false) }, 7000)
 
 
 

@@ -15,7 +15,7 @@ import BrandLogo from '../../components/common/BrandLogo';
 import '../../styles/AdminDashboard.css';
 import * as constants from '../../components/constants/constants';
 import IndividualAccounts from '../../components/IndividualAccounts';
-import Users2 from '../../components/Users';
+import SuperAdminUsers from '../../components/admin/SuperAdminUsers';
 import Companies2 from '../../components/Companies2';
 import NewCompanies2 from '../../components/NewCompanies2';
 import Tabs from '@mui/material/Tabs';
@@ -221,7 +221,7 @@ function SuperAdminDashboard() {
       key: 'accounts', label: 'Accounts', tabs: [
         { index: 0, label: 'Organisations', Icon: FaBuilding, load: getCompanies },
         { index: 3, label: 'Pending Approval', Icon: FaInbox, load: getNewCompanies },
-        { index: 1, label: 'Organisation Admins', Icon: FaUsers, load: getUsers },
+        { index: 1, label: 'Users', Icon: FaUsers, load: getCompanies },
         { index: 2, label: 'Individual Accounts', Icon: FaCircleUser, load: getIndividualUsers },
       ],
     },
@@ -386,23 +386,17 @@ function SuperAdminDashboard() {
                 </div>
               </CustomTabPanel>
               <CustomTabPanel value={tab} index={1} className='admin-tabpanel' fill>
-                <PanelHeader title="Admin accounts" subtitle="Organisation administrators across all companies." />
-                <div id='Admin Users' className='admin-grid'>
-                  <Users2
-                    getUser={getUser}
-                    setCurrentEditUserAdmin={setCurrentEditUserAdmin}
-                    setCurrentEditUserPhone={setCurrentEditUserPhone}
-                    setCurrentEditUserLast={setCurrentEditUserLast}
-                    setCurrentEditUserFirst={setCurrentEditUserFirst}
-                    setCurrentEditUser={setCurrentEditUser}
-                    setCurrentEditUserEmail={setCurrentEditUserEmail}
-                    setCurrentEditUserActive={setCurrentEditUserActive}
-                    setOpenDialogUpdateUser={setOpenDialogUpdateUser}
-                    companyid={user.companyid}
-                    getUsers={getUsers}
-                    setUsers={setUsers}
-                    users={users}
-                  />
+                <PanelHeader title="Users" subtitle="Any organisation's users: licences, admin rights, import, edit and delete." />
+                <div id='Users' className='admin-grid'>
+                  {/* Replaces the old admin-only list, whose edit button didn't work. */}
+                  {tab === 1 && (
+                    <SuperAdminUsers
+                      companies={companies}
+                      setAlertMsg={setAlertMsg}
+                      setAlertSeverity={setAlertSeverity}
+                      setOpenAlert={setOpenAlert}
+                    />
+                  )}
                 </div>
               </CustomTabPanel>
               <CustomTabPanel value={tab} index={2} className='admin-tabpanel' fill>

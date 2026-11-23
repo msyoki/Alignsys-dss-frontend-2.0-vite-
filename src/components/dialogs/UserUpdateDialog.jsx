@@ -1,9 +1,11 @@
 import * as React from 'react';
 import { FaEnvelope, FaPen, FaPhone, FaUser } from 'react-icons/fa';
-import { Box, Dialog, DialogContent, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Box, Dialog, DialogContent, Switch, TextField, Typography } from '@mui/material';
 import axios from 'axios';
 import * as constants from '../constants/constants';
 import AuthContext from '../../context/Authcontext.jsx';
+import { isValidEmail } from '../../utils/email';
+import { accountError, changeUserEmail } from '../../api/accounts';
 import { DialogFooter, DialogHeader, PrimaryButton, PropertyRow, SecondaryButton, StatusChip, fieldIcon, fieldSx } from '../common/dialogKit';
 import '../../styles/App.css';
 
@@ -23,6 +25,34 @@ const UserUpdateDialog = (props) => {
     if (props.opendialogupdateuser) setActive(userIsActive);
   }, [props.opendialogupdateuser, userIsActive]);
 
+  // Correcting a mistyped email: only for someone who has never signed in
+  // (has_signed_in === false). A new welcome email goes to the corrected address.
+  const canFixEmail = selectedUser?.has_signed_in === false;
+  const [emailDraft, setEmailDraft] = React.useState('');
+  const [emailBusy, setEmailBusy] = React.useState(false);
+  const [emailMsg, setEmailMsg] = React.useState(null); // { severity, text }
+  React.useEffect(() => {
+    if (props.opendialogupdateuser) { setEmailDraft(selectedUser?.email || ''); setEmailMsg(null); }
+  }, [props.opendialogupdateuser, selectedUser?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const draft = emailDraft.trim();
+  const draftChanged = draft.toLowerCase() !== String(selectedUser?.email || '').toLowerCase();
+  const draftInvalid = draft !== '' && !isValidEmail(draft);
+
+  const fixEmail = () => {
+    setEmailBusy(true);
+    setEmailMsg(null);
+    changeUserEmail(authTokens?.access, selectedUser.id, draft)
+      .then((res) => {
+        setEmailMsg(res.email_sent === false
+          ? { severity: 'warning', text: `Email changed to ${res.email}, but the welcome email could not be sent. Ask them to use "Forgot password" on the sign-in page.` }
+          : { severity: 'success', text: `Email changed to ${res.email}. A new welcome email with a link to set their password was sent there.` });
+        props.getusers?.();
+      })
+      .catch((err) => setEmailMsg({ severity: 'error', text: accountError(err) }))
+      .finally(() => setEmailBusy(false));
+  };
+
   const handleClose = () => {
     props.setOpenDialogUpdateUser(false);
   };
@@ -35,7 +65,7 @@ const UserUpdateDialog = (props) => {
     if (e.target.fname.value) data.append('first_name', e.target.fname.value);
     if (e.target.lname.value) data.append('last_name', e.target.lname.value);
     if (e.target.phone.value) data.append('phone', e.target.phone.value);
-    if (e.target.is_active.value) data.append('is_active', e.target.is_active.value);
+    // Access follows the licence (Users table > Licence), so there's no "active" switch here any more.
 
     setBusy(true);
     // Signed-in request: /api/user/<id> no longer accepts anonymous changes.
@@ -75,8 +105,30 @@ const UserUpdateDialog = (props) => {
             Leave a field blank to keep its current value.
           </Typography>
 
-          <PropertyRow label="Email" htmlFor="uu-email">
-            <TextField id="uu-email" value={selectedUser.email || ''} fullWidth size="small" InputProps={{ readOnly: true, ...fieldIcon(<FaEnvelope />) }} sx={fieldSx(true)} />
+          {emailMsg && <Alert severity={emailMsg.severity} sx={{ mb: 1.5, fontSize: 13 }}>{emailMsg.text}</Alert>}
+          <PropertyRow label="Email" htmlFor="uu-email" alignTop={canFixEmail}>
+            {canFixEmail ? (
+              <>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <TextField
+                    id="uu-email" value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} size="small" type="email"
+                    disabled={emailBusy} error={draftInvalid}
+                    InputProps={fieldIcon(<FaEnvelope />)} sx={{ ...fieldSx(), flex: '1 1 220px' }}
+                    inputProps={{ 'aria-describedby': 'uu-email-help' }}
+                  />
+                  <SecondaryButton onClick={fixEmail} disabled={emailBusy || !draftChanged || draftInvalid || !draft}>
+                    {emailBusy ? 'Saving…' : 'Correct email'}
+                  </SecondaryButton>
+                </Box>
+                <Typography id="uu-email-help" sx={{ fontSize: 11.5, color: draftInvalid ? '#b42318' : '#6b7280', mt: 0.5 }}>
+                  {draftInvalid
+                    ? 'Enter a valid email address, e.g. name@company.com.'
+                    : "They haven't signed in yet, so you can fix a mistyped email. A new welcome email goes to the corrected address."}
+                </Typography>
+              </>
+            ) : (
+              <TextField id="uu-email" value={selectedUser.email || ''} fullWidth size="small" InputProps={{ readOnly: true, ...fieldIcon(<FaEnvelope />) }} sx={fieldSx(true)} />
+            )}
           </PropertyRow>
           <PropertyRow label="First name" htmlFor="uu-fname">
             <TextField id="uu-fname" name="fname" fullWidth size="small" placeholder={selectedUser.first_name || 'First name'} InputProps={fieldIcon(<FaUser />)} sx={fieldSx()} />
@@ -97,13 +149,15 @@ const UserUpdateDialog = (props) => {
               sx={fieldSx()}
             />
           </PropertyRow>
-          <PropertyRow label="Account status" htmlFor="uu-active">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Switch id="uu-active" checked={active} onChange={(e) => setActive(e.target.checked)} size="small" color="primary" />
-              <StatusChip tone={active ? 'success' : 'neutral'}>{active ? 'Active' : 'Disabled'}</StatusChip>
-              {/* Same field the form always sent: is_active = "true" | "false" */}
-              <input type="hidden" name="is_active" value={active ? 'true' : 'false'} />
+          <PropertyRow label="Access" alignTop>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+              {selectedUser.is_licensed
+                ? <StatusChip tone="success">Licensed</StatusChip>
+                : <StatusChip tone="neutral">No licence</StatusChip>}
             </Box>
+            <Typography sx={{ fontSize: 11.5, color: '#6b7280' }}>
+              Someone can use Alignsys while they hold a licence. Assign or withdraw it with the Licence switch in the Users table.
+            </Typography>
           </PropertyRow>
         </DialogContent>
         <DialogFooter>

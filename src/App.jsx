@@ -33,6 +33,7 @@ import NewIndividual from "./pages/auth/NewIndividual.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import PasswordResetConfirm from "./pages/auth/PasswordResetConfirm.jsx";
 import PasswordResetRequest from "./pages/auth/PasswordResetRequest.jsx";
+import ChangePassword from "./pages/auth/ChangePassword.jsx";
 import QRPreview from "./pages/QRPreview.jsx";
 
 // M-Files "send for others" integration (public: the DSS session comes in the link).
@@ -48,6 +49,7 @@ function App() {
           <Route path="/" exact={true} element={<PrivateRoute><Dashboard/></PrivateRoute> } />
           <Route path="/reset/:uid/:token" element={<PasswordResetConfirm/>}  />
           <Route path="/password-reset" element={<PasswordResetRequest/>}  />
+          <Route path="/change-password" element={<ChangePassword/>}  />
           <Route element={<Login/>} path="/login"/>
           <Route element={<NewCompany/>} path="/company/register"/>
           <Route element={<NewIndividual/>} path="/individual/register"/>

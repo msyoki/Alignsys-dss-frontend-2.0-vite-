@@ -1,7 +1,9 @@
 import React, { useContext, useState } from 'react';
 import autoSizeColumns from './common/autoSizeColumns';
 import Box from '@mui/material/Box';
-import { FaToggleOn, FaToggleOff } from 'react-icons/fa';
+import { FaToggleOn, FaToggleOff, FaIdCard } from 'react-icons/fa';
+import TableIconButton from './common/TableIconButton';
+import CompanyLicenseDialog from './admin/CompanyLicenseDialog';
 import Switch from '@mui/material/Switch';
 
 import {
@@ -25,6 +27,8 @@ function Companies2(props) {
   // Status change waiting for confirmation: { row, next } (next = true to activate).
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Organisation whose licence dialog is open: { id, name }
+  const [licenceFor, setLicenceFor] = useState(null);
 
   const alertUser = (msg, severity, ms) => {
     if (!props.setOpenAlert) return;
@@ -104,6 +108,20 @@ function Companies2(props) {
       filterable: true,
       sortable: true,
     },
+    {
+      field: 'licence',
+      headerName: 'Licence',
+      width: 90,
+      sortable: false,
+      filterable: false,
+      disableExport: true,
+      // Approved organisations only: approval issues the first licence.
+      renderCell: (params) => (isTrue(params.row.approved) ? (
+        <TableIconButton title={`Licence for ${params.row.name || 'this organisation'}`} onClick={() => setLicenceFor({ id: params.row.id, name: params.row.name })}>
+          <FaIdCard />
+        </TableIconButton>
+      ) : null),
+    },
 
 
   ];
@@ -152,6 +170,8 @@ function Companies2(props) {
         <PropertyRow label="Admin email"><PropertyValue>{pending?.row?.email}</PropertyValue></PropertyRow>
       </ConfirmDialog>
 
+
+      <CompanyLicenseDialog open={Boolean(licenceFor)} company={licenceFor} onClose={() => setLicenceFor(null)} />
 
       <Box sx={{ flex: 1, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', fontSize: '10px' }}>
         <DataGrid

@@ -793,6 +793,7 @@ function AdminDashboard() {
                                         companyid={user.companyid}
                                         users={users}
                                         setSelectedUserId={setSelectedUserId}
+                                        licensing
                                         loading={loadingUsers}
                                         style={{ flex: 1, minHeight: 0, height: '100%' }}
                                     />

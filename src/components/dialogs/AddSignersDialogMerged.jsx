@@ -142,6 +142,7 @@ const AddSignersDialogMerged = (props) => {
   // --- Refs ---
   const selectRef = useRef();
   const emailInputRef = useRef();
+  const [emailValid, setEmailValid] = useState(false); // enables the "Add" button
   const phoneNumberRef = useRef();
   const wfTitleRef = useRef();
   const assignmentDescRef = useRef();
@@ -259,6 +260,7 @@ const AddSignersDialogMerged = (props) => {
     setSelectedAnnotationId(null);
     setChecked2(false);
     if (emailInputRef.current) emailInputRef.current.value = '';
+    setEmailValid(false);
     if (phoneNumberRef.current) phoneNumberRef.current.value = '';
     if (phoneCodeRef.current) phoneCodeRef.current.value = '';
     if (wfTitleRef.current) wfTitleRef.current.value = '';
@@ -398,6 +400,7 @@ const AddSignersDialogMerged = (props) => {
 
     setSigners((prev) => [...prev, signer]);
     emailInputRef.current.value = '';
+    setEmailValid(false);
     if (checked && phoneNumberRef.current) phoneNumberRef.current.value = '';
     setChecked(false);
     setChecked3(false);
@@ -580,11 +583,34 @@ const AddSignersDialogMerged = (props) => {
               <Typography sx={sectionSx}>Add a signer</Typography>
               <Box>
                 <Typography component="label" htmlFor="as-email" sx={labelSx}>Email</Typography>
-                <TextField
-                  id="as-email" inputRef={emailInputRef} type="email" size="small" fullWidth
-                  placeholder="name@example.com" sx={{ ...fieldSx(), '& .MuiInputBase-root': { ...fieldSx()['& .MuiInputBase-root'], bgcolor: '#fff' } }}
-                  inputProps={{ 'aria-label': 'Signer email' }}
-                />
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'stretch' }}>
+                  <TextField
+                    id="as-email" inputRef={emailInputRef} type="email" size="small" fullWidth
+                    placeholder="name@example.com" sx={{ ...fieldSx(), flex: '1 1 auto', minWidth: 0, '& .MuiInputBase-root': { ...fieldSx()['& .MuiInputBase-root'], bgcolor: '#fff' } }}
+                    inputProps={{ 'aria-label': 'Signer email' }}
+                    onChange={(e) => setEmailValid(validateEmail(e.target.value.trim()))}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={loadingAddSigner || !emailValid}
+                    aria-label="Add to signing order"
+                    startIcon={loadingAddSigner ? <CircularProgress size={12} color="inherit" /> : <FaPlus />}
+                    sx={{
+                      ...PILL_OUTLINE,
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap',
+                      // Solid theme blue once the email is valid; PILL_OUTLINE's grey disabled look otherwise.
+                      backgroundColor: '#2757aa',
+                      color: '#fff',
+                      '&:hover': { backgroundColor: '#1a3a7a', borderColor: '#1a3a7a', boxShadow: 'none' },
+                    }}
+                  >
+                    Add
+                  </Button>
+                </Box>
+                <Typography sx={{ fontSize: 11.5, color: '#6D7386', mt: 0.5 }}>
+                  Enter a valid email, then press Add or Enter to put this signer in the signing order.
+                </Typography>
               </Box>
 
               <Box>
@@ -641,15 +667,6 @@ const AddSignersDialogMerged = (props) => {
               )}
 
               {/* "Signer must log in" (checked3, v1) stays hidden, as before the redesign. */}
-
-              <Button
-                type="submit"
-                disabled={loadingAddSigner}
-                startIcon={loadingAddSigner ? <CircularProgress size={12} color="inherit" /> : <FaPlus />}
-                sx={{ ...PILL_OUTLINE, width: '100%' }}
-              >
-                Add to signing order
-              </Button>
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, color: '#6D7386', fontSize: 12 }}>

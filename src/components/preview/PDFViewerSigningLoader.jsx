@@ -27,6 +27,7 @@ function PDFViewerSigningLoader(props) {
     const navigate = useNavigate();
     // const containerRef = useRef(null);
     const [textAnnotation, setTextAnnotations] = useState([])
+    const [signedAt, setSignedAt] = useState(null) // when Finish was clicked
     const [isStamp, setIsStamp] = useState(false)
     const [openSignatureOptions, setOpenSignatureOptions] = React.useState(false);
     const [hasSignature, setSignatureExists] = useState(false)
@@ -222,6 +223,8 @@ function PDFViewerSigningLoader(props) {
     }
 
     const completeSigning = async () => {
+        // The moment Finish was clicked; sent as the signing timestamp.
+        setSignedAt(new Date());
         if (props.authenticateUser) {
             viewAnnotations()
             props.setFileLocked(true)
@@ -283,6 +286,8 @@ function PDFViewerSigningLoader(props) {
                 opendialogloading={annotatingDocument}
                 msg="Signing document"
                 detail="Applying your signature and securing the document. This usually takes a few seconds."
+                variant="signing"
+                fileName={props.docname}
             />
             {/* <LoadingDialog percentage={loadingPercentage} opendialogloading={loading} msg={`Loading ${numPages} pages...`} /> */}
             <OtpDialog
@@ -306,6 +311,7 @@ function PDFViewerSigningLoader(props) {
                 setOpenConfirmCompleteDialog={props.setOpenConfirmCompleteDialog}
                 completeSigning={props.handleClickOpenDialogOtp}
                 textAnnotation={textAnnotation}
+                signedAt={signedAt}
                 fileurl={props.fileurl}
                 signerguid={props.signerguid}
                 ip={props.ip}
@@ -334,6 +340,8 @@ function PDFViewerSigningLoader(props) {
                 signonePage={props.signonePage}
                 signAllpages={props.signAllpages}
                 isStamp={isStamp}
+                numPages={numPages}
+                docname={props.docname}
             />
 
             <SignatureDialog
@@ -370,6 +378,7 @@ function PDFViewerSigningLoader(props) {
                 isStamp={isStamp}
                 setOpenDialogSignBoxes={setOpenDialogSignBoxes}
                 clickedSignatureBox={props.clickedSignatureBox}
+                multipage={props.multipage}
             />
 
             <div className="row bg-white shadow-lg p-2 align-items-center signing-toolbar">

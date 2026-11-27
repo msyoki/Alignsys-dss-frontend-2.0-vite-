@@ -73,10 +73,28 @@ export const formatPattern = (value, pattern, tz = displayTimeZone) => {
   }[t]));
 };
 
-/** Locale date and time in the display time zone (replaces Date#toLocaleString). */
+/** "Nairobi" for Africa/Nairobi, "New York" for America/New_York, "UTC" for UTC. */
+export const zonePlace = (tz = displayTimeZone) => String(tz || 'UTC').split('/').pop().replace(/_/g, ' ');
+
+/**
+ * The app's date and time format, with the place and UTC offset of the zone:
+ *   formatFull(value) -> "18/Nov/2026 :22:20:24 Nairobi (UTC+03:00)"
+ * Same text as the signature stamp drawn by the backend.
+ */
+export const formatFull = (value, tz = displayTimeZone) => {
+  const d = toDate(value);
+  if (!d) return '';
+  return `${formatPattern(d, 'DD/MMM/YYYY :HH:mm:ss', tz)} ${zonePlace(tz)} (${utcOffsetLabel(tz, d) || 'UTC+00:00'})`;
+};
+
+/**
+ * Date and time in the display time zone. With no options, the app's format
+ * (see formatFull); with Intl options, the browser's locale style.
+ */
 export const formatDateTime = (value, options = {}, tz = displayTimeZone) => {
   const d = toDate(value);
-  return d ? d.toLocaleString(undefined, { timeZone: tz, ...options }) : '';
+  if (!d) return '';
+  return Object.keys(options).length ? d.toLocaleString(undefined, { timeZone: tz, ...options }) : formatFull(d, tz);
 };
 
 /** Locale date only in the display time zone (replaces Date#toLocaleDateString). */
@@ -88,6 +106,12 @@ export const formatDateOnly = (value, options = {}, tz = displayTimeZone) => {
 /** Zone in effect after the user saves their own setting ('' = organisation default). */
 export const effectiveTimeZone = (userTimezone, user) =>
   userTimezone || user?.company_timezone || (user?.user_timezone ? '' : user?.timezone) || 'Africa/Nairobi';
+
+/**
+ * Signing time for the signing record, in the display time zone:
+ *   signingTimestamp(new Date()) -> "18/Nov/2026 :22:20:24 Nairobi (UTC+03:00)"
+ */
+export const signingTimestamp = (value = new Date(), tz = displayTimeZone) => formatFull(toDate(value) || new Date(), tz);
 
 /** "YYYY-MM-DD" for a moment in the display time zone (toISOString() gives the UTC date). */
 export const localDateISO = (value = new Date(), tz = displayTimeZone) => formatPattern(value, 'YYYY-MM-DD', tz);

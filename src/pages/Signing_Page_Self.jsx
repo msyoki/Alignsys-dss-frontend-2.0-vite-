@@ -7,7 +7,6 @@ import Loading from '../components/loaders/Loading';
 import axios from 'axios';
 import ConfirmVoid from '../components/ConfirmVoid';
 import OtpDialog from '../components/OtpDialog';
-import { getComponent } from '@syncfusion/ej2-base';
 import logo from '../images/ZFBLU.webp';
 import BrandLogo from '../components/common/BrandLogo';
 import DocumentDetailsPanel from '../components/common/DocumentDetailsPanel';
@@ -95,20 +94,15 @@ function Signing_Page_Self() {
   const handleClickOpenCompleteDialog = () => setOpenConfirmCompleteDialog(true);
   const handleClickOpenDialogVoid = () => setOpenDialogVoid(true);
 
+  // (The signature dialog loads the saved signatures/stamps when it opens.)
   const signAllpages = () => {
     setMultipage(true);
     setSinglepage(false);
     setSigningPadDisabled(true);
-    getSavedSignatures();
-    getSavedStamps();
     setAddSignature(false);
     setAllPgebtnCssClass('e-custom-primary');
     setOnePgebtnCssClass('e-custom-light');
-    let signature = getComponent(document.getElementById('signature'), 'signature');
-    if (signature && !signature.disabled && !signature.isReadOnly) {
-      signature.clear();
-      setTempSignature('');
-    }
+    setTempSignature('');
     setOpenDialogSignature(true);
   };
 
@@ -116,16 +110,10 @@ function Signing_Page_Self() {
     setSinglepage(true);
     setMultipage(false);
     setSigningPadDisabled(true);
-    getSavedSignatures();
-    getSavedStamps();
     setAddSignature(false);
     setOnePgebtnCssClass('e-custom-primary');
     setAllPgebtnCssClass('e-custom-light');
-    let signature = getComponent(document.getElementById('signature'), 'signature');
-    if (signature && !signature.disabled && !signature.isReadOnly) {
-      signature.clear();
-      setTempSignature('');
-    }
+    setTempSignature('');
     setOpenDialogSignature(true);
   };
 
@@ -151,17 +139,22 @@ function Signing_Page_Self() {
       .catch(() => { });
   }
 
-  const getSavedSignatures = () => {
-    axios.post(`${constants.devApiBaseUrl}/api/savedsignatures/`, { email: user.email })
-      .then((response) => setSignerSavedSignatures(response.data))
-      .catch(() => { });
-  };
+  // Each resolves with the list (or null), so the signature dialog can wait for it.
+  const getSavedSignatures = () => axios
+    .post(`${constants.devApiBaseUrl}/api/savedsignatures/`, { email: user.email })
+    .then((response) => {
+      setSignerSavedSignatures(response.data);
+      return response.data;
+    })
+    .catch(() => null);
 
-  const getSavedStamps = () => {
-    axios.post(`${constants.devApi2BaseUrl}/api/SaveStamp/Receive?Email=${user.email}`)
-      .then((response) => setSignerSavedStamps(response.data))
-      .catch(() => { });
-  };
+  const getSavedStamps = () => axios
+    .post(`${constants.devApi2BaseUrl}/api/SaveStamp/Receive?Email=${user.email}`)
+    .then((response) => {
+      setSignerSavedStamps(response.data);
+      return response.data;
+    })
+    .catch(() => null);
 
   const getCompanyLogo = (guid) => {
     axios.post(`${constants.devApiBaseUrl}/api/logo2/`, { docguid: guid })

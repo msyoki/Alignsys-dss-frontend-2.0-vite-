@@ -440,7 +440,7 @@ const AppShell = ({
             <Divider />
             {onOpenProfile && (
               <MenuItem onClick={openProfile} sx={{ fontSize: 13, py: 1 }}>
-                <ListItemIcon sx={{ minWidth: 28, color: 'inherit' }}><FaUserCircle size={15} /></ListItemIcon>
+                <ListItemIcon sx={{ minWidth: 28, color: BRAND.primary }}><FaUserCircle size={15} /></ListItemIcon>
                 My profile
               </MenuItem>
             )}
@@ -450,12 +450,12 @@ const AppShell = ({
                 onClick={() => { setUserMenuAnchor(null); item.onClick(); }}
                 sx={{ fontSize: 13, py: 1 }}
               >
-                <ListItemIcon sx={{ minWidth: 28, color: 'inherit' }}>{item.icon}</ListItemIcon>
+                <ListItemIcon sx={{ minWidth: 28, color: BRAND.primary }}>{item.icon}</ListItemIcon>
                 {item.label}
               </MenuItem>
             ))}
             <MenuItem onClick={logout} sx={{ fontSize: 13, py: 1 }}>
-              <ListItemIcon sx={{ minWidth: 28, color: 'inherit' }}><FaSignOutAlt size={15} /></ListItemIcon>
+              <ListItemIcon sx={{ minWidth: 28, color: BRAND.error }}><FaSignOutAlt size={15} /></ListItemIcon>
               Sign out
             </MenuItem>
           </Menu>

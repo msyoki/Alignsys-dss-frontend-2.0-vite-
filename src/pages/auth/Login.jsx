@@ -183,9 +183,9 @@ const Login = () => {
               </label>
             </div>
 
-            <div className="text-center mt-3 row">
-              <div className="col-lg-3 col-md-3" />
-              <div className="col-lg-6 col-md-6">
+            {/* Full form width, same as the Create account / Register organisation buttons. */}
+            <div className="text-center mt-3">
+              <div>
                 {/* 
                 <Button
                   type="submit"
@@ -205,27 +205,35 @@ const Login = () => {
                 <Button
                   type="submit"
                   variant="contained"
+                  disableElevation
                   className="mb-3"
                   disabled={miniLoader}
-                  startIcon={miniLoader ? <CircularProgress size={14} color="inherit" /> : null}
+                  aria-busy={miniLoader}
+                  startIcon={miniLoader ? <CircularProgress size={14} thickness={5} sx={{ color: '#fff' }} /> : null}
                   sx={{
                     ...PILL_LARGE,
                     width: '100%',
-                    backgroundColor: miniLoader ? '#ccc' : '#2757aa',
+                    minHeight: 40,
+                    fontSize: '13.5px',
+                    fontWeight: 600,
+                    letterSpacing: '0.2px',
                     color: '#fff',
-                    '&:hover': {
-                      backgroundColor: miniLoader ? '#ccc' : '#1a3a7a',
-                    },
+                    bgcolor: '#2757aa',
+                    boxShadow: 'none',
+                    transition: 'background-color .15s ease, transform .1s ease',
+                    '&:hover': { bgcolor: '#1a3a7a', boxShadow: 'none' },
+                    '&:active': { transform: 'scale(0.98)' },
+                    '&:focus-visible': { outline: '2px solid #2757aa', outlineOffset: 2 },
+                    // While signing in: stay in the brand colour (slightly softened), not grey.
+                    '&.Mui-disabled': { bgcolor: '#2757aa', color: '#fff', opacity: 0.85, cursor: 'progress' },
                   }}
                 >
-                  {miniLoader ? 'Logging in ...' : 'LOGIN'}
+                  {miniLoader ? 'Signing in…' : 'Sign in'}
                 </Button>
-
               </div>
-              <div className="col-lg-3 col-md-3" />
             </div>
 
-            <div className="mt-3">
+            <div className="mt-2">
               <small style={{ fontSize: '13px' }}>
                 Don't have an account?
                 <br />

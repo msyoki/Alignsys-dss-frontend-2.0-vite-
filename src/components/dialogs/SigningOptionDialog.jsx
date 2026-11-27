@@ -1,144 +1,109 @@
 import * as React from 'react';
-import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import IconButton from '@mui/material/IconButton';
-import Slide from '@mui/material/Slide';
+import { Box, ButtonBase, Typography } from '@mui/material';
+import { FaInfoCircle, FaSignature, FaStamp } from 'react-icons/fa';
 
-import { FaStamp, FaSignature, FaCopy } from 'react-icons/fa';
-import { IoClose } from 'react-icons/io5';
-import { PILL } from '../common/pillButton';
+import { DialogHeader } from '../common/dialogKit';
+import { BRAND } from '../layout/shellTheme';
 
-const Transition = React.forwardRef(function Transition(props, ref) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
+/*
+ * First step of Sign / Stamp: put it on the current page or on all pages.
+ * Next comes the signature dialog (it offers the default signature first).
+ */
 
-const pillBtn = {
-  ...PILL,
-  display: 'flex',
-  alignItems: 'center',
-};
+// A page outline with a small signature bar in the corner.
+const PageIcon = ({ stacked }) => (
+  <Box aria-hidden sx={{ position: 'relative', width: 64, height: 64 }}>
+    {stacked && (
+      <>
+        <Box sx={{ position: 'absolute', left: 12, top: 0, width: 46, height: 56, boxSizing: 'border-box', border: '1.5px solid #9fb3d6', borderRadius: '6px', bgcolor: '#fff' }} />
+        <Box sx={{ position: 'absolute', left: 6, top: 4, width: 46, height: 56, boxSizing: 'border-box', border: '1.5px solid #6f8cc0', borderRadius: '6px', bgcolor: '#fff' }} />
+      </>
+    )}
+    <Box sx={{
+      position: 'absolute', left: 0, top: stacked ? 8 : 0, width: 46, height: 56, boxSizing: 'border-box',
+      border: `1.5px solid ${BRAND.primary}`, borderRadius: '6px', bgcolor: '#fff',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', p: '7px',
+    }}>
+      <Box sx={{ width: 20, height: 7, borderRadius: '2px', bgcolor: BRAND.primary }} />
+    </Box>
+  </Box>
+);
+
+const Choice = ({ title, detail, stacked, onClick }) => (
+  <ButtonBase
+    onClick={onClick}
+    sx={{
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1.5, p: 2, textAlign: 'left',
+      border: '1px solid #d0d7e2', borderRadius: '12px', bgcolor: '#fff',
+      transition: 'border-color .15s ease, background-color .15s ease',
+      '&:hover': { borderColor: BRAND.primary, bgcolor: '#f7faff' },
+      '&.Mui-focusVisible': { outline: `2px solid ${BRAND.primary}`, outlineOffset: 2 },
+    }}
+  >
+    <PageIcon stacked={stacked} />
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
+      <Typography component="span" sx={{ fontSize: 14, fontWeight: 600, color: BRAND.primaryDark }}>{title}</Typography>
+      <Typography component="span" sx={{ fontSize: 12, lineHeight: 1.45, color: '#4b5563' }}>{detail}</Typography>
+    </Box>
+  </ButtonBase>
+);
 
 function SigningOptionDialog(props) {
+  const verb = props.isStamp ? 'Stamp' : 'Sign';
+  const kind = props.isStamp ? 'stamp' : 'signature';
+  const pages = Number(props.numPages) || 0;
 
-  const handleSignOnePage = (e) => {
-    e.preventDefault();
+  const handleSignOnePage = () => {
     props.setOpen(false);
     props.signonePage();
   };
 
-  const handleSignAllPages = (e) => {
-    e.preventDefault();
+  const handleSignAllPages = () => {
     props.setOpen(false);
     props.signAllpages();
   };
 
-  const handleClose = (event, reason) => {
-    if (reason !== 'backdropClick') {
-      props.setOpen(false);
-    }
-  };
+  const handleClose = () => props.setOpen(false);
 
   return (
-    <div>
-      <Dialog
-        disableEscapeKeyDown
-        open={props.open}
+    <Dialog open={!!props.open} onClose={handleClose} fullWidth maxWidth="xs" aria-labelledby="signing-option-title"
+      PaperProps={{ sx: { maxWidth: 480 } }}>
+      <DialogHeader
+        id="signing-option-title"
+        icon={props.isStamp ? <FaStamp /> : <FaSignature />}
+        title={`${verb} document`}
         onClose={handleClose}
-        TransitionComponent={Transition}
-      >
+      />
+      <DialogContent sx={{ px: { xs: 2, sm: 3 }, pt: '20px !important', pb: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box>
+          <Typography component="h3" sx={{ m: 0, fontSize: 16, fontWeight: 600, color: '#111827' }}>
+            Where should the {kind} go?
+          </Typography>
+          {(props.docname || pages > 0) && (
+            <Typography sx={{ mt: 0.25, fontSize: 13, color: '#4b5563' }}>
+              {[props.docname, pages > 0 ? `${pages} page${pages === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')}
+            </Typography>
+          )}
+        </Box>
 
-        {/* Header */}
-        <DialogTitle
-          sx={{
-            color: "#fff",
-            backgroundColor: "#1C4690",
-            fontSize: "15px",
-            textAlign: 'center',
-            position: 'relative',
-            py: 1.5,
-          }}
-        >
-          {props.isStamp ? 'Stamp Document' : 'Sign Document'}
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+          <Choice title={`${verb} current page`} detail="Only the page you are viewing." onClick={handleSignOnePage} />
+          <Choice
+            title={`${verb} all pages`}
+            detail={pages > 1 ? `The same spot on all ${pages} pages.` : 'The same spot on every page.'}
+            stacked
+            onClick={handleSignAllPages}
+          />
+        </Box>
 
-          {/* Close Icon */}
-          <IconButton
-            onClick={handleClose}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: '#fff',
-            }}
-          >
-            <IoClose size={22} />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent>
-          <p
-            className='mt-3 text-center'
-            style={{ fontSize: '40px', color: '#1C4690' }}
-          >
-            {props.isStamp ? (
-              <FaStamp className='mx-2' />
-            ) : (
-              <FaSignature className='mx-2' />
-            )}
-          </p>
-
-          <p
-            className='text-center'
-            style={{ fontSize: "12px" }}
-          >
-            How would you like you to {props.isStamp ? 'stamp' : 'sign'} the document?
-          </p>
-
-          <div className="d-flex flex-wrap justify-content-center gap-2">
-            <Button
-              variant="outlined"
-              onClick={handleSignOnePage}
-              startIcon={
-                props.isStamp ? (
-                  <FaStamp size={13}  />
-                ) : (
-                  <FaSignature size={13}  />
-                )
-              }
-              sx={{
-                ...pillBtn,
-                display: 'inline-flex',
-                alignItems: 'center',
-                width: 'auto',
-                minWidth: 'unset',
-              }}
-            >
-              {props.isStamp ? 'Stamp' : 'Sign'} current page
-            </Button>
-
-            <Button
-              variant="outlined"
-              onClick={handleSignAllPages}
-              startIcon={<FaCopy size={13}  />}
-              sx={{
-                ...pillBtn,
-                display: 'inline-flex',
-                alignItems: 'center',
-                width: 'auto',
-                minWidth: 'unset',
-              }}
-            >
-              {props.isStamp ? 'Stamp' : 'Sign'} all pages
-            </Button>
-          </div>
-        </DialogContent>
-
-        {/* Removed Cancel Button */}
-        <DialogActions />
-      </Dialog>
-    </div>
+        <Typography component="p" sx={{ m: 0, display: 'flex', alignItems: 'flex-start', gap: 1, px: 1.5, py: 1.25, borderRadius: '8px', bgcolor: '#f3f5f8', fontSize: 12, lineHeight: 1.45, color: '#4b5563' }}>
+          <FaInfoCircle size={13} color={BRAND.primary} aria-hidden style={{ flexShrink: 0, marginTop: 1 }} />
+          Next you can use your default {kind} or choose another one.
+        </Typography>
+      </DialogContent>
+    </Dialog>
   );
 }
 

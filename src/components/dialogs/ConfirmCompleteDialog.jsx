@@ -1,19 +1,14 @@
 import * as React from 'react';
-import { PILL } from '../common/pillButton';
-import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
-import Slide from '@mui/material/Slide';
-import { FaTimes, FaCheck, FaSignature, FaExclamationTriangle, FaRedoAlt } from 'react-icons/fa';
+import { FaCheck, FaSignature, FaExclamationTriangle, FaRedoAlt } from 'react-icons/fa';
 import { Box, Typography } from '@mui/material';
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Authcontext from '../../context/Authcontext';
 import * as constants from "../constants/constants";
-import { ConfirmDialog } from '../common/dialogKit';
+import { signingTimestamp } from '../../utils/datetime';
+import { ConfirmDialog, DialogFooter, DialogHeader, PrimaryButton, SecondaryButton } from '../common/dialogKit';
 
 // Turn an axios error from the signing service into a plain-language message
 // plus the technical detail (kept for support, shown on demand).
@@ -53,15 +48,8 @@ function describeSigningError(error) {
   return { message, detail };
 }
 
-// Transition for dialog slide
-const Transition = React.forwardRef(function Transition(props, ref) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
-
 function ConfirmCompleteDialog(props) {
   const { user } = React.useContext(Authcontext);
-  const [fullWidth, setFullWidth] = React.useState(true);
-  const [maxWidth, setMaxWidth] = React.useState('sm');
   let navigate = useNavigate();
   const [signError, setSignError] = React.useState(null); // { message, detail }
   const [showDetail, setShowDetail] = React.useState(false);
@@ -89,6 +77,8 @@ function ConfirmCompleteDialog(props) {
       "fileName": `${props.fileurl}`,
       "ipAddress": `${props.ip}`,
       "signersGuid": `${props.signerguid}`,
+      // Time Finish was clicked, in the signer's configured time zone, e.g. "18/Nov/2026 :22:20:24 Nairobi (UTC+03:00)".
+      "timestamp": signingTimestamp(props.signedAt || new Date()),
       "imageAnnotations": props.annotationList,
       "textAnnotations": processedTextAnnotations
     });
@@ -157,49 +147,61 @@ function ConfirmCompleteDialog(props) {
  
   };
 
+  // What is about to be signed, for the summary: signatures, stamps and text, with pages.
+  const images = Array.isArray(props.annotationList) ? props.annotationList : [];
+  const texts = Array.isArray(props.textAnnotation) ? props.textAnnotation : [];
+  const summaryLine = (items, one, many) => {
+    if (!items.length) return null;
+    const pages = [...new Set(items.map((a) => (Number(a.pageIndex) || 0) + 1))].sort((a, b) => a - b);
+    const pageText = pages.length > 1
+      ? `pages ${pages.slice(0, -1).join(', ')} and ${pages[pages.length - 1]}`
+      : `page ${pages[0]}`;
+    return `${items.length} ${items.length === 1 ? one : many} placed, on ${pageText}`;
+  };
+  const summary = [
+    summaryLine(images.filter((a) => a.isSignature), 'signature', 'signatures'),
+    summaryLine(images.filter((a) => !a.isSignature), 'stamp', 'stamps'),
+    summaryLine(texts, 'text note', 'text notes'),
+  ].filter(Boolean);
+
   // Return dialog JSX
   return (
     <div>
       <Dialog
-        open={props.openconfirmcompletedialog}
-        TransitionComponent={Transition}
-        keepMounted
-        // onClose={handleClose}
-        aria-describedby="alert-dialog-slide-description"
+        open={!!props.openconfirmcompletedialog}
+        onClose={handleClose}
+        fullWidth
+        maxWidth="xs"
+        aria-labelledby="complete-signing-title"
+        aria-describedby="complete-signing-desc"
       >
-        <DialogTitle
-          className="text-center"
-          style={{ color: "#ffff", backgroundColor: "#1C4690", fontSize: "14px" }}
-        >
-          <FaSignature style={{ marginRight: 6, verticalAlign: 'middle' }} /> {"Complete Signing"}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-slide-description" className="text-center">
-            <p className="m-4 text-dark" style={{ fontSize: "14px" }}>
-              I confirm the placed signature is in order. Let's proceed.
-            </p>
-          </DialogContentText>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, paddingBottom: 8 }}>
-            <Button
-              variant="outlined"
-              color="warning"
-              onClick={handleClose}
-              sx={{ ...PILL, minWidth: 100 }}
-              startIcon={<FaTimes />}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleCloseAgree}
-              sx={{ ...PILL, minWidth: 100 }}
-              startIcon={<FaCheck />}
-            >
-              Proceed
-            </Button>
-          </div>
+        <DialogHeader id="complete-signing-title" icon={<FaSignature />} title="Complete signing" onClose={handleClose} />
+        <DialogContent sx={{ px: 3, pt: '22px !important', pb: 2.5, display: 'flex', flexDirection: 'column', gap: 1.75 }}>
+          <Box id="complete-signing-desc">
+            <Typography sx={{ fontSize: 15, fontWeight: 600, color: '#111827', wordBreak: 'break-word' }}>
+              {props.docname ? `Ready to sign ${props.docname}?` : 'Ready to sign this document?'}
+            </Typography>
+            <Typography sx={{ mt: 0.5, fontSize: 13, lineHeight: 1.5, color: '#4b5563' }}>
+              I confirm the placed signature is in order. Once signed, it can't be changed.
+            </Typography>
+          </Box>
+          {summary.length > 0 && (
+            <Box component="ul" sx={{ listStyle: 'none', m: 0, px: 1.75, py: 1.5, display: 'flex', flexDirection: 'column', gap: 1, bgcolor: '#f7faff', border: '1px solid #dbe5f4', borderRadius: '10px' }}>
+              {summary.map((line) => (
+                <Box component="li" key={line} sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: 13, color: '#374151' }}>
+                  <FaCheck size={11} color="#2e7d32" aria-hidden style={{ flexShrink: 0 }} />
+                  {line}
+                </Box>
+              ))}
+            </Box>
+          )}
         </DialogContent>
+        <Box sx={{ borderTop: '1px solid #e5e7eb' }}>
+          <DialogFooter>
+            <SecondaryButton onClick={handleClose}>Go back</SecondaryButton>
+            <PrimaryButton onClick={handleCloseAgree} startIcon={<FaCheck />} autoFocus>Sign document</PrimaryButton>
+          </DialogFooter>
+        </Box>
       </Dialog>
 
       <ConfirmDialog

@@ -1,61 +1,58 @@
 import * as React from 'react';
-import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
-import { FaCheck, FaTimes } from 'react-icons/fa';
-import { PILL } from '../common/pillButton';
+import { Box, Typography } from '@mui/material';
+import { FaCheck, FaSignature } from 'react-icons/fa';
 
+import { DialogFooter, DialogHeader, PrimaryButton, SecondaryButton } from '../common/dialogKit';
+import { BRAND } from '../layout/shellTheme';
 
+// "1", "1 and 4", "1, 4 and 6"
+const joinPages = (pages) => (pages.length <= 1
+  ? `${pages[0] ?? ''}`
+  : `${pages.slice(0, -1).join(', ')} and ${pages[pages.length - 1]}`);
+
+/**
+ * Confirm placing the signature in every area the sender assigned to this signer.
+ * `areas`: the signer's assigned boxes ({ page_number, ... }); used for the count and pages.
+ */
 export default function SignSignatureBoxesDialog(props) {
-  const handleClose = () => {
-    props.setOpen(false);
-  };
+  const areas = Array.isArray(props.areas) ? props.areas : [];
+  const count = areas.length;
+  const pages = [...new Set(areas.map((a) => a?.page_number).filter((p) => p != null))].sort((a, b) => a - b);
+
+  const handleClose = () => props.setOpen(false);
 
   const handleComplete = () => {
-    props.handleAnnotation()
+    props.handleAnnotation();
     props.setOpen(false);
-    // Add your 'complete' logic here
   };
 
-  return (
-    <Dialog
-      open={props.open}
-      onClose={handleClose}
-      aria-labelledby="dialog-title"
-      aria-describedby="dialog-description"
-    >
-      {/* <DialogTitle id="dialog-title">Confirm Action</DialogTitle> */}
-      <DialogTitle style={{color:"#ffff",backgroundColor:"#1C4690",fontSize:"15px"}} className='text-center'>Sign on Assigned Areas</DialogTitle>
-      <DialogContent>
+  const question = count > 1 ? `Sign all ${count} assigned areas?` : 'Sign the assigned area?';
+  const detail = count > 0
+    ? `Your signature will be placed in ${count > 1 ? 'every area' : 'the area'} the sender marked for you${pages.length ? `, on page${pages.length > 1 ? 's' : ''} ${joinPages(pages)}` : ''}.`
+    : 'Your signature will be placed in the areas the sender marked for you.';
 
-        <p className=' text-center p-3' style={{fontSize:"13px"}}>Are you certain you want to finalize the signatures in the designated areas? </p>
-        <div className="d-flex justify-content-center flex-wrap gap-2 pb-2">
-                    <Button
-                      variant="outlined"
-                      color="warning"
-                      sx={PILL}
-                      startIcon={<FaTimes />}
-                      onClick={handleClose}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      sx={PILL}
-                      startIcon={<FaCheck />}
-                      onClick={handleComplete}
-                    >
-                      Proceed
-                    </Button>
-                  </div>
-  
-   
+  return (
+    <Dialog open={!!props.open} onClose={handleClose} fullWidth maxWidth="xs" aria-labelledby="sign-areas-title" aria-describedby="sign-areas-desc">
+      <DialogHeader id="sign-areas-title" icon={<FaSignature />} title="Sign assigned areas" onClose={handleClose} />
+      <DialogContent sx={{ px: 3, pt: '22px !important', pb: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box aria-hidden sx={{ width: 52, height: 52, flexShrink: 0, borderRadius: '50%', bgcolor: BRAND.surfaceLight, color: BRAND.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+          <FaSignature />
+        </Box>
+        <Box id="sign-areas-desc" sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>{question}</Typography>
+          <Typography sx={{ mt: 0.5, fontSize: 13, lineHeight: 1.5, color: '#4b5563' }}>{detail}</Typography>
+        </Box>
       </DialogContent>
-      
+      <Box sx={{ borderTop: '1px solid #e5e7eb' }}>
+        <DialogFooter>
+          <SecondaryButton onClick={handleClose}>Cancel</SecondaryButton>
+          <PrimaryButton onClick={handleComplete} startIcon={<FaCheck />} autoFocus>
+            {count > 1 ? `Sign ${count} areas` : 'Sign area'}
+          </PrimaryButton>
+        </DialogFooter>
+      </Box>
     </Dialog>
   );
 }

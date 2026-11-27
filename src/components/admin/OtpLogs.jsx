@@ -82,7 +82,7 @@ export default function OtpLogs({ showOrganization = false }) {
       renderCell: (p) => {
         const t = EVENT_TONE[p.row.event] || EVENT_TONE['otp blocked'];
         return (
-          <Box component="span" sx={{ px: 1.25, py: '2px', borderRadius: 999, fontSize: 12, fontWeight: 600, color: t.fg, bgcolor: t.bg }}>
+          <Box component="span" sx={{ px: 1.25, py: '2px', borderRadius: 999, fontSize: 12, fontWeight: 400, color: t.fg, bgcolor: t.bg }}>
             {p.value}
           </Box>
         );

@@ -22,7 +22,7 @@ export const SeatsCell = ({ usage, loading }) => {
   const full = pct >= 90;
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px', lineHeight: 1.2 }}>
-      <Box component="span" sx={{ fontSize: 12.5, color: full ? '#8a4b00' : '#374151', fontWeight: full ? 600 : 400 }}>
+      <Box component="span" sx={{ fontSize: 12.5, color: full ? '#8a4b00' : '#374151', fontWeight: 400 }}>
         {used} / {total}
       </Box>
       <Box
@@ -43,14 +43,16 @@ export const SeatsCell = ({ usage, loading }) => {
  * Cell pieces shared by the admin and super admin tables, so every table there
  * reads the same: status pills, a switch and an outlined text action. Use with ADMIN_GRID_PROPS, which
  * adds the "admin-table" look (styles/DataTable.css) on top of "app-table".
+ * Only the column headers are bold; everything inside the rows is normal weight
+ * (tones are told apart by colour).
  */
 
 const PILL = {
-  neutral: { bg: '#f3f4f6', fg: '#374151', weight: 400 },
-  info: { bg: '#e8eef9', fg: '#1a3a7a', weight: 600 },
-  success: { bg: '#e8f5e9', fg: '#1e6b30', weight: 600 },
-  warning: { bg: '#fff4e5', fg: '#8a4b00', weight: 600 },
-  danger: { bg: '#fdecea', fg: '#b42318', weight: 600 },
+  neutral: { bg: '#f3f4f6', fg: '#374151' },
+  info: { bg: '#e8eef9', fg: '#1a3a7a' },
+  success: { bg: '#e8f5e9', fg: '#1e6b30' },
+  warning: { bg: '#fff4e5', fg: '#8a4b00' },
+  danger: { bg: '#fdecea', fg: '#b42318' },
 };
 
 /** Small rounded status label, e.g. "Never signed in". */
@@ -59,7 +61,7 @@ export const Pill = ({ tone = 'neutral', children }) => {
   return (
     <Box component="span" sx={{
       display: 'inline-flex', alignItems: 'center', px: 1.25, py: '2px', borderRadius: 999,
-      fontSize: 12, lineHeight: 1.5, whiteSpace: 'nowrap', bgcolor: t.bg, color: t.fg, fontWeight: t.weight,
+      fontSize: 12, lineHeight: 1.5, whiteSpace: 'nowrap', bgcolor: t.bg, color: t.fg, fontWeight: 400,
     }}>
       {children}
     </Box>
@@ -70,7 +72,7 @@ export const Pill = ({ tone = 'neutral', children }) => {
 export const StatusText = ({ tone = 'neutral', children }) => {
   const t = PILL[tone] || PILL.neutral;
   return (
-    <Box component="span" sx={{ fontSize: 12.5, color: tone === 'neutral' ? '#4b5563' : t.fg, fontWeight: tone === 'neutral' ? 400 : 600, whiteSpace: 'nowrap' }}>
+    <Box component="span" sx={{ fontSize: 12.5, color: tone === 'neutral' ? '#4b5563' : t.fg, fontWeight: 400, whiteSpace: 'nowrap' }}>
       {children}
     </Box>
   );
@@ -107,7 +109,7 @@ export const RowButton = ({ children, onClick, ...rest }) => (
     {...rest}
     sx={{
       height: 28, px: 1.25, minWidth: 0, borderRadius: '8px', borderColor: '#c3c9d4', bgcolor: '#fff',
-      color: '#2757aa', fontSize: 13, fontWeight: 600, textTransform: 'none', whiteSpace: 'nowrap',
+      color: '#2757aa', fontSize: 13, fontWeight: 400, textTransform: 'none', whiteSpace: 'nowrap',
       '&:hover': { borderColor: '#2757aa', bgcolor: '#ecf4fc' },
       ...(rest.sx || {}),
     }}

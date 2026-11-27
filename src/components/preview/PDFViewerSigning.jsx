@@ -1126,7 +1126,7 @@ const PDFViewerSigning = (props) => {
   // Render
   return (
     <>
-      <SignSignatureBoxesDialog handleAnnotation={addPredefinedAnnotationsWithPageDims} open={props.openDialogSignBoxes} setOpen={props.setOpenDialogSignBoxes} />
+      <SignSignatureBoxesDialog handleAnnotation={addPredefinedAnnotationsWithPageDims} open={props.openDialogSignBoxes} setOpen={props.setOpenDialogSignBoxes} areas={props.signerAnnotations} />
       <MultipageInfoDialog open={openMultipageInfoDialog} setOpen={setOpenMultipageInfoDialog} stamp={props.isStamp} addMultipageAnnotation={addMultipageAnnotation} />
       <DeleteAnnotationDialog findAnnotationById={id => props.annotations.find(a => a.id === id)} deleteAnnotation={deleteAnnotation} selectedAnnotationId={selectedAnnotationId} setDeleteAnnotationDialog={setDeleteAnnotationDialog} deleteAnnotationDialog={deleteAnnotationDialog} />
 
@@ -1245,14 +1245,12 @@ const PDFViewerSigning = (props) => {
         )}
 
         {/* Main PDF Viewer */}
+        {/* No fixed height: it stretches to fill .pdf-viewer-container (the rest of the
+            column on desktop, 85vh on smaller screens). A fixed 80vh left an empty
+            band under the document. */}
         <main
           className="pdf-main-viewer scrollbar-custom"
           ref={mainContainerRef}
-          style={{
-
-            height: "80vh"
-
-          }}
         >
           <Document
             file={props.document}

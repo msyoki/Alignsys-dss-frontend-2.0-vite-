@@ -292,35 +292,42 @@ const NewIndividual = () => {
                 </div> */}
 
 
-                <div className="text-center mt-3 row">
-                  <div className='col-lg-3 col-md-3 col-sm-3'> </div>
-
-                  <div className='col-lg-6 col-md-6 col-sm-6'>
+                {/* Full form width: a half-width pill was too narrow for "Creating account…" with its spinner. */}
+                <div className="text-center mt-3">
+                  <div>
 
                     {/* <ButtonComponent type="submit" cssClass='e-custom-primary' className='mb-2 m-2' style={{ textTransform: 'none', width: '100%', padding: '10px' }} disabled={false}> Register</ButtonComponent> */}
                     <Button
                       type="submit"
                       variant="contained"
+                      disableElevation
                       className="mb-3"
                       disabled={loading}
-                      startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
+                      aria-busy={loading}
+                      startIcon={loading ? <CircularProgress size={14} thickness={5} sx={{ color: '#fff' }} /> : null}
                       sx={{
                         ...PILL_LARGE,
                         width: '100%',
-                        backgroundColor: loading ? '#ccc' : '#2757aa',
+                        minHeight: 40,
+                        fontSize: '13.5px',
+                        fontWeight: 600,
+                        letterSpacing: '0.2px',
                         color: '#fff',
-                        '&:hover': {
-                          backgroundColor: loading ? '#ccc' : '#1a3a7a',
-                        },
+                        bgcolor: '#2757aa',
+                        boxShadow: 'none',
+                        transition: 'background-color .15s ease, transform .1s ease',
+                        '&:hover': { bgcolor: '#1a3a7a', boxShadow: 'none' },
+                        '&:active': { transform: 'scale(0.98)' },
+                        '&:focus-visible': { outline: '2px solid #2757aa', outlineOffset: 2 },
+                        // While registering: stay in the brand colour (slightly softened), not grey.
+                        '&.Mui-disabled': { bgcolor: '#2757aa', color: '#fff', opacity: 0.85, cursor: 'progress' },
                       }}
                     >
-                      {loading ? 'Registering ...' : 'REGISTER'}
+                      {loading ? 'Creating account…' : 'Create account'}
                     </Button>
                   </div>
-                  <div className='col-lg-3 col-md-3 col-sm-3'> </div>
 
-                  <br />
-                  <div className="mt-3 text-center">
+                  <div className="mt-2 text-center">
                     <small style={{ fontSize: '13px' }}>
                       Already have an account?{' '}
                       <Link to="/login" style={{ color: '#2757aa', textDecoration: 'none' }}>

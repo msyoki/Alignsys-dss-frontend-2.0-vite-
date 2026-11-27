@@ -16,7 +16,7 @@ import { PILL_COMPACT, PILL_OUTLINE } from '../common/pillButton';
 import {
   ConfirmDialog, DialogFooter, DialogHeader, PrimaryButton, PropertyRow, PropertyValue, SecondaryButton, StatusChip, fieldSx,
 } from '../common/dialogKit';
-import { formatPattern } from '../../utils/datetime';
+import { formatFull } from '../../utils/datetime';
 
 // Document details, shared by the dashboard tabs (Inbox, Outbox, Completed, ...) and the
 // admin document log. People who manage the document (its originator; in the admin log,
@@ -36,8 +36,8 @@ export const maskPhone = (phone) => {
   const digits = String(phone || '').replace(/\D/g, '');
   return digits.length >= 3 ? `••• ${digits.slice(-3)}` : '';
 };
-const fmt = (value) => formatPattern(value, 'DD/MMM/YYYY · HH:mm');
-const fmtShort = (value) => formatPattern(value, 'DD/MMM HH:mm');
+const fmt = (value) => formatFull(value);
+const fmtShort = (value) => formatFull(value);
 const isTrue = (v) => v === true || v === 'True';
 const errorText = (err, fallback) => err?.response?.data?.msg || err?.response?.data?.error || fallback;
 

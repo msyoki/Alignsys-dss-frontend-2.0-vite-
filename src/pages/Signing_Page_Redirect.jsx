@@ -9,7 +9,6 @@ import logo from '../images/ZFBLU.webp';
 import BrandLogo from '../components/common/BrandLogo';
 import DocumentDetailsPanel from '../components/common/DocumentDetailsPanel';
 import ConfirmVoid from '../components/ConfirmVoid';
-import { getComponent } from '@syncfusion/ej2-base';
 import HelpBubble from '../components/HelpBubble';
 import '../styles/SigningLayout.css';
 import LoadingDialog from '../components/loaders/LoadingDialog';
@@ -193,27 +192,26 @@ function Signing_Page_Redirect() {
       .catch(() => { });
   }
 
-  // Fetch saved signatures
-  const getSavedSignatures = () => {
-    axios
-      .post(`${constants.devApiBaseUrl}/api/savedsignatures/`, {
-        email: currentsignerEmail,
-      })
-      .then((response) => {
-        setSignerSavedSignatures(response.data);
-        console.log(response.data);
-      })
-      .catch((error) => {
-        console.error("Error fetching saved signatures:", error);
-      });
-  };
+  // Fetch saved signatures / stamps. Each resolves with the list (or null), so the
+  // signature dialog can wait for it before offering the default one.
+  const getSavedSignatures = () => axios
+    .post(`${constants.devApiBaseUrl}/api/savedsignatures/`, { email: currentsignerEmail })
+    .then((response) => {
+      setSignerSavedSignatures(response.data);
+      return response.data;
+    })
+    .catch((error) => {
+      console.error("Error fetching saved signatures:", error);
+      return null;
+    });
 
-  // Fetch saved stamps
-  const getSavedStamps = () => {
-    axios.post(`${constants.devApi2BaseUrl}/api/SaveStamp/Receive?Email=${currentsignerEmail}`)
-      .then((response) => setSignerSavedStamps(response.data))
-      .catch(() => { });
-  };
+  const getSavedStamps = () => axios
+    .post(`${constants.devApi2BaseUrl}/api/SaveStamp/Receive?Email=${currentsignerEmail}`)
+    .then((response) => {
+      setSignerSavedStamps(response.data);
+      return response.data;
+    })
+    .catch(() => null);
 
   // Fetch annotations by signer email and document
   const getAnnotationsBySignerEmailAndDocument = async (email) => {
@@ -286,26 +284,17 @@ function Signing_Page_Redirect() {
       setMultipage(false);   // multi-page mode OFF
     }
 
-    // 3. Load previously saved signatures and stamps
-    getSavedSignatures();
-    getSavedStamps();
-
-    // 4. Reset signing pad & signature add mode
+    // 3. Reset signing pad & signature add mode
     setSigningPadDisabled(true);
     setAddSignature(false);
 
-    // 5. Style buttons (probably toggle UI buttons for one-page vs all-page signing)
+    // 4. Style buttons (probably toggle UI buttons for one-page vs all-page signing)
     setOnePgebtnCssClass('e-custom-primary');
     setAllPgebtnCssClass('e-custom-light');
 
-    // 6. Reset the signature component if it’s available and editable
-    let signature = getComponent(document.getElementById('signature'), 'signature');
-    if (signature && !signature.disabled && !signature.isReadOnly) {
-      signature.clear();      // clear the canvas
-      setTempSignature('');   // clear any temp stored signature
-    }
-
-    // 7. Finally, open the signature dialog/modal
+    // 5. Clear any temp stored signature, then open the signature dialog
+    //    (it loads the saved signatures and stamps itself and starts with a fresh pad).
+    setTempSignature('');
     setOpenDialogSignature(true);
   };
 
@@ -338,20 +327,15 @@ function Signing_Page_Redirect() {
   };
 
   // Sign all pages
+  // (The signature dialog loads the saved signatures/stamps when it opens.)
   const signAllpages = () => {
     setMultipage(true);
     setSinglepage(false);
-    getSavedSignatures();
-    getSavedStamps();
     setSigningPadDisabled(true);
     setAddSignature(false);
     setAllPgebtnCssClass('e-custom-primary');
     setOnePgebtnCssClass('e-custom-light');
-    let signature = getComponent(document.getElementById('signature'), 'signature');
-    if (signature && !signature.disabled && !signature.isReadOnly) {
-      signature.clear();
-      setTempSignature('');
-    }
+    setTempSignature('');
     setOpenDialogSignature(true);
   };
 
@@ -359,17 +343,11 @@ function Signing_Page_Redirect() {
   const signonePage = () => {
     setSinglepage(true);
     setMultipage(false);
-    getSavedSignatures();
-    getSavedStamps();
     setSigningPadDisabled(true);
     setAddSignature(false);
     setOnePgebtnCssClass('e-custom-primary');
     setAllPgebtnCssClass('e-custom-light');
-    let signature = getComponent(document.getElementById('signature'), 'signature');
-    if (signature && !signature.disabled && !signature.isReadOnly) {
-      signature.clear();
-      setTempSignature('');
-    }
+    setTempSignature('');
     setOpenDialogSignature(true);
   };
 

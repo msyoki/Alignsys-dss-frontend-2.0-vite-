@@ -2,7 +2,8 @@ import React from 'react'
 import {createContext, useState, useEffect} from 'react'
 import jwt_decode from "jwt-decode";
 import { useNavigate  } from "react-router-dom";
-import Loading from '../components/loaders/LoadingDialog';
+// App-start screen while the session is restored (was LoadingDialog, which rendered closed).
+import Loading from '../components/loaders/Loading';
 import axios from "axios"
 import * as constants from '../components/constants/constants'
 import { setDisplayTimeZone } from '../utils/datetime'
